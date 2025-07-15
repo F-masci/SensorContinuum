@@ -12,7 +12,6 @@ on:
 
 env:
   GO_VERSION: 1.24.5
-  IMAGE_NAME: sensor-agent
 
 jobs:
   sonarcloud:
@@ -46,14 +45,18 @@ jobs:
         run: go test ./tests/... -v
 
   docker-build:
-    name: Build Docker Image
+    name: Build Docker Images via Compose
     needs: sonarcloud
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Set up Docker Compose
+        run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+      - name: Build Docker images via Compose
         run: |
-          docker build -f deploy/docker/sensor-agent.Dockerfile -t sensor-agent:latest .
+          docker compose -f deploy/compose/docker-compose.yml build

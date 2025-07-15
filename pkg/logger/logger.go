@@ -2,7 +2,7 @@ package logger
 
 import (
 	"fmt"
-	"log"
+	defaultLogger "log"
 	"os"
 	"strings"
 )
@@ -11,18 +11,9 @@ import (
 type Context map[string]string
 
 type Logger struct {
-	infoLogger  *log.Logger
-	errorLogger *log.Logger
-	debugLogger *log.Logger
-}
-
-func New(ctx Context) *Logger {
-	prefix := formatContext(ctx)
-	return &Logger{
-		infoLogger:  log.New(os.Stdout, "[INFO]  "+prefix, log.Ldate|log.Ltime|log.Lshortfile),
-		errorLogger: log.New(os.Stderr, "[ERROR] "+prefix, log.Ldate|log.Ltime|log.Lshortfile),
-		debugLogger: log.New(os.Stdout, "[DEBUG] "+prefix, log.Ldate|log.Ltime|log.Lshortfile),
-	}
+	infoLogger  *defaultLogger.Logger
+	errorLogger *defaultLogger.Logger
+	debugLogger *defaultLogger.Logger
 }
 
 // formatta il contesto in stringa chiave=valore separati da spazi
@@ -39,18 +30,41 @@ func formatContext(ctx Context) string {
 
 // metodi di log che includono il contesto nei messaggi
 
-func (l *Logger) log(logger *log.Logger, v ...interface{}) {
+func (l *Logger) log(logger *defaultLogger.Logger, v ...interface{}) {
+	if l == nil {
+		return // Se il logger non è inizializzato, non fare nulla
+	}
 	logger.Output(3, fmt.Sprint(v...))
 }
 
 func (l *Logger) Info(v ...interface{}) {
+	if l == nil {
+		return // Se il logger non è inizializzato, non fare nulla
+	}
 	l.log(l.infoLogger, v...)
 }
 
 func (l *Logger) Error(v ...interface{}) {
+	if l == nil {
+		return // Se il logger non è inizializzato, non fare nulla
+	}
 	l.log(l.errorLogger, v...)
 }
 
 func (l *Logger) Debug(v ...interface{}) {
+	if l == nil {
+		return // Se il logger non è inizializzato, non fare nulla
+	}
 	l.log(l.debugLogger, v...)
+}
+
+var Log *Logger = nil
+
+func CreateLogger(ctx Context) {
+	prefix := formatContext(ctx)
+	Log = &Logger{
+		infoLogger:  defaultLogger.New(os.Stdout, "[INFO]  "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		errorLogger: defaultLogger.New(os.Stderr, "[ERROR] "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		debugLogger: defaultLogger.New(os.Stdout, "[DEBUG] "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+	}
 }

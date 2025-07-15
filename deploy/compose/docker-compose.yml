@@ -1,0 +1,52 @@
+services:
+  mosquitto:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/mosquitto-local.Dockerfile
+    container_name: mosquitto-compose
+    hostname: mosquitto-broker
+    ports:
+      - "1883:1883"
+    networks:
+      - iot-net
+
+  edge-hub:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/edge-hub.Dockerfile
+    container_name: edge-hub-compose
+    hostname: edge-hub
+    depends_on:
+      - mosquitto
+    networks:
+      - iot-net
+
+  sensor-agent-1:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    container_name: sensor-agent-1-compose
+    environment:
+      - EDGE_HUB=edge-hub
+      - MQTT_BROKER=mosquitto-broker
+    depends_on:
+      - edge-hub
+    networks:
+      - iot-net
+
+  sensor-agent-2:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    container_name: sensor-agent-2-compose
+    environment:
+      - EDGE_HUB=edge-hub
+      - MQTT_BROKER=mosquitto-broker
+    depends_on:
+      - edge-hub
+    networks:
+      - iot-net
+
+networks:
+  iot-net:
+    driver: bridge

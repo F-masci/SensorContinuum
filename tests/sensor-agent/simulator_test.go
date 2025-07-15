@@ -1,28 +1,42 @@
 package sensoragent_test
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	"SensorContinuum/internal/sensor-agent"
+	"SensorContinuum/pkg/logger"
 )
 
+func initTestEnvironment() {
+	// Inizializza il logger
+	logger.CreateLogger(logger.Context{
+		"service": "sensor-agent-test",
+	})
+}
+
+func TestMain(m *testing.M) {
+	initTestEnvironment()
+	os.Exit(m.Run())
+}
+
 // Test 1: resChan == nil → deve loggare, ma non scrivere
-func TestRun_NilChannel(t *testing.T) {
+func TestSimulate_NilChannel(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Run panicked with nil channel: %v", r)
+			t.Errorf("Simulate panicked with nil channel: %v", r)
 		}
 	}()
-	sensor_agent.Run(2, nil) // Deve semplicemente ignorare il canale
+	sensor_agent.Simulate(2, nil) // Deve semplicemente ignorare il canale
 }
 
 // Test 2: Channel buffered con spazio sufficiente
-func TestRun_BufferedChannel(t *testing.T) {
+func TestSimulate_BufferedChannel(t *testing.T) {
 	n := 3
 	ch := make(chan float64, n)
 
-	go sensor_agent.Run(n, ch)
+	go sensor_agent.Simulate(n, ch)
 
 	timeout := time.After(time.Second * 5)
 	count := 0
@@ -41,13 +55,13 @@ func TestRun_BufferedChannel(t *testing.T) {
 }
 
 // Test 3: Channel pieno → deve saltare invio (niente panic, niente blocco)
-func TestRun_FullChannel(t *testing.T) {
+func TestSimulate_FullChannel(t *testing.T) {
 	ch := make(chan float64, 1)
 	ch <- 42.0 // Riempie il buffer
 
 	done := make(chan struct{})
 	go func() {
-		sensor_agent.Run(1, ch)
+		sensor_agent.Simulate(1, ch)
 		close(done)
 	}()
 
@@ -55,17 +69,17 @@ func TestRun_FullChannel(t *testing.T) {
 	case <-done:
 		// Success: funzione non si è bloccata, ha loggato l'errore e continuato
 	case <-time.After(3 * time.Second):
-		t.Fatal("Run should not block even when channel is full")
+		t.Fatal("Simulate should not block even when channel is full")
 	}
 }
 
 // Test 4: Unbuffered channel (funziona solo se ricevi subito)
-func TestRun_UnbufferedChannel(t *testing.T) {
+func TestSimulate_UnbufferedChannel(t *testing.T) {
 	ch := make(chan float64) // unbuffered
 	n := 1
 
 	go func() {
-		sensor_agent.Run(n, ch)
+		sensor_agent.Simulate(n, ch)
 	}()
 
 	select {
