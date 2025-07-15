@@ -56,4 +56,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f deploy/docker/sensor-agent.Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/sensor-agent:latest .
+          docker build -f deploy/docker/sensor-agent.Dockerfile -t sensor-agent:latest .
