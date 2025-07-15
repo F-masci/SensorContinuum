@@ -11,9 +11,10 @@ import (
 type Context map[string]string
 
 type Logger struct {
-	infoLogger  *defaultLogger.Logger
-	errorLogger *defaultLogger.Logger
-	debugLogger *defaultLogger.Logger
+	infoLogger    *defaultLogger.Logger
+	warningLogger *defaultLogger.Logger
+	errorLogger   *defaultLogger.Logger
+	debugLogger   *defaultLogger.Logger
 }
 
 // formatta il contesto in stringa chiave=valore separati da spazi
@@ -44,6 +45,13 @@ func (l *Logger) Info(v ...interface{}) {
 	l.log(l.infoLogger, v...)
 }
 
+func (l *Logger) Warn(v ...interface{}) {
+	if l == nil {
+		return // Se il logger non è inizializzato, non fare nulla
+	}
+	l.log(l.warningLogger, v...)
+}
+
 func (l *Logger) Error(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -63,8 +71,9 @@ var Log *Logger = nil
 func CreateLogger(ctx Context) {
 	prefix := formatContext(ctx)
 	Log = &Logger{
-		infoLogger:  defaultLogger.New(os.Stdout, "[INFO]  "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
-		errorLogger: defaultLogger.New(os.Stderr, "[ERROR] "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
-		debugLogger: defaultLogger.New(os.Stdout, "[DEBUG] "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		infoLogger:    defaultLogger.New(os.Stdout, "[INFO]    "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		warningLogger: defaultLogger.New(os.Stdout, "[WARNING] "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		errorLogger:   defaultLogger.New(os.Stderr, "[ERROR]   "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
+		debugLogger:   defaultLogger.New(os.Stdout, "[DEBUG]   "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
 	}
 }

@@ -43,20 +43,3 @@ jobs:
 
       - name: Run tests
         run: go test ./tests/... -v
-
-  docker-build:
-    name: Build Docker Images via Compose
-    needs: sonarcloud
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Compose
-        run: sudo apt-get update && sudo apt-get install -y docker-compose
-
-      - name: Build Docker images via Compose
-        run: |
-          docker compose -f deploy/compose/docker-compose.yml build

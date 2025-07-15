@@ -23,13 +23,13 @@ type IDReply struct {
 
 func main() {
 
-	adress, exists := os.LookupEnv("EDGE_HUB")
+	address, exists := os.LookupEnv("EDGE_HUB")
 	if !exists {
-		adress = "localhost"
+		address = "localhost"
 	}
 
 	// Ottiene il proprio ID
-	client, err := rpc.Dial("tcp", adress+":1234")
+	client, err := rpc.Dial("tcp", address+":1234")
 	if err != nil {
 		panic(err)
 	}
@@ -40,6 +40,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	sensor_agent.SetSensorID(reply.ID)
 
 	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext(reply.ID))

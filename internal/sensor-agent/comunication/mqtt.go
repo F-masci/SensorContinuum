@@ -2,23 +2,34 @@ package comunication
 
 import (
 	"fmt"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"os"
 
+	MQTT "github.com/eclipse/paho.mqtt.golang"
+
+	mosquittoConf "SensorContinuum/configs/mosquitto"
+	"SensorContinuum/internal/sensor-agent"
 	"SensorContinuum/pkg/logger"
 )
 
 var client MQTT.Client
+var connectionPending = false
 
 func connect() {
 
-	adress, exists := os.LookupEnv("MQTT_BROKER")
-	if !exists {
-		adress = "localhost"
+	if connectionPending {
+		logger.Log.Warn("Connection already in progress, skipping new connection attempt")
+		return
 	}
 
-	opts := MQTT.NewClientOptions().AddBroker("tcp://" + adress + ":1883")
-	opts.SetClientID("go_mqtt_client")
+	connectionPending = true
+
+	address, exists := os.LookupEnv("MQTT_BROKER")
+	if !exists {
+		address = "localhost"
+	}
+
+	opts := MQTT.NewClientOptions().AddBroker(mosquittoConf.PROTOCOL + "://" + address + ":" + mosquittoConf.PORT)
+	opts.SetClientID(sensor_agent.GetSensorID())
 
 	client = MQTT.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
@@ -28,11 +39,12 @@ func connect() {
 }
 
 func Publish(data float64) {
+
 	if client == nil || !client.IsConnected() {
 		connect()
 	}
 
-	token := client.Publish("piano/1/sensori/temperatura/sensore01", 0, false, fmt.Sprintf("%f", data))
+	token := client.Publish("floor/1/sensors/"+sensor_agent.GetSensorID(), 0, false, fmt.Sprintf("%f", data))
 	token.Wait()
 	if token.Error() != nil {
 		logger.Log.Error("Error during publishing: ", token.Error())
