@@ -5,7 +5,8 @@ FROM golang:1.24.5 AS builder
 WORKDIR /app
 
 # Copia go.mod per installare le dipendenze
-COPY go.mod go.sum ./
+COPY go.mod ./
+RUN go mod tidy
 RUN go mod download
 
 # Copia il codice sorgente nel container
