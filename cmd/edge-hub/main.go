@@ -1,12 +1,11 @@
 package main
 
 import (
+	"SensorContinuum/internal/edge-hub"
 	"SensorContinuum/internal/edge-hub/comunication"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"os"
-
-	"SensorContinuum/internal/edge-hub"
-	"SensorContinuum/pkg/logger"
 )
 
 // getContext ritorna il contesto del logger con le informazioni specifiche dell'hub
