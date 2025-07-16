@@ -4,53 +4,38 @@ import (
 	"SensorContinuum/internal/sensor-agent"
 	"SensorContinuum/internal/sensor-agent/comunication"
 	"SensorContinuum/pkg/logger"
-	"net/rpc"
 	"os"
 )
 
-// TODO: Configurare il contesto del logger dinamicamente
-func getContext(sensorID string) logger.Context {
+// getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
+func getContext() logger.Context {
 	return logger.Context{
 		"service":  "sensor-agent",
-		"sensorID": sensorID,
+		"building": sensor_agent.BuildingID,
+		"floor":    sensor_agent.FloorID,
+		"sensor":   sensor_agent.SensorID,
 	}
-}
-
-type EmptyArgs struct{}
-type IDReply struct {
-	ID string
 }
 
 func main() {
 
-	address, exists := os.LookupEnv("EDGE_HUB")
-	if !exists {
-		address = "localhost"
+	// Inizializza l'ambiente
+	if err := sensor_agent.SetupEnvironment(); err != nil {
+		println("Failed to setup environment:", err.Error())
+		os.Exit(1)
 	}
-
-	// Ottiene il proprio ID
-	client, err := rpc.Dial("tcp", address+":1234")
-	if err != nil {
-		panic(err)
-	}
-	defer client.Close()
-
-	var reply IDReply
-	err = client.Call("SensorIDService.GetNextID", &EmptyArgs{}, &reply)
-	if err != nil {
-		panic(err)
-	}
-	sensor_agent.SetSensorID(reply.ID)
 
 	// Inizializza il logger con il contesto
-	logger.CreateLogger(getContext(reply.ID))
+	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Sensor Agent...")
 
+	// Inizializza la comunicazione con il simulatore del sensore
 	sensorChannel := make(chan float64, 100)
 	go sensor_agent.SimulateForever(sensorChannel)
 
+	// Invia i dati al broker MQTT
 	for data := range sensorChannel {
-		comunication.Publish(data)
+		comunication.PublishData(data)
 	}
 
 }

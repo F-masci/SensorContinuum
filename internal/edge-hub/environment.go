@@ -1,16 +1,15 @@
-package sensor_agent
+package edge_hub
 
 import (
+	"SensorContinuum/configs/mosquitto"
 	"errors"
 	"github.com/google/uuid"
 	"os"
-
-	"SensorContinuum/configs/mosquitto"
 )
 
 var BuildingID string
 var FloorID string
-var SensorID string
+var HubID string
 
 var MosquittoProtocol string
 var MosquittoBroker string
@@ -31,9 +30,9 @@ func SetupEnvironment() error {
 		return errors.New("environment variable FLOOR_ID not set")
 	}
 
-	SensorID, exists = os.LookupEnv("SENSOR_ID")
+	HubID, exists = os.LookupEnv("HUB_ID")
 	if !exists {
-		SensorID = uuid.New().String()
+		HubID = uuid.New().String()
 	}
 
 	MosquittoProtocol, exists = os.LookupEnv("MQTT_BROKER_PROTOCOL")

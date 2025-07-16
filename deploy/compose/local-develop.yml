@@ -15,6 +15,11 @@ services:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
     container_name: edge-hub-compose
+    environment:
+      - BUILDING_ID=building-0001
+      - FLOOR_ID=floor-001
+      - HUBID=hub-001
+      - MQTT_BROKER_ADDRESS=mosquitto-broker
     hostname: edge-hub
     depends_on:
       - mosquitto
@@ -27,8 +32,10 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-1-compose
     environment:
-      - EDGE_HUB=edge-hub
-      - MQTT_BROKER=mosquitto-broker
+      - BUILDING_ID=building-0001
+      - FLOOR_ID=floor-001
+      - SENSOR_ID=sensor-0001
+      - MQTT_BROKER_ADDRESS=mosquitto-broker
     depends_on:
       - edge-hub
     networks:
@@ -40,8 +47,10 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-2-compose
     environment:
-      - EDGE_HUB=edge-hub
-      - MQTT_BROKER=mosquitto-broker
+      - BUILDING_ID=building-0001
+      - FLOOR_ID=floor-001
+      - SENSOR_ID=sensor-0002
+      - MQTT_BROKER_ADDRESS=mosquitto-broker
     depends_on:
       - edge-hub
     networks:

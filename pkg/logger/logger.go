@@ -17,7 +17,7 @@ type Logger struct {
 	debugLogger   *defaultLogger.Logger
 }
 
-// formatta il contesto in stringa chiave=valore separati da spazi
+// formatContext formatta il contesto in una stringa per essere utilizzata nei log
 func formatContext(ctx Context) string {
 	if len(ctx) == 0 {
 		return ""
@@ -29,8 +29,7 @@ func formatContext(ctx Context) string {
 	return strings.Join(parts, " ") + " "
 }
 
-// metodi di log che includono il contesto nei messaggi
-
+// log è un metodo privato che scrive il messaggio di log utilizzando il logger specificato
 func (l *Logger) log(logger *defaultLogger.Logger, v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -38,6 +37,7 @@ func (l *Logger) log(logger *defaultLogger.Logger, v ...interface{}) {
 	logger.Output(3, fmt.Sprint(v...))
 }
 
+// Info scrive un messaggio di log di livello informativo
 func (l *Logger) Info(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -45,6 +45,7 @@ func (l *Logger) Info(v ...interface{}) {
 	l.log(l.infoLogger, v...)
 }
 
+// Warn scrive un messaggio di log di livello di avviso
 func (l *Logger) Warn(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -52,6 +53,7 @@ func (l *Logger) Warn(v ...interface{}) {
 	l.log(l.warningLogger, v...)
 }
 
+// Error scrive un messaggio di log di livello di errore
 func (l *Logger) Error(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -59,6 +61,7 @@ func (l *Logger) Error(v ...interface{}) {
 	l.log(l.errorLogger, v...)
 }
 
+// Debug scrive un messaggio di log di livello di debug
 func (l *Logger) Debug(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
@@ -66,8 +69,10 @@ func (l *Logger) Debug(v ...interface{}) {
 	l.log(l.debugLogger, v...)
 }
 
+// Log è il logger globale che può essere utilizzato in tutto il pacchetto
 var Log *Logger = nil
 
+// CreateLogger inizializza il logger globale con il contesto fornito
 func CreateLogger(ctx Context) {
 	prefix := formatContext(ctx)
 	Log = &Logger{
