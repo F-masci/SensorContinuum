@@ -1,11 +1,11 @@
 package sensoragent_test
 
 import (
+	"SensorContinuum/internal/sensor-agent/simulation"
 	"os"
 	"testing"
 	"time"
 
-	"SensorContinuum/internal/sensor-agent"
 	"SensorContinuum/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func TestSimulate_NilChannel(t *testing.T) {
 			t.Errorf("Simulate panicked with nil channel: %v", r)
 		}
 	}()
-	sensor_agent.Simulate(2, nil) // Deve semplicemente ignorare il canale
+	simulation.Simulate(2, nil) // Deve semplicemente ignorare il canale
 }
 
 // Test 2: Channel buffered con spazio sufficiente
@@ -36,7 +36,7 @@ func TestSimulate_BufferedChannel(t *testing.T) {
 	n := 3
 	ch := make(chan float64, n)
 
-	go sensor_agent.Simulate(n, ch)
+	go simulation.Simulate(n, ch)
 
 	timeout := time.After(time.Second * 5)
 	count := 0
@@ -61,7 +61,7 @@ func TestSimulate_FullChannel(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		sensor_agent.Simulate(1, ch)
+		simulation.Simulate(1, ch)
 		close(done)
 	}()
 
@@ -79,7 +79,7 @@ func TestSimulate_UnbufferedChannel(t *testing.T) {
 	n := 1
 
 	go func() {
-		sensor_agent.Simulate(n, ch)
+		simulation.Simulate(n, ch)
 	}()
 
 	select {
