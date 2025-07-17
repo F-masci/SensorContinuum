@@ -1,3 +1,6 @@
 .idea
 
 go.sum
+
+csv
+tests/sensor-agent/csv

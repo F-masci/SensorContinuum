@@ -18,10 +18,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o sensor-agent ./cmd/sensor-
 # Fase 2: runtime (immagine minimale)
 FROM gcr.io/distroless/static:nonroot
 
-WORKDIR /
+WORKDIR /app
 
 # Copia il binario compilato dalla fase builder
 COPY --from=builder /app/sensor-agent .
 
 # Esegui il binario
-ENTRYPOINT ["/sensor-agent"]
+ENTRYPOINT ["/app/sensor-agent"]
