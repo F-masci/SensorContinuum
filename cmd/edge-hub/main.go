@@ -6,9 +6,10 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
-// getContext ritorna il contesto del logger con le informazioni specifiche dell'hub
 func getContext() logger.Context {
 	return logger.Context{
 		"service":  "edge-hub",
@@ -18,38 +19,31 @@ func getContext() logger.Context {
 	}
 }
 
-func pullSensorData(dataChannel chan structure.SensorData) {
-	err := comunication.PullSensorData(dataChannel)
-	if err != nil {
-		logger.Log.Error("Failed to pull sensor data:", err.Error())
-		return
-	}
-}
-
 func main() {
-
-	// Inizializza l'ambiente
 	if err := edge_hub.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
 
-	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Edge Hub...")
 
-	// Avvia il servizio di processamento dei dati
-	logger.Log.Info("Starting data processing...")
+	dataChannel := make(chan structure.SensorData, 100)
 
-	for {
-		logger.Log.Debug("Waiting for data...")
+	// Avvia il produttore (MQTT) in una goroutine.
+	// questo nuovo approccio prevede che la funzione sia bloccante
+	// e che non ritornerà mai se non per un errore fatale.
+	go comunication.PullSensorData(dataChannel)
 
-		// Ottieni i dati dai sensori
-		dataChannel := make(chan structure.SensorData)
-		go pullSensorData(dataChannel)
+	// Avvia il consumatore in un'altra goroutine.
+	go edge_hub.ProcessSensorData(dataChannel)
 
-		// Processa i dati dei sensori
-		edge_hub.ProcessSensorData(dataChannel)
-	}
+	logger.Log.Info("Edge Hub is running. Waiting for termination signal (Ctrl+C)...")
 
+	// creazione canale quit che attende segnali per terminare in modo controllato
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Log.Info("Shutting down Edge Hub...")
 }
