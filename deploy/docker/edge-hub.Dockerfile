@@ -16,12 +16,21 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
 
 # Fase 2: runtime (immagine minimale)
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:latest
 
-WORKDIR /
+# Crea un utente non-root per una maggiore sicurezza
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
 
 # Copia il binario compilato dalla fase builder
 COPY --from=builder /app/edge-hub .
 
+# Imposta i permessi corretti per l'utente non-root
+RUN chown appuser:appgroup /app/edge-hub
+
+# Passa all'utente non-root
+USER appuser
+
 # Esegui il binario
-ENTRYPOINT ["/edge-hub"]
+ENTRYPOINT ["./edge-hub"]
