@@ -3,6 +3,7 @@ package structure
 import (
 	"encoding/json"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/segmentio/kafka-go"
 )
 
 type SensorData struct {
@@ -16,5 +17,11 @@ type SensorData struct {
 func CreateSensorDataFromMQTT(msg MQTT.Message) (SensorData, error) {
 	var data SensorData
 	err := json.Unmarshal(msg.Payload(), &data)
+	return data, err
+}
+
+func CreateSensorDataFromKafka(msg kafka.Message) (SensorData, error) {
+	var data SensorData
+	err := json.Unmarshal(msg.Value, &data)
 	return data, err
 }
