@@ -3,6 +3,7 @@ package main
 import (
 	"SensorContinuum/internal/edge-hub"
 	"SensorContinuum/internal/edge-hub/comunication"
+	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"os"
@@ -13,14 +14,14 @@ import (
 func getContext() logger.Context {
 	return logger.Context{
 		"service":  "edge-hub",
-		"building": edge_hub.BuildingID,
-		"floor":    edge_hub.FloorID,
-		"hub":      edge_hub.HubID,
+		"building": environment.BuildingID,
+		"floor":    environment.FloorID,
+		"hub":      environment.HubID,
 	}
 }
 
 func main() {
-	if err := edge_hub.SetupEnvironment(); err != nil {
+	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}

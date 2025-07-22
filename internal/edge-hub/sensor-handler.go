@@ -1,6 +1,7 @@
 package edge_hub
 
 import (
+	"SensorContinuum/internal/edge-hub/comunication"
 	"SensorContinuum/internal/edge-hub/processing"
 	"SensorContinuum/internal/edge-hub/processing/filtering"
 	"SensorContinuum/pkg/logger"
@@ -52,8 +53,10 @@ func ProcessSensorData(dataChannel chan structure.SensorData) {
 		// 6. (DA IMPLEMENTARE) Invia il dato valido al Fog Aggregator.
 		logger.Log.Info("Valid data received from sensor " + data.SensorID)
 		logger.Log.Info("value: ", data.Data)
-		logger.Log.Info("send data to Fog Aggregator...To do later")
-		// Esempio placeholder per il futuro:
-		// fog_aggregator.SendData(data)
+		logger.Log.Info("send data to Fog Aggregator")
+		err := comunication.SendFilteredData(data)
+		if err != nil {
+			logger.Log.Error("Error sending data to Fog Hub", err)
+		}
 	}
 }

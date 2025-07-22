@@ -1,7 +1,7 @@
 package comunication
 
 import (
-	"SensorContinuum/internal/edge-hub"
+	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"errors"
@@ -38,7 +38,7 @@ func messageHandler(dataChannel chan structure.SensorData) MQTT.MessageHandler {
 
 // onConnectHandler viene eseguito ogni volta che la connessione al broker ha successo.
 func onConnectHandler(client MQTT.Client) {
-	topic := edge_hub.BaseTopic + "#"
+	topic := environment.SensorDataTopic + "#"
 	logger.Log.Info("Successfully connected to MQTT broker. Subscribing to topic...")
 	// QoS 0, sottoscrivi al topic per ricevere i dati
 	token := client.Subscribe(topic, 0, nil) // Il message handler è globale
@@ -58,8 +58,8 @@ func onConnectHandler(client MQTT.Client) {
 // PullSensorData inizializza e gestisce la connessione MQTT in modo robusto.
 // Non ritorna mai, mantenendo viva la connessione.
 func PullSensorData(dataChannel chan structure.SensorData) error {
-	mqttId := edge_hub.BuildingID + "_" + edge_hub.FloorID + "_" + edge_hub.HubID
-	brokerURL := fmt.Sprintf("%s://%s:%s", edge_hub.MosquittoProtocol, edge_hub.MosquittoBroker, edge_hub.MosquittoPort)
+	mqttId := environment.BuildingID + "_" + environment.FloorID + "_" + environment.HubID
+	brokerURL := fmt.Sprintf("%s://%s:%s", environment.MosquittoProtocol, environment.MosquittoBroker, environment.MosquittoPort)
 
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
