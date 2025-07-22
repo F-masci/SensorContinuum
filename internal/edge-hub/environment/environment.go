@@ -3,12 +3,9 @@ package environment
 import (
 	"SensorContinuum/configs/kafka"
 	"SensorContinuum/configs/mosquitto"
-	"SensorContinuum/pkg/logger"
 	"errors"
 	"github.com/google/uuid"
 	"os"
-	"regexp"
-	"strconv"
 )
 
 var BuildingID string
@@ -61,12 +58,12 @@ func SetupEnvironment() error {
 
 	SensorDataTopic = BuildingID + "/" + FloorID + "/"
 
-	KafkaBroker, exists = os.LookupEnv("KAFKA_ADDRESS")
+	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {
 		KafkaBroker = kafka.BROKER
 	}
 
-	KafkaPort, exists = os.LookupEnv("KAFKA_PORT")
+	KafkaPort, exists = os.LookupEnv("KAFKA_BROKER_PORT")
 	if !exists {
 		KafkaPort = kafka.PORT
 	}
@@ -76,7 +73,7 @@ func SetupEnvironment() error {
 		EdgeHubTopic = kafka.EDGE_HUB_TOPIC + "_" + BuildingID
 	}
 
-	EdgeHubTopicPartition, exists := os.LookupEnv("KAFKA_EDGE_HUB_TOPIC_PARTITION")
+	EdgeHubTopicPartition, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC_PARTITION")
 	if !exists {
 		EdgeHubTopicPartition = FloorID
 	}

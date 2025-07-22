@@ -8,6 +8,14 @@ const PORT = "9094"
 // In particolare:
 // - il topic edge-hub permette la comunicazione tra l'edge hub e il proximity fog hub.
 // - il topic proximity-fog-hub permette la comunicazione tra il proximity fog hub e l'intermediate fog hub.
+// - il topic intermediate-fog-hub permette la comunicazione tra l'intermediate fog hub e il cloud.
 // Il nome e la relativa costante deriva da chi sta scrivendo il messaggio.
+
+// EDGE_HUB_TOPIC permette la comunicazione tra l'edge hub e il proximity fog hub.
 const EDGE_HUB_TOPIC = "raw-data-edge-hub"
+
+// PROXIMITY_FOG_HUB_TOPIC permette la comunicazione tra il proximity fog hub e l'intermediate fog hub.
 const PROXIMITY_FOG_HUB_TOPIC = "aggregated-data-proximity-fog-hub"
+
+// INTERMEDIATE_FOG_HUB_TOPIC permette la comunicazione tra l'intermediate fog hub e il cloud.
+const INTERMEDIATE_FOG_HUB_TOPIC = "persistence-data-intermediate-fog-hub"

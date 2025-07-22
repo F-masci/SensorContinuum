@@ -12,9 +12,8 @@ var HubID string
 
 var KafkaBroker string
 var KafkaPort string
-var EdgeHubTopic string
 var ProximityDataTopic string
-var ProximityDataTopicPartition string
+var IntermediateDataTopic string
 
 func SetupEnvironment() error {
 
@@ -40,19 +39,14 @@ func SetupEnvironment() error {
 		KafkaPort = kafka.PORT
 	}
 
-	EdgeHubTopic, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC")
-	if !exists {
-		EdgeHubTopic = kafka.EDGE_HUB_TOPIC + "_" + BuildingID
-	}
-
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC")
 	if !exists {
 		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_TOPIC + "_" + BuildingID
 	}
 
-	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
+	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")
 	if !exists {
-		ProximityDataTopicPartition = BuildingID
+		IntermediateDataTopic = kafka.INTERMEDIATE_FOG_HUB_TOPIC
 	}
 
 	return nil
