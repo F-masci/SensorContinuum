@@ -5,13 +5,15 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"context"
+	"encoding/json"
 	"github.com/segmentio/kafka-go"
 )
 
 var kafkaReader *kafka.Reader = nil
+var kafkaWriter *kafka.Writer = nil
 
 func connect() {
-	if kafkaReader != nil {
+	if kafkaReader != nil && kafkaWriter != nil {
 		return // already connected
 	}
 
@@ -21,7 +23,17 @@ func connect() {
 		Topic:   environment.EdgeHubTopic,
 		GroupID: environment.BuildingID,
 	})
-	logger.Log.Info("Connected to Kafka topic: ", environment.EdgeHubTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+	logger.Log.Info("Connected (reader) to Kafka topic: ", environment.EdgeHubTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+
+	// Configura il writer Kafka
+	kafkaWriter = &kafka.Writer{
+		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
+		Topic:        environment.ProximityDataTopic,
+		RequiredAcks: kafka.RequireOne,
+		Balancer:     &kafka.Hash{},
+	}
+	logger.Log.Info("Connected (writing) to Kafka topic: ", environment.ProximityDataTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+
 }
 
 func PullFilteredData(dataChannel chan structure.SensorData) error {
@@ -44,5 +56,26 @@ func PullFilteredData(dataChannel chan structure.SensorData) error {
 		}
 		dataChannel <- data
 	}
+
+}
+
+func SendAggregatedData(data structure.SensorData) error {
+
+	connect()
+
+	// Serializza il dato in JSON
+	msgBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	// Invia il messaggio sulla partizione desiderata
+	logger.Log.Debug("Sending message to Kafka topic: ", environment.ProximityDataTopic)
+	return kafkaWriter.WriteMessages(context.Background(),
+		kafka.Message{
+			Key:   []byte(environment.ProximityDataTopicPartition),
+			Value: msgBytes,
+		},
+	)
 
 }

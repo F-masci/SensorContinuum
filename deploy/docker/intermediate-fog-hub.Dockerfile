@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Compila il binario per linux
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o intermediate-fog-hub ./cmd/intermediate-fog-hub
 
 # Fase 2: runtime (immagine minimale)
 FROM gcr.io/distroless/static:nonroot
@@ -21,7 +21,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /app
 
 # Copia il binario compilato dalla fase builder
-COPY --from=builder /app/edge-hub .
+COPY --from=builder /app/intermediate-fog-hub .
 
 # Esegui il binario
-ENTRYPOINT ["/app/edge-hub"]
+ENTRYPOINT ["/app/intermediate-fog-hub"]

@@ -38,7 +38,7 @@ func SendFilteredData(data structure.SensorData) error {
 	}
 
 	// Invia il messaggio sulla partizione desiderata
-	logger.Log.Debug("Sending message to Kafka topic: ", environment.EdgeHubTopic, " Partition: ")
+	logger.Log.Debug("Sending message to Kafka topic: ", environment.EdgeHubTopic)
 	return kafkaWriter.WriteMessages(context.Background(),
 		kafka.Message{
 			Key:   []byte(environment.EdgeHubTopicPartition),
