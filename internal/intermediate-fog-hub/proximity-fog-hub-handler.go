@@ -1,8 +1,10 @@
 package intermediate_fog_hub
 
 import (
+	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
+	"fmt"
 
 	"context"
 	"log"
@@ -13,7 +15,10 @@ import (
 func ProcessProximityFogHubData(dataChannel chan structure.SensorData) {
 
 	// Connessione al DB
-	dbURL := "postgres://admin:adminpass@localhost:5432/timeseriesdb?sslmode=disable"
+	dbURL := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		environment.PostgresUser, environment.PostgresPass, environment.PostgresHost, environment.PostgresPort, environment.PostgresDatabase,
+	)
 	ctx := context.Background()
 
 	pool, err := pgxpool.New(ctx, dbURL)
@@ -39,6 +44,6 @@ func insertSensorData(ctx context.Context, db *pgxpool.Pool, d structure.SensorD
         INSERT INTO sensor_measurements (time, building_id, floor_id, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
-	_, err := db.Exec(ctx, query, d.Timestamp, d.BuildingID, d.FloorID, d.SensorID, "temperature", d.Data)
+	_, err := db.Exec(ctx, query, d.Timestamp, d.BuildingID, d.FloorID, d.SensorID, d.Type, d.Data)
 	return err
 }

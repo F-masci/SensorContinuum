@@ -9,9 +9,16 @@ import (
 
 // IsOutlier controlla se un dato è un outlier basandosi sulla storia recente.
 func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData) bool {
+
+	// Se i valori superano dei trashold, li consideriamo outlier.
+	if data.Data >= environment.FilteringMaxTreshold || data.Data <= environment.FilteringMinTreshold {
+		logger.Log.Debug("Data for sensor ", data.SensorID, "is out of bounds. Value:", data.Data)
+		return true
+	}
+
 	// Se non abbiamo abbastanza dati, non possiamo fare un calcolo significativo.
 	if len(historyReadings) < environment.FilteringMinSamples {
-		logger.Log.Debug("Not enough data to calculate outliers for sensor", data.SensorID, ". Current count:", len(historyReadings))
+		logger.Log.Debug("Not enough data to calculate outliers for sensor ", data.SensorID, ". Current count:", len(historyReadings))
 		return false
 	}
 
@@ -37,12 +44,12 @@ func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData
 	lowerBound := mean - environment.FilteringStdDevFactor*stdDev
 	upperBound := mean + environment.FilteringStdDevFactor*stdDev
 
-	logger.Log.Debug("Outlier check for sensor ", data.SensorID)
-	logger.Log.Info("Courrent value: ", data.Data)
-	logger.Log.Info("Mean: ", mean)
-	logger.Log.Info("StdDev: ", stdDev, " => ", environment.FilteringStdDevFactor, " * StdDev = ", environment.FilteringStdDevFactor*stdDev)
-	logger.Log.Info("LowerBound: ", lowerBound)
-	logger.Log.Info("UpperBound: ", upperBound)
+	logger.Log.Info("Outlier check for sensor ", data.SensorID)
+	logger.Log.Debug(" - Courrent value: ", data.Data)
+	logger.Log.Debug(" - Mean: ", mean)
+	logger.Log.Debug(" - StdDev: ", stdDev, " => ", environment.FilteringStdDevFactor, " * StdDev = ", environment.FilteringStdDevFactor*stdDev)
+	logger.Log.Debug(" - LowerBound: ", lowerBound)
+	logger.Log.Debug(" - UpperBound: ", upperBound)
 
 	// 4. Controlla se il nuovo dato è fuori dai limiti
 	return data.Data < lowerBound || data.Data > upperBound

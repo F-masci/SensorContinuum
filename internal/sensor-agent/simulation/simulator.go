@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"SensorContinuum/configs/simulation"
+	"SensorContinuum/pkg/structure"
 	"time"
 
 	"SensorContinuum/pkg/logger"
@@ -32,7 +33,7 @@ func setupSimulator() error {
 	return nil
 }
 
-func Simulate(nValue int, res chan float64) error {
+func Simulate(nValue int, dataChannel chan structure.SensorData) error {
 
 	err := setupSimulator()
 	if err != nil {
@@ -48,16 +49,15 @@ func Simulate(nValue int, res chan float64) error {
 
 	for nValue == infiniteValue || nValue > 0 {
 
-		value := generateValue()
+		sensorData := generateSensorData()
 
-		logger.Log.Debug("Sensor reading: ", value.Temperature)
+		logger.Log.Debug("Sensor reading: ", sensorData.Data)
 
-		if res != nil && value != (sensorReading{}) {
+		if dataChannel != nil && sensorData != (structure.SensorData{}) {
 			select {
-			case res <- value.Temperature:
-				logger.Log.Debug("Sent value to channel: ", value.Temperature)
+			case dataChannel <- sensorData:
 			default:
-				logger.Log.Error("Channel is full, skipping sending value: ", value.Temperature)
+				logger.Log.Error("Channel is full, skipping sending value: ", sensorData.Data)
 			}
 		}
 
@@ -73,10 +73,10 @@ func Simulate(nValue int, res chan float64) error {
 	return nil
 }
 
-func SimulateForever(res chan float64) {
+func SimulateForever(dataChannel chan structure.SensorData) {
 	logger.Log.Info("Starting sensor simulator loop...")
 	for {
-		if err := Simulate(infiniteValue, res); err != nil {
+		if err := Simulate(infiniteValue, dataChannel); err != nil {
 			logger.Log.Error("Error during simulation: ", err)
 			return
 		}

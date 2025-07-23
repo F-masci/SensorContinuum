@@ -3,22 +3,35 @@ services:
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: timescaledb-compose
+    hostname: timescaledb-host
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
-      POSTGRES_DB: timeseriesdb
+      POSTGRES_DB: sensorcontinuum
     ports:
       - "5432:5432"
     volumes:
-      - configs\postgresql\init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
+      - ../../configs/postgresql/init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - iot-net
 
   redis:
     image: redis:latest
     container_name: redis-compose
+    hostname: redis-storage
+    command: ["--bind", "0.0.0.0", "--protected-mode", "no"]
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - iot-net
 
@@ -29,6 +42,11 @@ services:
       - "2181:2181"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+    healthcheck:
+      test: [ "CMD", "zkServer.sh", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - iot-net
 
@@ -50,7 +68,13 @@ services:
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@:9093
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "kafka:9092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - iot-net
 
@@ -83,9 +107,11 @@ services:
       - KAFKA_BROKER_PORT=9094
       # - EDGE_HUB_TOPIC=raw-data-edge-hub_build-0001
       # - EDGE_HUB_TOPIC_PARTITION=1
+      - POSTGRES_HOST=timescaledb-host
     hostname: intermediate-fog-hub
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - iot-net
 
@@ -103,14 +129,15 @@ services:
       # - EDGE_HUB_TOPIC_PARTITION=0
     hostname: proximity-fog-hub
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - iot-net
 
   edge-hub:
     build:
       context: ../..
-      dockerfile: ../docker/edge-hub/aggregate-service.Dockerfile
+      dockerfile: deploy/docker/edge-hub.Dockerfile
     container_name: edge-hub-compose
     environment:
       - BUILDING_ID=building-0001
@@ -119,15 +146,15 @@ services:
       - MQTT_BROKER_ADDRESS=mosquitto-broker
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
+      - REDIS_ADDRESS=redis-storage
     hostname: edge-hub
     depends_on:
       mosquitto:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/healthy || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - iot-net
 
@@ -142,8 +169,7 @@ services:
       - SENSOR_ID=sensor-0001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
     depends_on:
-      edge-hub:
-        condition: service_healthy
+      - edge-hub
     networks:
       - iot-net
 

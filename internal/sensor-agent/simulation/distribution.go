@@ -2,7 +2,9 @@ package simulation
 
 import (
 	"SensorContinuum/configs/simulation"
+	"SensorContinuum/internal/sensor-agent/environment"
 	"SensorContinuum/pkg/logger"
+	"SensorContinuum/pkg/structure"
 	"math"
 	"math/rand"
 	"time"
@@ -20,10 +22,8 @@ type distribution struct {
 
 // SensorReading rappresenta una riga del CSV
 type sensorReading struct {
-	Timestamp   time.Time
-	Pressure    float64
-	Temperature float64
-	Humidity    float64
+	Timestamp time.Time
+	Value     float64
 }
 
 // setupDistribution carica il file e prepara la distribuzione
@@ -40,10 +40,18 @@ func setupDistribution(filePath string) error {
 	return nil
 }
 
-// generateValue genera una lettura randomica basata sulla distribuzione
-func generateValue() sensorReading {
-	now := time.Now()
-	return generateRandomReading(now)
+// generateSensorData genera letture randomiche basate sulla distribuzione
+func generateSensorData() structure.SensorData {
+	now := time.Now().UTC()
+	reading := generateRandomReading(now)
+	return structure.SensorData{
+		BuildingID: environment.BuildingID,
+		FloorID:    environment.FloorID,
+		SensorID:   environment.SensorID,
+		Timestamp:  reading.Timestamp.Format(time.RFC3339),
+		Type:       environment.SensorType,
+		Data:       reading.Value,
+	}
 }
 
 // computeStatsByHour calcola la media e la deviazione standard per le letture di una specifica ora
@@ -54,7 +62,7 @@ func computeStatsByHour() {
 		var vals []float64
 		for _, r := range readings {
 			if r.Timestamp.Hour() == hour {
-				vals = append(vals, r.Temperature)
+				vals = append(vals, r.Value)
 			}
 		}
 		if len(vals) == 0 {
@@ -87,20 +95,20 @@ func generateRandomReading(datetime time.Time) sensorReading {
 	}
 
 	// Genera un valore casuale basato sulla distribuzione normale
-	temp := rand.NormFloat64() * stats.Std
+	tmp := rand.NormFloat64() * stats.Std
 
 	// Aggiunge un outlier con una probabilità definita
 	if rand.Float64() < simulation.OUTLIER_PROBABILITY {
 		logger.Log.Debug("Generating outlier")
-		temp *= simulation.OUTLIER_MULTIPLIER // Moltiplica per il moltiplicatore per generare un outlier
-		temp += simulation.OUTLIER_ADDITION   // Aggiunge un valore per aumentare il centro dell'outlier
+		tmp *= simulation.OUTLIER_MULTIPLIER // Moltiplica per il moltiplicatore per generare un outlier
+		tmp += simulation.OUTLIER_ADDITION   // Aggiunge un valore per aumentare il centro dell'outlier
 	}
 
 	// Aggiunge la media per centrare il valore
-	temp += stats.Mean
+	tmp += stats.Mean
 
 	return sensorReading{
-		Timestamp:   datetime,
-		Temperature: temp,
+		Timestamp: datetime,
+		Value:     tmp,
 	}
 }
