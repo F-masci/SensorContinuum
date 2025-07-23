@@ -11,7 +11,7 @@ import (
 
 func getContext() logger.Context {
 	return logger.Context{
-		"service":  "edge-hub-aggregate",
+		"service":  "edge-hub-health-clean",
 		"building": environment.BuildingID,
 		"floor":    environment.FloorID,
 		"hub":      environment.HubID,
@@ -25,7 +25,7 @@ func main() {
 	}
 
 	logger.CreateLogger(getContext())
-	logger.Log.Info("Starting Edge Hub - Aggregate service...")
+	logger.Log.Info("Starting Edge Hub - Health&Clean service...")
 
 	if environment.OperationMode == "loop" {
 		logger.Log.Info("Operation mode is set to 'loop'. The service will run indefinitely.")
@@ -37,7 +37,8 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					edge_hub.AggregateAllSensorsData()
+					unhealthySensors := edge_hub.CleanUnhealthySensors()
+					edge_hub.NotifyUnhealthySensors(unhealthySensors)
 				}
 			}
 		}()
@@ -46,11 +47,12 @@ func main() {
 
 	if environment.OperationMode == "once" {
 		logger.Log.Info("Operation mode is set to 'once'. The service will run once and then terminate.")
-		edge_hub.AggregateAllSensorsData()
+		unhealthySensors := edge_hub.CleanUnhealthySensors()
+		edge_hub.NotifyUnhealthySensors(unhealthySensors)
 	}
 
+	// creazione canale quit che attende segnali per terminare in modo controllato
 	utils.WaitForTerminationSignal()
 
-	logger.Log.Info("Edge Hub is terminating")
-	logger.Log.Info("Shutting down Edge Hub - Aggregate service...")
+	logger.Log.Info("Shutting down Edge Hub - Health&Clean service...")
 }

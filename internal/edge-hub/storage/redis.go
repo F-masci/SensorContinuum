@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"strings"
 	"time"
 )
 
@@ -58,6 +59,8 @@ func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.
 		return nil, err
 	}
 
+	logger.Log.Debug("Retrieved ", len(vals), " readings for sensor ", sensorID, " at minute ", minute)
+
 	readings := make([]structure.SensorData, 0, len(vals))
 	for _, v := range vals {
 		var d structure.SensorData
@@ -67,13 +70,40 @@ func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.
 				continue
 			}
 			logger.Log.Debug("Checking reading timestamp: ", t, " against minute: ", minute)
-			tUTC := t.UTC()
-			minuteUTC := minute.UTC()
-			if tUTC.Year() == minuteUTC.Year() && tUTC.Month() == minuteUTC.Month() && tUTC.Day() == minuteUTC.Day() &&
-				tUTC.Hour() == minuteUTC.Hour() && tUTC.Minute() == minuteUTC.Minute() {
+			if t.Year() == minute.Year() && t.Month() == minute.Month() && t.Day() == minute.Day() &&
+				t.Hour() == minute.Hour() && t.Minute() == minute.Minute() {
 				readings = append(readings, d)
 			}
+		} else {
+			logger.Log.Error("Error unmarshalling sensor data: ", err)
+			continue
 		}
 	}
 	return readings, nil
+}
+
+func GetAllSensorIDs(ctx context.Context) ([]string, error) {
+	keys, err := RedisClient.Keys(ctx, "sensor:*:history").Result()
+	if err != nil {
+		return nil, err
+	}
+	sensorIDs := make([]string, 0, len(keys))
+	for _, key := range keys {
+		sensorID := strings.TrimPrefix(key, "sensor:")
+		sensorID = strings.TrimSuffix(sensorID, ":history")
+		logger.Log.Debug("Retrieving sensor ID from redis: ", sensorID)
+		sensorIDs = append(sensorIDs, sensorID)
+	}
+	return sensorIDs, nil
+}
+
+func RemoveSensorHistory(ctx context.Context, sensorID string) error {
+	key := fmt.Sprintf("sensor:%s:history", sensorID)
+	_, err := RedisClient.Del(ctx, key).Result()
+	if err != nil {
+		logger.Log.Error("Error removing sensor history for sensor ", sensorID, ": ", err)
+		return err
+	}
+	logger.Log.Info("Removed sensor history for sensor ", sensorID)
+	return nil
 }

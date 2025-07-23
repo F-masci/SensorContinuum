@@ -70,7 +70,7 @@ func PublishData(data float64) {
 		BuildingID: environment.BuildingID,
 		FloorID:    environment.FloorID,
 		SensorID:   environment.SensorID,
-		Timestamp:  time.Now().Format(time.RFC3339),
+		Timestamp:  time.Now().UTC().Format(time.RFC3339),
 		Data:       data,
 	}
 

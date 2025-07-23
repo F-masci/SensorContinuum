@@ -12,8 +12,9 @@ if "%~2"=="" (
     exit /b 1
 )
 
-set "IMAGE_NAME=%~1"
-set "VERSION=%~2"
+set "DOCKERFILE_NAME=%~1"
+set "IMAGE_NAME=%~2"
+set "VERSION=%~3"
 
 REM === PERCORSO CORRENTE ===
 set "CUR_DIR=%cd%"
@@ -54,7 +55,7 @@ echo [INFO] Trovata radice del progetto: !FULL_PATH!
 cd /d "!FULL_PATH!"
 
 REM === COSTRUISCI PATH DEL DOCKERFILE ===
-set "DOCKERFILE_PATH=deploy\docker\%IMAGE_NAME%.Dockerfile"
+set "DOCKERFILE_PATH=deploy\docker\%DOCKERFILE_NAME%.Dockerfile"
 
 REM === VERIFICA ESISTENZA DOCKERFILE ===
 if not exist "!DOCKERFILE_PATH!" (

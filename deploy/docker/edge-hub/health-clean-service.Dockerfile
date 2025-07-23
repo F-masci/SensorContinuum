@@ -10,10 +10,10 @@ RUN go mod tidy
 RUN go mod download
 
 # Copia il codice sorgente nel container
-COPY . .
+COPY .. .
 
 # Compila il binario per linux
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub-health-filter ./cmd/edge-hub/health-clean-service.go
 
 # Fase 2: runtime (immagine minimale)
 FROM gcr.io/distroless/static:nonroot
@@ -21,7 +21,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /app
 
 # Copia il binario compilato dalla fase builder
-COPY --from=builder /app/edge-hub .
+COPY --from=builder /app/edge-hub-health-filter .
 
 # Esegui il binario
-ENTRYPOINT ["/app/edge-hub"]
+ENTRYPOINT ["/app/edge-hub-health-filter"]

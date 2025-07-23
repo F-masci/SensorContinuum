@@ -1,8 +1,30 @@
 services:
 
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb-compose
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: timeseriesdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - configs\postgresql\init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
+    networks:
+      - iot-net
+
+  redis:
+    image: redis:latest
+    container_name: redis-compose
+    ports:
+      - "6379:6379"
+    networks:
+      - iot-net
+
   zookeeper:
     image: bitnami/zookeeper:latest
-    container_name: zookeeper
+    container_name: zookeeper-compose
     ports:
       - "2181:2181"
     environment:
@@ -12,7 +34,7 @@ services:
 
   kafka:
     image: bitnami/kafka:latest
-    container_name: kafka
+    container_name: kafka-compose
     hostname: kafka-broker
     ports:
       - "9094:9094"
@@ -88,7 +110,7 @@ services:
   edge-hub:
     build:
       context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+      dockerfile: ../docker/edge-hub/aggregate-service.Dockerfile
     container_name: edge-hub-compose
     environment:
       - BUILDING_ID=building-0001

@@ -81,6 +81,11 @@ func generateRandomReading(datetime time.Time) sensorReading {
 	stats := statsByHour[datetime.Hour()]
 	logger.Log.Debug("Generating random reading for hour: ", datetime.Hour(), " with mean: ", stats.Mean, " and std: ", stats.Std)
 
+	if rand.Float64() < simulation.MISSING_PROBABILITY {
+		logger.Log.Debug("Generating missing value")
+		return sensorReading{}
+	}
+
 	// Genera un valore casuale basato sulla distribuzione normale
 	temp := rand.NormFloat64() * stats.Std
 

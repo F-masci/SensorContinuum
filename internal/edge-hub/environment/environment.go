@@ -7,7 +7,15 @@ import (
 	"github.com/google/uuid"
 	"os"
 	"strconv"
+	"time"
 )
+
+// I valori validi per OperationMode sono:
+// - "loop": per eseguire in un ciclo continuo di aggregazione|pulizia dei dati. (default)
+// - "once": per eseguire una singola iterazione di aggregazione|pulizia dei dati.
+
+// OperationMode specifica la modalità di funzionamento del servizio.
+var OperationMode string
 
 var BuildingID string
 var FloorID string
@@ -23,13 +31,20 @@ var KafkaPort string
 var EdgeHubTopic string
 var EdgeHubTopicPartition string
 
-var HistoryWindowSize int = 10
+var HistoryWindowSize int = 25
 var FilteringMinSamples int = 5
 var FilteringStdDevFactor float64 = 5
+
+var UnhealthySensorTimeout time.Duration = 5 * time.Minute
 
 func SetupEnvironment() error {
 
 	var exists bool
+
+	OperationMode, exists = os.LookupEnv("OPERATION_MODE")
+	if !exists {
+		OperationMode = "loop"
+	}
 
 	BuildingID, exists = os.LookupEnv("BUILDING_ID")
 	if !exists {
