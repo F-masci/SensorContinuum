@@ -5,6 +5,7 @@ import (
 	"SensorContinuum/internal/sensor-agent/environment"
 	"SensorContinuum/internal/sensor-agent/simulation"
 	"SensorContinuum/pkg/logger"
+	"SensorContinuum/pkg/structure"
 	"os"
 )
 
@@ -15,6 +16,7 @@ func getContext() logger.Context {
 		"building": environment.BuildingID,
 		"floor":    environment.FloorID,
 		"sensor":   environment.SensorID,
+		"type":     environment.SensorType,
 	}
 }
 
@@ -32,9 +34,12 @@ func main() {
 	logger.Log.Info("Building ID: ", environment.BuildingID)
 	logger.Log.Info("Floor ID: ", environment.FloorID)
 	logger.Log.Info("Sensor ID: ", environment.SensorID)
+	logger.Log.Info("Sensor Location: ", environment.SensorLocation)
+	logger.Log.Info("Sensor Type: ", environment.SensorType)
+	logger.Log.Info("Sensor Reference: ", environment.SimulationSensorReference)
 
 	// Inizializza la comunicazione con il simulatore del sensore
-	sensorChannel := make(chan float64, 100)
+	sensorChannel := make(chan structure.SensorData, 100)
 	go simulation.SimulateForever(sensorChannel)
 
 	// Invia i dati al broker MQTT

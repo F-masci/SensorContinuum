@@ -31,9 +31,14 @@ var KafkaPort string
 var EdgeHubTopic string
 var EdgeHubTopicPartition string
 
+var RedisAddress string
+var RedisPort string
+
 var HistoryWindowSize int = 25
 var FilteringMinSamples int = 5
 var FilteringStdDevFactor float64 = 5
+var FilteringMinTreshold float64 = 0.0
+var FilteringMaxTreshold float64 = 60.0
 
 var UnhealthySensorTimeout time.Duration = 5 * time.Minute
 
@@ -98,12 +103,40 @@ func SetupEnvironment() error {
 		EdgeHubTopicPartition = FloorID
 	}
 
-	HistoryWindowSizeStr, exists := os.LookupEnv("HISTORY_WINDOW_SIZE")
+	RedisAddress, exists = os.LookupEnv("REDIS_ADDRESS")
 	if !exists {
+		RedisAddress = "localhost"
+	}
+
+	RedisPort, exists = os.LookupEnv("REDIS_PORT")
+	if !exists {
+		RedisPort = "6379"
+	}
+
+	HistoryWindowSizeStr, exists := os.LookupEnv("HISTORY_WINDOW_SIZE")
+	if exists {
 		var err error
 		HistoryWindowSize, err = strconv.Atoi(HistoryWindowSizeStr)
 		if err != nil {
-			HistoryWindowSize = 10
+			return errors.New("invalid value for HISTORY_WINDOW_SIZE: " + HistoryWindowSizeStr)
+		}
+	}
+
+	FilteringMinTresholdStr, exists := os.LookupEnv("FILTERING_MIN_TRESHOLD")
+	if exists {
+		var err error
+		FilteringMinTreshold, err = strconv.ParseFloat(FilteringMinTresholdStr, 64)
+		if err != nil {
+			return errors.New("invalid value for FILTERING_MIN_TRESHOLD: " + FilteringMinTresholdStr)
+		}
+	}
+
+	FilteringMaxTresholdStr, exists := os.LookupEnv("FILTERING_MAX_TRESHOLD")
+	if exists {
+		var err error
+		FilteringMaxTreshold, err = strconv.ParseFloat(FilteringMaxTresholdStr, 64)
+		if err != nil {
+			return errors.New("invalid value for FILTERING_MAX_TRESHOLD: " + FilteringMaxTresholdStr)
 		}
 	}
 

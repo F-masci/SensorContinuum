@@ -15,8 +15,9 @@ import (
 var RedisClient *redis.Client
 
 func InitRedisConnection() {
+	logger.Log.Debug("Initializing Redis connection with address: ", environment.RedisAddress, " and port: ", environment.RedisPort)
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: environment.RedisAddress + ":" + environment.RedisPort,
 	})
 }
 

@@ -53,7 +53,7 @@ func connectAndManage() {
 }
 
 // PublishData pubblica i dati del sensore al broker MQTT
-func PublishData(data float64) {
+func PublishData(sensorData structure.SensorData) {
 	// Assicura che la connessione sia gestita
 	if client == nil {
 		connectAndManage()
@@ -64,14 +64,6 @@ func PublishData(data float64) {
 		logger.Log.Warn("MQTT client not connected. Skipping data publishing.")
 		// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
 		return
-	}
-
-	sensorData := structure.SensorData{
-		BuildingID: environment.BuildingID,
-		FloorID:    environment.FloorID,
-		SensorID:   environment.SensorID,
-		Timestamp:  time.Now().UTC().Format(time.RFC3339),
-		Data:       data,
 	}
 
 	payload, err := json.Marshal(sensorData)

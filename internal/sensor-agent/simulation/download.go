@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"SensorContinuum/configs/simulation"
+	"SensorContinuum/internal/sensor-agent/environment"
 	"SensorContinuum/pkg/logger"
 	"fmt"
 	"io"
@@ -57,7 +58,13 @@ func downloadRandomCSV() (string, error) {
 		return "", err
 	}
 
-	re := regexp.MustCompile(`href="([^"]*dht22[^"]*\.csv)"`)
+	pattern := ""
+	if environment.SensorLocation == "building" {
+		pattern = fmt.Sprintf(`href="([^"]*(%s.*indoor|indoor.*%s)[^"]*\.csv)"`, environment.SimulationSensorReference, environment.SimulationSensorReference)
+	} else {
+		pattern = fmt.Sprintf(`href="([^"]*%s[^"]*\.csv)"`, environment.SimulationSensorReference)
+	}
+	re := regexp.MustCompile(pattern)
 	matches := re.FindAllStringSubmatch(string(body), -1)
 	if len(matches) == 0 {
 		logger.Log.Error("No CSV file found on page")

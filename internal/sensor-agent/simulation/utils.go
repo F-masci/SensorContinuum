@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"SensorContinuum/internal/sensor-agent/environment"
 	"encoding/csv"
 	"os"
 	"strconv"
@@ -15,7 +16,7 @@ func parseCSV(filePath string) ([]sensorReading, error) {
 	defer f.Close()
 
 	r := csv.NewReader(f)
-	r.Comma = ';'
+	r.Comma = environment.SimulationSeparator
 	records, err := r.ReadAll()
 	if err != nil {
 		return nil, err
@@ -33,28 +34,17 @@ func parseCSV(filePath string) ([]sensorReading, error) {
 
 	var res []sensorReading
 	for _, rec := range records[1:] {
-		timestamp, _ := time.Parse("2006-01-02T15:04:05", rec[colIndex["timestamp"]])
+		timestamp, _ := time.Parse(environment.SimulationTimestampFormat, rec[colIndex[environment.SimulationTimestampColumn]])
 
-		pressure := 0.0
-		if idx, ok := colIndex["pressure"]; ok {
-			pressure, _ = strconv.ParseFloat(rec[idx], 64)
+		value := 0.0
+		if idx, ok := colIndex[environment.SimulationValueColumn]; ok {
+			if value, err = strconv.ParseFloat(rec[idx], 64); err == nil {
+				res = append(res, sensorReading{
+					Timestamp: timestamp,
+					Value:     value,
+				})
+			}
 		}
-
-		temperature := 0.0
-		if idx, ok := colIndex["temperature"]; ok {
-			temperature, _ = strconv.ParseFloat(rec[idx], 64)
-		}
-
-		humidity := 0.0
-		if _, ok := colIndex["humidity"]; !ok {
-			humidity, _ = strconv.ParseFloat(rec[colIndex["humidity"]], 64)
-		}
-		res = append(res, sensorReading{
-			Timestamp:   timestamp,
-			Pressure:    pressure,
-			Temperature: temperature,
-			Humidity:    humidity,
-		})
 	}
 	return res, nil
 }

@@ -11,6 +11,7 @@ type SensorData struct {
 	FloorID    string  `json:"floor_id"`
 	SensorID   string  `json:"sensor_id"`
 	Timestamp  string  `json:"timestamp"`
+	Type       string  `json:"type"`
 	Data       float64 `json:"data"`
 }
 

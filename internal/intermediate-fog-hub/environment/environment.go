@@ -15,6 +15,12 @@ var KafkaPort string
 var ProximityDataTopic string
 var IntermediateDataTopic string
 
+var PostgresUser string
+var PostgresPass string
+var PostgresHost string
+var PostgresPort string
+var PostgresDatabase string
+
 func SetupEnvironment() error {
 
 	var exists bool
@@ -47,6 +53,31 @@ func SetupEnvironment() error {
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")
 	if !exists {
 		IntermediateDataTopic = kafka.INTERMEDIATE_FOG_HUB_TOPIC
+	}
+
+	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")
+	if !exists {
+		PostgresUser = "admin"
+	}
+
+	PostgresPass, exists = os.LookupEnv("POSTGRES_PASSWORD")
+	if !exists {
+		PostgresPass = "adminpass"
+	}
+
+	PostgresHost, exists = os.LookupEnv("POSTGRES_HOST")
+	if !exists {
+		PostgresHost = "localhost"
+	}
+
+	PostgresPort, exists = os.LookupEnv("POSTGRES_PORT")
+	if !exists {
+		PostgresPort = "5432"
+	}
+
+	PostgresDatabase, exists = os.LookupEnv("POSTGRES_DATABASE")
+	if !exists {
+		PostgresDatabase = "sensorcontinuum"
 	}
 
 	return nil
