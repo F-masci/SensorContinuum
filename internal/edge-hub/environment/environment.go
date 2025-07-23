@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"os"
+	"strconv"
 )
 
 var BuildingID string
@@ -21,6 +22,10 @@ var KafkaBroker string
 var KafkaPort string
 var EdgeHubTopic string
 var EdgeHubTopicPartition string
+
+var HistoryWindowSize int = 10
+var FilteringMinSamples int = 5
+var FilteringStdDevFactor float64 = 5
 
 func SetupEnvironment() error {
 
@@ -56,7 +61,7 @@ func SetupEnvironment() error {
 		MosquittoPort = mosquitto.PORT
 	}
 
-	SensorDataTopic = BuildingID + "/" + FloorID + "/"
+	SensorDataTopic = "$share/edge-hub-filtering/" + BuildingID + "/" + FloorID + "/"
 
 	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {
@@ -76,6 +81,15 @@ func SetupEnvironment() error {
 	EdgeHubTopicPartition, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC_PARTITION")
 	if !exists {
 		EdgeHubTopicPartition = FloorID
+	}
+
+	HistoryWindowSizeStr, exists := os.LookupEnv("HISTORY_WINDOW_SIZE")
+	if !exists {
+		var err error
+		HistoryWindowSize, err = strconv.Atoi(HistoryWindowSizeStr)
+		if err != nil {
+			HistoryWindowSize = 10
+		}
 	}
 
 	return nil

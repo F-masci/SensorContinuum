@@ -1,7 +1,7 @@
 package comunication
 
 import (
-	"SensorContinuum/internal/sensor-agent"
+	"SensorContinuum/internal/sensor-agent/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"encoding/json"
@@ -20,8 +20,8 @@ func connectAndManage() {
 		return
 	}
 
-	mqttId := sensor_agent.BuildingID + "_" + sensor_agent.FloorID + "_" + sensor_agent.SensorID
-	brokerURL := fmt.Sprintf("%s://%s:%s", sensor_agent.MosquittoProtocol, sensor_agent.MosquittoBroker, sensor_agent.MosquittoPort)
+	mqttId := environment.BuildingID + "_" + environment.FloorID + "_" + environment.SensorID
+	brokerURL := fmt.Sprintf("%s://%s:%s", environment.MosquittoProtocol, environment.MosquittoBroker, environment.MosquittoPort)
 
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
@@ -67,9 +67,9 @@ func PublishData(data float64) {
 	}
 
 	sensorData := structure.SensorData{
-		BuildingID: sensor_agent.BuildingID,
-		FloorID:    sensor_agent.FloorID,
-		SensorID:   sensor_agent.SensorID,
+		BuildingID: environment.BuildingID,
+		FloorID:    environment.FloorID,
+		SensorID:   environment.SensorID,
 		Timestamp:  time.Now().Format(time.RFC3339),
 		Data:       data,
 	}
@@ -80,7 +80,7 @@ func PublishData(data float64) {
 		return
 	}
 
-	topic := sensor_agent.BaseTopic + sensor_agent.SensorID
+	topic := environment.BaseTopic + environment.SensorID
 	token := client.Publish(topic, 0, false, payload)
 
 	// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
