@@ -52,7 +52,7 @@ func Simulate(nValue int, res chan float64) error {
 
 		logger.Log.Debug("Sensor reading: ", value.Temperature)
 
-		if res != nil {
+		if res != nil && value != (sensorReading{}) {
 			select {
 			case res <- value.Temperature:
 				logger.Log.Debug("Sent value to channel: ", value.Temperature)

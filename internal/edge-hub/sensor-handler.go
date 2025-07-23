@@ -18,7 +18,7 @@ func FilterSensorData(dataChannel chan structure.SensorData) {
 	ctx := context.Background()
 
 	for data := range dataChannel {
-		logger.Log.Debug("Processing data for sensor", data.SensorID)
+		logger.Log.Debug("Processing data for sensor: ", data.SensorID)
 
 		// 1. Recupera la storia dal Redis
 		readings, err := storage.GetSensorHistory(ctx, data.SensorID, environment.HistoryWindowSize)
@@ -39,7 +39,7 @@ func FilterSensorData(dataChannel chan structure.SensorData) {
 		}
 
 		// 4. Se il dato è valido, procedi con l'elaborazione successiva.
-		logger.Log.Debug("Data is valid for sensor", data.SensorID)
+		logger.Log.Debug("Data is valid for sensor: ", data.SensorID)
 
 		// 5. Aggiungi il nuovo dato alla storia su Redis se non è un outlier.
 		if err := storage.AddSensorHistory(ctx, data); err != nil {
@@ -49,45 +49,130 @@ func FilterSensorData(dataChannel chan structure.SensorData) {
 	}
 }
 
-// AggregateSensorData aggrega il dato del sensore corrente calcolando la media per il minuto corrente.
-func AggregateSensorData(sensorID string) structure.SensorData {
+// AggregateAllSensorsData esegue l'aggregazione per tutti i sensori presenti in Redis.
+func AggregateAllSensorsData() {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
+	sensorIDs, err := storage.GetAllSensorIDs(ctx)
+	if err != nil {
+		logger.Log.Error("Error getting sensor IDs from Redis: ", err)
+	}
+
+	var results []structure.SensorData
 	now := time.Now().UTC()
-	minuteStart := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, time.UTC)
-	readings, err := storage.GetSensorHistoryByMinute(ctx, sensorID, minuteStart)
+	minuteStart := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()-1, 0, 0, time.UTC)
+
+	logger.Log.Info("Starting aggregation for all sensors at ", minuteStart.Format(time.RFC3339))
+
+	for _, sensorID := range sensorIDs {
+		readings, err := storage.GetSensorHistoryByMinute(ctx, sensorID, minuteStart)
+		if err != nil {
+			logger.Log.Error("Error getting sensor history from Redis for sensor ", sensorID, ": ", err)
+			continue
+		}
+
+		if len(readings) == 0 {
+			logger.Log.Warn("No valid readings found for sensor " + sensorID + " in the current minute")
+			continue
+		}
+
+		avg := aggregation.AverageInMinute(readings, minuteStart)
+		buildingID := readings[0].BuildingID
+		floorID := readings[0].FloorID
+
+		result := structure.SensorData{
+			BuildingID: buildingID,
+			FloorID:    floorID,
+			SensorID:   sensorID,
+			Data:       avg,
+			Timestamp:  minuteStart.Format(time.RFC3339),
+		}
+		logger.Log.Info("Average for minute ", minuteStart.Format(time.RFC3339), " sensor "+sensorID+": ", avg)
+
+		err = comunication.SendAggregatedData(result)
+		if err != nil {
+			logger.Log.Error("Error sending average data to Proximity Fog Hub", err)
+		}
+
+		results = append(results, result)
+	}
+
+}
+
+func CleanUnhealthySensors() (unhealthySensors []string) {
+	storage.InitRedisConnection()
+	ctx := context.Background()
+
+	sensorIDs, err := storage.GetAllSensorIDs(ctx)
 	if err != nil {
-		logger.Log.Error("Error getting sensor history from Redis: ", err)
-		return structure.SensorData{}
+		logger.Log.Error("Error getting sensor IDs from Redis: ", err)
+		return
 	}
 
-	if len(readings) == 0 {
-		logger.Log.Warn("No valid readings found for sensor " + sensorID + " in the current minute")
-		return structure.SensorData{}
+	for _, sensorID := range sensorIDs {
+		readings, err := storage.GetSensorHistory(ctx, sensorID, environment.HistoryWindowSize)
+		if err != nil {
+			logger.Log.Error("Error getting sensor history from Redis for sensor ", sensorID, ": ", err)
+			continue
+		}
+
+		if len(readings) == 0 {
+			logger.Log.Warn("No readings found for sensor " + sensorID + ". Removing from Redis.")
+			if err := storage.RemoveSensorHistory(ctx, sensorID); err != nil {
+				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
+			}
+			unhealthySensors = append(unhealthySensors, sensorID)
+			continue
+		}
+
+		// Trova il timestamp più recente tra le letture
+		latestTime := time.Time{}
+		for _, reading := range readings {
+			t, err := time.Parse(time.RFC3339, reading.Timestamp)
+			if err != nil {
+				continue
+			}
+			if t.After(latestTime) {
+				latestTime = t
+			}
+		}
+
+		// Se l'ultima lettura è più vecchia di 5 minuti, elimina la storia
+		if time.Since(latestTime) > environment.UnhealthySensorTimeout {
+			logger.Log.Warn("Sensor " + sensorID + " inactive for over 5 minutes. Removing from Redis.")
+			if err := storage.RemoveSensorHistory(ctx, sensorID); err != nil {
+				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
+			}
+			unhealthySensors = append(unhealthySensors, sensorID)
+			continue
+		}
+
+		logger.Log.Info("Sensor "+sensorID+" for healthy. Readings count: ", len(readings))
+
 	}
 
-	// Calcola la media solo sui dati filtrati
-	avg := aggregation.AverageCurrentMinute(readings)
-
-	// Prendi BuildingID e FloorID dal primo dato valido
-	buildingID := readings[0].BuildingID
-	floorID := readings[0].FloorID
-
-	result := structure.SensorData{
-		BuildingID: buildingID,
-		FloorID:    floorID,
-		SensorID:   sensorID,
-		Data:       avg,
-		Timestamp:  minuteStart.Format(time.RFC3339),
+	logger.Log.Info("Cleaned up unhealthy sensors. Total sensors checked: ", len(sensorIDs))
+	if len(unhealthySensors) > 0 {
+		logger.Log.Warn("Unhealthy sensors found: ", unhealthySensors)
+	} else {
+		logger.Log.Info("No unhealthy sensors found.")
 	}
-	logger.Log.Info("Average for current minute for sensor "+sensorID+": ", avg)
+	return unhealthySensors
+}
 
-	// Invio al prossimo Hub
-	err = comunication.SendAggregatedData(result)
-	if err != nil {
-		logger.Log.Error("Error sending average data to Edge Hub - Aggregator Microservice", err)
+func NotifyUnhealthySensors(unhealthySensors []string) {
+	if len(unhealthySensors) == 0 {
+		logger.Log.Info("No unhealthy sensors to notify.")
+		return
 	}
 
-	return result
+	for _, sensorID := range unhealthySensors {
+		logger.Log.Warn("Notifying about unhealthy sensor: ", sensorID)
+		// TODO: Implement the actual notification logic
+		// err := comunication.NotifyUnhealthySensor(sensorID)
+		// if err != nil {
+		// 	 logger.Log.Error("Error notifying about unhealthy sensor ", sensorID, ": ", err)
+		// }
+	}
 }

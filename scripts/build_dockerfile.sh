@@ -9,8 +9,9 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-IMAGE_NAME="$1"
-VERSION="$2"
+DOCKERFILE_NAME="$1"
+IMAGE_NAME="$2"
+VERSION="$3"
 TARGET_DIR="SensorContinuum"
 
 # === PERCORSO CORRENTE ===
@@ -36,7 +37,7 @@ echo "[INFO] Trovata radice del progetto: $FULL_PATH"
 cd "$FULL_PATH"
 
 # === COSTRUISCI PATH DEL DOCKERFILE ===
-DOCKERFILE_PATH="deploy/docker/${IMAGE_NAME}.Dockerfile"
+DOCKERFILE_PATH="deploy/docker/${DOCKERFILE_NAME}.Dockerfile"
 
 # === VERIFICA ESISTENZA DOCKERFILE ===
 if [ ! -f "$DOCKERFILE_PATH" ]; then
