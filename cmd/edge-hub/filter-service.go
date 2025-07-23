@@ -6,9 +6,8 @@ import (
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/utils"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 func getContext() logger.Context {
@@ -36,15 +35,13 @@ func main() {
 	// e che non ritornerà mai se non per un errore fatale.
 	go comunication.PullSensorData(dataChannel)
 
-	// Avvia il consumatore in un'altra goroutine.
-	go edge_hub.ProcessSensorData(dataChannel)
+	// Avvia il filtro in un'altra goroutine.
+	go edge_hub.FilterSensorData(dataChannel)
 
 	logger.Log.Info("Edge Hub is running. Waiting for termination signal (Ctrl+C)...")
 
 	// creazione canale quit che attende segnali per terminare in modo controllato
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	utils.WaitForTerminationSignal()
 
 	logger.Log.Info("Shutting down Edge Hub...")
 }

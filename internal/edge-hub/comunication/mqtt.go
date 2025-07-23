@@ -64,6 +64,7 @@ func PullSensorData(dataChannel chan structure.SensorData) error {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
 	opts.SetClientID(mqttId)
+	opts.SetProtocolVersion(5)
 
 	// --- Impostazioni di Resilienza ---
 	opts.SetAutoReconnect(true)                    // Abilita la riconnessione automatica

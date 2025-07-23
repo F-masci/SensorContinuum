@@ -25,11 +25,3 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
-    command: >
-      bash -c "
-        /opt/bitnami/scripts/kafka/run.sh &
-        sleep 20 &&
-        kafka-topics.sh --delete --topic raw-data-edge-hub_build-0001 --bootstrap-server localhost:9094
-        kafka-topics.sh --create --topic raw-data-edge-hub_build-0001 --partitions 5 --replication-factor 1 --bootstrap-server localhost:9094
-        wait
-      "

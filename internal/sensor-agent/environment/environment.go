@@ -1,4 +1,4 @@
-package sensor_agent
+package environment
 
 import (
 	"errors"

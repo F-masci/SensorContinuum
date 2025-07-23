@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"SensorContinuum/configs/simulation"
 	"time"
 
 	"SensorContinuum/pkg/logger"
@@ -64,7 +65,7 @@ func Simulate(nValue int, res chan float64) error {
 			nValue--
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(simulation.TIMEOUT * time.Millisecond)
 
 	}
 

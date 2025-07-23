@@ -1,24 +1,16 @@
 package filtering
 
 import (
-	_ "SensorContinuum/internal/edge-hub/processing"
+	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"math"
 )
 
-const (
-	// MinSamplesForCalculation è il numero minimo di dati necessari prima di iniziare a calcolare gli outlier.
-	MinSamplesForCalculation = 5
-	// StdDevFactor determina quanto un valore si deve discostare dalla media per essere un outlier.
-	// Un valore comune è tra 2 e 3. Con 2, circa il 95% dei dati (in una distribuzione normale) è considerato valido.
-	StdDevFactor = 2.0
-)
-
 // IsOutlier controlla se un dato è un outlier basandosi sulla storia recente.
 func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData) bool {
 	// Se non abbiamo abbastanza dati, non possiamo fare un calcolo significativo.
-	if len(historyReadings) < MinSamplesForCalculation {
+	if len(historyReadings) < environment.FilteringMinSamples {
 		logger.Log.Debug("Not enough data to calculate outliers for sensor", data.SensorID, ". Current count:", len(historyReadings))
 		return false
 	}
@@ -42,20 +34,17 @@ func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData
 	stdDev := math.Sqrt(variance)
 
 	// 3. Calcola i limiti di accettazione
-	lowerBound := mean - StdDevFactor*stdDev
-	upperBound := mean + StdDevFactor*stdDev
+	lowerBound := mean - environment.FilteringStdDevFactor*stdDev
+	upperBound := mean + environment.FilteringStdDevFactor*stdDev
 
 	logger.Log.Debug("Outlier check for sensor ", data.SensorID)
-	logger.Log.Info("courrent value: ", data.Data)
-	logger.Log.Info("mean: ", mean)
-	logger.Log.Info("stdDev: ", stdDev)
-	logger.Log.Info("lowerBound: ", lowerBound)
-	logger.Log.Info("upperBound: ", upperBound)
+	logger.Log.Info("Courrent value: ", data.Data)
+	logger.Log.Info("Mean: ", mean)
+	logger.Log.Info("StdDev: ", stdDev, " => ", environment.FilteringStdDevFactor, " * StdDev = ", environment.FilteringStdDevFactor*stdDev)
+	logger.Log.Info("LowerBound: ", lowerBound)
+	logger.Log.Info("UpperBound: ", upperBound)
 
 	// 4. Controlla se il nuovo dato è fuori dai limiti
-	if data.Data < lowerBound || data.Data > upperBound {
-		return true
-	}
+	return data.Data < lowerBound || data.Data > upperBound
 
-	return false
 }

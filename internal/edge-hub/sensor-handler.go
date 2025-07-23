@@ -2,61 +2,92 @@ package edge_hub
 
 import (
 	"SensorContinuum/internal/edge-hub/comunication"
-	"SensorContinuum/internal/edge-hub/processing"
+	"SensorContinuum/internal/edge-hub/environment"
+	"SensorContinuum/internal/edge-hub/processing/aggregation"
 	"SensorContinuum/internal/edge-hub/processing/filtering"
+	"SensorContinuum/internal/edge-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
+	"context"
+	"time"
 )
 
-const (
-	// HistoryWindowSize definisce quanti dati storici per sensore conservare per l'analisi.
-	HistoryWindowSize = 10
-)
+// FilterSensorData orchestra il filtraggio dei dati dei sensori.
+func FilterSensorData(dataChannel chan structure.SensorData) {
+	storage.InitRedisConnection()
+	ctx := context.Background()
 
-// sensorStates mantiene la storia dei dati per ogni sensore.
-// La mappa usa l'ID del sensore come chiave.
-var sensorStates = make(map[string]*processing.History)
-
-// ProcessSensorData orchestra il processamento dei dati in arrivo.
-func ProcessSensorData(dataChannel chan structure.SensorData) {
 	for data := range dataChannel {
 		logger.Log.Debug("Processing data for sensor", data.SensorID)
 
-		// 1. Ottieni (o crea) la storia per questo specifico sensore
-		history, exists := sensorStates[data.SensorID]
-		if !exists {
-			logger.Log.Info("First time seeing sensor, creating history tracking for", data.SensorID)
-			history = processing.NewHistory(HistoryWindowSize)
-			sensorStates[data.SensorID] = history
+		// 1. Recupera la storia dal Redis
+		readings, err := storage.GetSensorHistory(ctx, data.SensorID, environment.HistoryWindowSize)
+		if err != nil {
+			logger.Log.Error("Error getting sensor history from Redis: ", err)
+			continue
 		}
 
 		// 2. Controlla se il dato è un outlier BASANDOSI sulla storia attuale (PRIMA di aggiungere il nuovo dato)
-		isOutlier := filtering.IsOutlier(data, history.GetReadings())
+		isOutlier := filtering.IsOutlier(data, readings)
 
-		// 3. Aggiungi SEMPRE il nuovo dato alla storia.
-		// In questo modo la finestra scorre costantemente, evitando il blocco.
-		// La storia conterrà sempre le ultime N misurazioni ricevute.
-		history.Add(data)
-
-		// 4. Ora, IN BASE AL RISULTATO del controllo, decidiamo se scartare il dato.
+		// 3. IN BASE AL RISULTATO del controllo, decidiamo se scartare il dato.
 		if isOutlier {
 			logger.Log.Warn("Outlier detected and discarded for sensor " + data.SensorID)
 			logger.Log.Warn("value outliner detected: ", data.Data)
 			logger.Log.Warn("timestamp: ", data.Timestamp)
-			// Il dato è un outlier, quindi saltiamo l'invio al Fog Aggregator.
 			continue
 		}
 
-		// 5. Se il dato è valido, procedi con l'elaborazione successiva.
+		// 4. Se il dato è valido, procedi con l'elaborazione successiva.
 		logger.Log.Debug("Data is valid for sensor", data.SensorID)
 
-		// 6. (DA IMPLEMENTARE) Invia il dato valido al Fog Aggregator.
-		logger.Log.Info("Valid data received from sensor " + data.SensorID)
-		logger.Log.Info("value: ", data.Data)
-		logger.Log.Info("send data to Fog Aggregator")
-		err := comunication.SendFilteredData(data)
-		if err != nil {
-			logger.Log.Error("Error sending data to Fog Hub", err)
+		// 5. Aggiungi il nuovo dato alla storia su Redis se non è un outlier.
+		if err := storage.AddSensorHistory(ctx, data); err != nil {
+			logger.Log.Error("Error saving sensor data to Redis: ", err)
+			continue
 		}
 	}
+}
+
+// AggregateSensorData aggrega il dato del sensore corrente calcolando la media per il minuto corrente.
+func AggregateSensorData(sensorID string) structure.SensorData {
+	storage.InitRedisConnection()
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	minuteStart := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, time.UTC)
+	readings, err := storage.GetSensorHistoryByMinute(ctx, sensorID, minuteStart)
+	if err != nil {
+		logger.Log.Error("Error getting sensor history from Redis: ", err)
+		return structure.SensorData{}
+	}
+
+	if len(readings) == 0 {
+		logger.Log.Warn("No valid readings found for sensor " + sensorID + " in the current minute")
+		return structure.SensorData{}
+	}
+
+	// Calcola la media solo sui dati filtrati
+	avg := aggregation.AverageCurrentMinute(readings)
+
+	// Prendi BuildingID e FloorID dal primo dato valido
+	buildingID := readings[0].BuildingID
+	floorID := readings[0].FloorID
+
+	result := structure.SensorData{
+		BuildingID: buildingID,
+		FloorID:    floorID,
+		SensorID:   sensorID,
+		Data:       avg,
+		Timestamp:  minuteStart.Format(time.RFC3339),
+	}
+	logger.Log.Info("Average for current minute for sensor "+sensorID+": ", avg)
+
+	// Invio al prossimo Hub
+	err = comunication.SendAggregatedData(result)
+	if err != nil {
+		logger.Log.Error("Error sending average data to Edge Hub - Aggregator Microservice", err)
+	}
+
+	return result
 }

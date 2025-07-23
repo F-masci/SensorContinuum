@@ -27,7 +27,7 @@ func connect() {
 	}
 }
 
-func SendFilteredData(data structure.SensorData) error {
+func SendAggregatedData(data structure.SensorData) error {
 
 	connect()
 
