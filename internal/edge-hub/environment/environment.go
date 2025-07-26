@@ -1,7 +1,6 @@
 package environment
 
 import (
-	"SensorContinuum/configs/kafka"
 	"SensorContinuum/configs/mosquitto"
 	"errors"
 	"github.com/google/uuid"
@@ -25,11 +24,7 @@ var MosquittoProtocol string
 var MosquittoBroker string
 var MosquittoPort string
 var SensorDataTopic string
-
-var KafkaBroker string
-var KafkaPort string
-var EdgeHubTopic string
-var EdgeHubTopicPartition string
+var FilteredDataTopic string
 
 var RedisAddress string
 var RedisPort string
@@ -81,27 +76,8 @@ func SetupEnvironment() error {
 		MosquittoPort = mosquitto.PORT
 	}
 
-	SensorDataTopic = "$share/edge-hub-filtering/" + BuildingID + "/" + FloorID + "/"
-
-	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
-	if !exists {
-		KafkaBroker = kafka.BROKER
-	}
-
-	KafkaPort, exists = os.LookupEnv("KAFKA_BROKER_PORT")
-	if !exists {
-		KafkaPort = kafka.PORT
-	}
-
-	EdgeHubTopic, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC")
-	if !exists {
-		EdgeHubTopic = kafka.EDGE_HUB_TOPIC + "_" + BuildingID
-	}
-
-	EdgeHubTopicPartition, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC_PARTITION")
-	if !exists {
-		EdgeHubTopicPartition = FloorID
-	}
+	SensorDataTopic = "$share/edge-hub-filtering/sensor-data/" + BuildingID + "/" + FloorID
+	FilteredDataTopic = "filtered-data/" + BuildingID + "/" + FloorID
 
 	RedisAddress, exists = os.LookupEnv("REDIS_ADDRESS")
 	if !exists {

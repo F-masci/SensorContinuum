@@ -1,10 +1,9 @@
 package comunication
 
 import (
-	"SensorContinuum/internal/edge-hub/environment"
+	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -15,7 +14,7 @@ import (
 var client MQTT.Client
 
 // sensorDataHandler è la funzione di callback che processa i messaggi in arrivo.
-func makeSensorDataHandler(sensorDataChannel chan structure.SensorData) MQTT.MessageHandler {
+func makeSensorDataHandler(filteredDataChannel chan structure.SensorData) MQTT.MessageHandler {
 	return func(client MQTT.Client, msg MQTT.Message) {
 		logger.Log.Debug("Received message on topic: ", msg.Topic())
 
@@ -28,20 +27,22 @@ func makeSensorDataHandler(sensorDataChannel chan structure.SensorData) MQTT.Mes
 		// select non bloccante, il ricevitore MQTT non viene mai bloccato dal processore
 		// Se il canale è pieno, scarta il messaggio per non rallentare la ricezione.
 		select {
-		case sensorDataChannel <- sensorData:
+		case filteredDataChannel <- sensorData:
 			// Messaggio inviato correttamente
+			logger.Log.Debug("Sent sensor data to channel")
+			break
 		default:
 			logger.Log.Warn("Data channel is full. Discarding message from sensor: ", sensorData.SensorID)
 		}
 	}
 }
 
-func makeConnectionHandler(sensorDataChannel chan structure.SensorData) MQTT.OnConnectHandler {
+func makeConnectionHandler(filteredDataChannel chan structure.SensorData) MQTT.OnConnectHandler {
 	return func(client MQTT.Client) {
-		topic := environment.SensorDataTopic + "/#"
+		topic := environment.FilteredDataTopic + "/#"
 		logger.Log.Info("Successfully connected to MQTT broker. Subscribing to topic: ", topic)
 		// QoS 0, sottoscrivi al topic per ricevere i dati
-		token := client.Subscribe(topic, 0, makeSensorDataHandler(sensorDataChannel)) // Il message handler è globale
+		token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)) // Il message handler è globale
 		logger.Log.Info("Subscribed to topic: ", topic)
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
 			logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
@@ -51,13 +52,13 @@ func makeConnectionHandler(sensorDataChannel chan structure.SensorData) MQTT.OnC
 }
 
 // connectAndManage gestisce la connessione una sola volta.
-func connectAndManage(sensorDataChannel chan structure.SensorData) {
+func connectAndManage(filteredDataChannel chan structure.SensorData) {
 	// Se il client è già definito e connesso, non fare nulla.
 	if client != nil && client.IsConnected() {
 		return
 	}
 
-	mqttId := environment.BuildingID + "_" + environment.FloorID + "_" + environment.HubID
+	mqttId := environment.BuildingID + "_" + environment.HubID
 	logger.Log.Info(fmt.Sprintf("MQTT Client ID: %s", mqttId))
 	brokerURL := fmt.Sprintf("%s://%s:%s", environment.MosquittoProtocol, environment.MosquittoBroker, environment.MosquittoPort)
 	logger.Log.Info(fmt.Sprintf("Broker URL: %s", brokerURL))
@@ -79,7 +80,7 @@ func connectAndManage(sensorDataChannel chan structure.SensorData) {
 	// Questo handler viene chiamato quando la connessione è stabilita con successo
 	// e permette di sottoscrivere ai topic desiderati.
 	// In questo caso, sottoscrive al topic dei dati del sensore.
-	opts.SetOnConnectHandler(makeConnectionHandler(sensorDataChannel))
+	opts.SetOnConnectHandler(makeConnectionHandler(filteredDataChannel))
 
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
 		logger.Log.Warn("Sensor lost connection to MQTT broker: ", err.Error())
@@ -95,7 +96,7 @@ func connectAndManage(sensorDataChannel chan structure.SensorData) {
 	}
 }
 
-func SetupMQTTConnection(sensorDataChannel chan structure.SensorData) {
+func SetupMQTTConnection(filteredDataChannel chan structure.SensorData) {
 
 	// Assicura che la connessione non sia già stata inizializzata.
 	if client != nil && client.IsConnected() {
@@ -104,7 +105,7 @@ func SetupMQTTConnection(sensorDataChannel chan structure.SensorData) {
 	}
 
 	// Inizializza la connessione MQTT
-	connectAndManage(sensorDataChannel)
+	connectAndManage(filteredDataChannel)
 
 	// Non procedere se la connessione non è attiva.
 	if !client.IsConnected() {
@@ -113,37 +114,4 @@ func SetupMQTTConnection(sensorDataChannel chan structure.SensorData) {
 	}
 
 	logger.Log.Info("MQTT connection established successfully.")
-}
-
-// PublishFilteredData pubblica i dati filtrati al broker MQTT
-func PublishFilteredData(filteredDataChannel chan structure.SensorData) {
-
-	// Non procedere se la connessione non è attiva.
-	if !client.IsConnected() {
-		logger.Log.Warn("MQTT client not connected. Skipping data publishing.")
-		// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
-		return
-	}
-
-	for filteredData := range filteredDataChannel {
-		payload, err := json.Marshal(filteredData)
-		if err != nil {
-			logger.Log.Error("Error during JSON serialization: ", err.Error())
-			return
-		}
-
-		topic := environment.FilteredDataTopic + "/" + filteredData.SensorID
-		token := client.Publish(topic, 0, false, payload)
-
-		// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
-		// cioè se la rete è lenta il sensore comunque non si blocca
-		//anche se il timeout scade il programma comunque prosegue
-		if !token.WaitTimeout(2 * time.Second) {
-			logger.Log.Warn("Timeout publishing message.")
-		} else if err := token.Error(); err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
-		} else {
-			logger.Log.Debug("Message published successfully.")
-		}
-	}
 }

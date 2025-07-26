@@ -3,6 +3,7 @@ package main
 import (
 	"SensorContinuum/internal/sensor-agent/comunication"
 	"SensorContinuum/internal/sensor-agent/environment"
+	"SensorContinuum/internal/sensor-agent/health"
 	"SensorContinuum/internal/sensor-agent/simulation"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
@@ -39,12 +40,30 @@ func main() {
 	logger.Log.Info("Sensor Reference: ", environment.SimulationSensorReference)
 
 	// Inizializza la comunicazione con il simulatore del sensore
-	sensorChannel := make(chan structure.SensorData, 100)
-	go simulation.SimulateForever(sensorChannel)
+	sensorChannelSource := make(chan structure.SensorData, 100)
+	go simulation.SimulateForever(sensorChannelSource)
 
+	sensorChannelTarget := make(chan structure.SensorData, 100)
 	// Invia i dati al broker MQTT
-	for data := range sensorChannel {
-		comunication.PublishData(data)
+	go comunication.PublishData(sensorChannelTarget)
+
+	go func() {
+		for data := range sensorChannelSource {
+			health.UpdateLastValueTimestamp()
+			// Invia i dati al canale di comunicazione
+			select {
+			case sensorChannelTarget <- data:
+				health.UpdateLastValueTimestamp()
+			default:
+				logger.Log.Warn("MQTT channel is full, discarding data: ", data)
+			}
+		}
+	}()
+
+	// Abilita il canale di comunicazione per health check
+	if err := health.StartHealthCheckServer(":8080"); err != nil {
+		logger.Log.Error("Failed to enable health check channel: ", err.Error())
+		os.Exit(1)
 	}
 
 }

@@ -19,6 +19,11 @@ func InitRedisConnection() {
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr: environment.RedisAddress + ":" + environment.RedisPort,
 	})
+	logger.Log.Debug("Redis client initialized")
+	if err := RedisClient.Ping(context.Background()).Err(); err != nil {
+		logger.Log.Error("Failed to connect to Redis: ", err)
+		panic(fmt.Sprintf("Failed to connect to Redis at %s:%s", environment.RedisAddress, environment.RedisPort))
+	}
 }
 
 // AddSensorHistory Salva un nuovo dato SensorData nella lista Redis del sensore.

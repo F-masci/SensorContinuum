@@ -3,6 +3,7 @@ package simulation
 import (
 	"SensorContinuum/configs/simulation"
 	"SensorContinuum/pkg/structure"
+	"os"
 	"time"
 
 	"SensorContinuum/pkg/logger"
@@ -78,7 +79,7 @@ func SimulateForever(dataChannel chan structure.SensorData) {
 	for {
 		if err := Simulate(infiniteValue, dataChannel); err != nil {
 			logger.Log.Error("Error during simulation: ", err)
-			return
+			os.Exit(1)
 		}
 	}
 }
