@@ -2,6 +2,7 @@ package environment
 
 import (
 	"SensorContinuum/configs/kafka"
+	"SensorContinuum/configs/mosquitto"
 	"errors"
 	"github.com/google/uuid"
 	"os"
@@ -10,9 +11,13 @@ import (
 var BuildingID string
 var HubID string
 
+var MosquittoProtocol string
+var MosquittoBroker string
+var MosquittoPort string
+var FilteredDataTopic string
+
 var KafkaBroker string
 var KafkaPort string
-var EdgeHubTopic string
 var ProximityDataTopic string
 var ProximityDataTopicPartition string
 
@@ -30,6 +35,23 @@ func SetupEnvironment() error {
 		HubID = uuid.New().String()
 	}
 
+	MosquittoProtocol, exists = os.LookupEnv("MQTT_BROKER_PROTOCOL")
+	if !exists {
+		MosquittoProtocol = mosquitto.PROTOCOL
+	}
+
+	MosquittoBroker, exists = os.LookupEnv("MQTT_BROKER_ADDRESS")
+	if !exists {
+		MosquittoBroker = mosquitto.BROKER
+	}
+
+	MosquittoPort, exists = os.LookupEnv("MQTT_BROKER_PORT")
+	if !exists {
+		MosquittoPort = mosquitto.PORT
+	}
+
+	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + BuildingID
+
 	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {
 		KafkaBroker = kafka.BROKER
@@ -38,11 +60,6 @@ func SetupEnvironment() error {
 	KafkaPort, exists = os.LookupEnv("KAFKA_BROKER_PORT")
 	if !exists {
 		KafkaPort = kafka.PORT
-	}
-
-	EdgeHubTopic, exists = os.LookupEnv("KAFKA_EDGE_HUB_TOPIC")
-	if !exists {
-		EdgeHubTopic = kafka.EDGE_HUB_TOPIC + "_" + BuildingID
 	}
 
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC")

@@ -128,7 +128,7 @@ func SetupEnvironment() error {
 		MosquittoPort = mosquitto.PORT
 	}
 
-	BaseTopic = BuildingID + "/" + FloorID + "/"
+	BaseTopic = "sensor-data/" + BuildingID + "/" + FloorID
 
 	return nil
 

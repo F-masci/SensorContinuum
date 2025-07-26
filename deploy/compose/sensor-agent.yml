@@ -1,0 +1,19 @@
+services:
+
+  sensor-agent:
+    image: sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - BUILDING_ID=build-0001
+      - FLOOR_ID=floor-001
+      - MQTT_BROKER_ADDRESS=floor-001.mosquitto.local
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    restart: always
+    extra_hosts:
+      - "floor-001.mosquitto.local:192.168.0.10"

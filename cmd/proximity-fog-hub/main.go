@@ -33,10 +33,10 @@ func main() {
 	logger.Log.Info("Building ID: ", environment.BuildingID)
 	logger.Log.Info("Hub ID: ", environment.HubID)
 
-	dataChannel := make(chan structure.SensorData)
-	go comunication.PullFilteredData(dataChannel)
+	filteredDataChannel := make(chan structure.SensorData)
+	go comunication.SetupMQTTConnection(filteredDataChannel)
 
-	go proximity_fog_hub.ProcessEdgeHubData(dataChannel)
+	go proximity_fog_hub.ProcessEdgeHubData(filteredDataChannel)
 
 	logger.Log.Info("Proximity Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()

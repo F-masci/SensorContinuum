@@ -1,0 +1,19 @@
+services:
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb-compose
+    hostname: timescaledb-host
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: sensorcontinuum
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../../configs/postgresql/init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3

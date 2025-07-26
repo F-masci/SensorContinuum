@@ -2,8 +2,10 @@ package main
 
 import (
 	"SensorContinuum/internal/edge-hub"
+	"SensorContinuum/internal/edge-hub/comunication"
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
+	"SensorContinuum/pkg/structure"
 	"SensorContinuum/pkg/utils"
 	"os"
 	"time"
@@ -27,6 +29,9 @@ func main() {
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Edge Hub - Aggregate service...")
 
+	filteredDataChannel := make(chan structure.SensorData, 100)
+	go comunication.PublishFilteredData(filteredDataChannel)
+
 	if environment.OperationMode == "loop" {
 		logger.Log.Info("Operation mode is set to 'loop'. The service will run indefinitely.")
 
@@ -37,7 +42,7 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					edge_hub.AggregateAllSensorsData()
+					edge_hub.AggregateAllSensorsData(filteredDataChannel)
 				}
 			}
 		}()
@@ -46,7 +51,9 @@ func main() {
 
 	if environment.OperationMode == "once" {
 		logger.Log.Info("Operation mode is set to 'once'. The service will run once and then terminate.")
-		edge_hub.AggregateAllSensorsData()
+		edge_hub.AggregateAllSensorsData(filteredDataChannel)
+		logger.Log.Info("Aggregation completed. The service will now terminate.")
+		os.Exit(0)
 	}
 
 	utils.WaitForTerminationSignal()

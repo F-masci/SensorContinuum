@@ -21,7 +21,9 @@ func connectAndManage() {
 	}
 
 	mqttId := environment.BuildingID + "_" + environment.FloorID + "_" + environment.SensorID
+	logger.Log.Info(fmt.Sprintf("MQTT Client ID: %s", mqttId))
 	brokerURL := fmt.Sprintf("%s://%s:%s", environment.MosquittoProtocol, environment.MosquittoBroker, environment.MosquittoPort)
+	logger.Log.Info(fmt.Sprintf("Broker URL: %s", brokerURL))
 
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
@@ -53,7 +55,7 @@ func connectAndManage() {
 }
 
 // PublishData pubblica i dati del sensore al broker MQTT
-func PublishData(sensorData structure.SensorData) {
+func PublishData(sensorChannel chan structure.SensorData) {
 	// Assicura che la connessione sia gestita
 	if client == nil {
 		connectAndManage()
@@ -66,23 +68,25 @@ func PublishData(sensorData structure.SensorData) {
 		return
 	}
 
-	payload, err := json.Marshal(sensorData)
-	if err != nil {
-		logger.Log.Error("Error during JSON serialization: ", err.Error())
-		return
-	}
+	for sensorData := range sensorChannel {
+		payload, err := json.Marshal(sensorData)
+		if err != nil {
+			logger.Log.Error("Error during JSON serialization: ", err.Error())
+			return
+		}
 
-	topic := environment.BaseTopic + environment.SensorID
-	token := client.Publish(topic, 0, false, payload)
+		topic := environment.BaseTopic + "/" + environment.SensorID
+		token := client.Publish(topic, 0, false, payload)
 
-	// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
-	// cioè se la rete è lenta il sensore comunque non si blocca
-	//anche se il timeout scade il programma comunque prosegue
-	if !token.WaitTimeout(2 * time.Second) {
-		logger.Log.Warn("Timeout publishing message.")
-	} else if err := token.Error(); err != nil {
-		logger.Log.Error("Error publishing message: ", err.Error())
-	} else {
-		logger.Log.Debug("Message published successfully.")
+		// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
+		// cioè se la rete è lenta il sensore comunque non si blocca
+		// anche se il timeout scade il programma comunque prosegue
+		if !token.WaitTimeout(2 * time.Second) {
+			logger.Log.Warn("Timeout publishing message.")
+		} else if err := token.Error(); err != nil {
+			logger.Log.Error("Error publishing message: ", err.Error())
+		} else {
+			logger.Log.Debug("Message published successfully on topic: ", topic)
+		}
 	}
 }

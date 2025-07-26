@@ -1,0 +1,15 @@
+package health
+
+import "time"
+
+var lastValueTimestamp time.Time
+
+// UpdateLastValueTimestamp aggiorna il timestamp dell'ultimo valore ricevuto
+func UpdateLastValueTimestamp() {
+	lastValueTimestamp = time.Now()
+}
+
+// IsHealthy verifica se l'ultimo valore ricevuto è entro il timeout di salute
+func isHealthy() bool {
+	return time.Since(lastValueTimestamp) < 5*time.Minute
+}

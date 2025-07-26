@@ -15,10 +15,13 @@ COPY . .
 # Compila il binario per linux
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o sensor-agent ./cmd/sensor-agent
 
-# Fase 2: runtime (immagine minimale)
-FROM gcr.io/distroless/static:nonroot
+# Fase 2: runtime minimale con curl
+FROM alpine:latest
 
 WORKDIR /app
+
+# Installa curl per le richieste HTTP
+RUN apk add --no-cache curl
 
 # Copia il binario compilato dalla fase builder
 COPY --from=builder /app/sensor-agent .

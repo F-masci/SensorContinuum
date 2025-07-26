@@ -29,24 +29,24 @@ func main() {
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Edge Hub...")
 
-	dataChannel := make(chan structure.SensorData, 100)
-
-	// Avvia il produttore (MQTT) in una goroutine.
-	// questo nuovo approccio prevede che la funzione sia bloccante
-	// e che non ritornerà mai se non per un errore fatale.
-	go comunication.PullSensorData(dataChannel)
+	// Avvia il produttore (MQTT)
+	sensorDataChannel := make(chan structure.SensorData, 100)
+	comunication.SetupMQTTConnection(sensorDataChannel)
 
 	// Avvia il filtro in un'altra goroutine.
-	go edge_hub.FilterSensorData(dataChannel)
+	go edge_hub.FilterSensorData(sensorDataChannel)
 
 	aggregateTicker := time.NewTicker(time.Minute)
 	defer aggregateTicker.Stop()
+
+	filteredDataChannel := make(chan structure.SensorData, 100)
+	go comunication.PublishFilteredData(filteredDataChannel)
 
 	go func() {
 		for {
 			select {
 			case <-aggregateTicker.C:
-				edge_hub.AggregateAllSensorsData()
+				edge_hub.AggregateAllSensorsData(filteredDataChannel)
 			}
 		}
 	}()

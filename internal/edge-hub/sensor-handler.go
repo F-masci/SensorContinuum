@@ -1,7 +1,6 @@
 package edge_hub
 
 import (
-	"SensorContinuum/internal/edge-hub/comunication"
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/internal/edge-hub/processing/aggregation"
 	"SensorContinuum/internal/edge-hub/processing/filtering"
@@ -13,11 +12,11 @@ import (
 )
 
 // FilterSensorData orchestra il filtraggio dei dati dei sensori.
-func FilterSensorData(dataChannel chan structure.SensorData) {
+func FilterSensorData(sensorDataChannel chan structure.SensorData) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
-	for data := range dataChannel {
+	for data := range sensorDataChannel {
 		logger.Log.Debug("Processing data for sensor: ", data.SensorID)
 
 		// 1. Recupera la storia dal Redis
@@ -50,7 +49,7 @@ func FilterSensorData(dataChannel chan structure.SensorData) {
 }
 
 // AggregateAllSensorsData esegue l'aggregazione per tutti i sensori presenti in Redis.
-func AggregateAllSensorsData() {
+func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
@@ -90,11 +89,16 @@ func AggregateAllSensorsData() {
 		}
 		logger.Log.Info("Average for minute ", minuteStart.Format(time.RFC3339), " sensor "+sensorID+": ", avg)
 
-		err = comunication.SendAggregatedData(result)
-		if err != nil {
-			logger.Log.Error("Error sending average data to Proximity Fog Hub", err)
+		// Invia il risultato al canale di dati filtrati
+		select {
+		case filteredDataChannel <- result:
+			logger.Log.Debug("Sent aggregated data for sensor: ", sensorID)
+		default:
+			logger.Log.Warn("Filtered data channel is full, discarding aggregated data for sensor: ", sensorID)
 		}
 
+		// Aggiungi il risultato all'elenco dei risultati
+		// per eventuali operazioni successive
 		results = append(results, result)
 	}
 
