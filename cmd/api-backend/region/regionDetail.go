@@ -10,13 +10,32 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	id := request.PathParameters["id"]
+
+	// Esempio: cerca la regione con quell'id
 	regions := []structure.Region{
 		{Name: "region-001", Longitude: 9.19, Latitude: 45.46},
 		{Name: "region-002", Longitude: 13.36, Latitude: 38.11},
 		{Name: "region-003", Longitude: 12.50, Latitude: 41.89},
 	}
 
-	body, err := json.Marshal(regions)
+	var found *structure.Region
+	for _, r := range regions {
+		if r.Name == id {
+			found = &r
+			break
+		}
+	}
+
+	if found == nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNotFound,
+			Body:       `{"error":"Regione non trovata"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+
+	body, err := json.Marshal(found)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}

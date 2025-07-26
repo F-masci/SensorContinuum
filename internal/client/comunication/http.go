@@ -6,17 +6,11 @@ import (
 	"net/http"
 )
 
-type Client struct {
-	BaseURL string
-}
-
-func NewClient(baseURL string) *Client {
-	return &Client{BaseURL: baseURL}
-}
-
-func (c *Client) GetData(endpoint string) (string, error) {
-	url := fmt.Sprintf("%s/%s", c.BaseURL, endpoint)
-	resp, err := http.Get(url)
+func GetApiData(endpoint string) (string, error) {
+	if endpoint == "" {
+		return "", fmt.Errorf("endpoint vuoto: controlla la configurazione")
+	}
+	resp, err := http.Get(endpoint)
 	if err != nil {
 		return "", err
 	}
