@@ -1,19 +1,24 @@
 package main
 
 import (
-	"SensorContinuum/internal/client/comunication"
-	"fmt"
-	"log"
+	"SensorContinuum/internal/client/cli"
+	"SensorContinuum/internal/client/environment"
 )
 
 func main() {
 
-	c := comunication.NewClient("http://localhost:4566/restapis/9h0c72wjbe/dev/_user_request_")
-	data, err := c.GetData("region")
+	// Inizializza l'ambiente e le configurazioni necessarie
+	err := environment.SetupEnvironment()
 	if err != nil {
-		log.Fatalf("Errore nella richiesta: %v", err)
+		// Gestione dell'errore di configurazione
+		// Se non riesce a caricare le variabili d'ambiente, esce con un errore
+		panic("Errore nella configurazione dell'ambiente: " + err.Error())
 	}
 
-	fmt.Println("Risposta dal server:")
-	fmt.Println(data)
+	// Avvia il menù principale dell'applicazione
+	// Questo menù è stateless e non mantiene lo stato tra le chiamate
+	// Le operazioni come la gestione delle regioni saranno gestite in modo stateless
+	// all'interno del menù stesso, senza mantenere uno stato persistente
+	// per ogni operazione.
+	cli.MainMenu()
 }
