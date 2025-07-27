@@ -5,15 +5,13 @@ import (
 	"fmt"
 )
 
-// RegionMenu Sottomenù gestione zone stateless
+// RegionMenu mostra il menù di gestione delle zone e gestisce le interazioni dell'utente in modo stateless
 func RegionMenu() {
 	for {
 		fmt.Println("\n--- Gestione Zone ---")
 		fmt.Println("1) Lista zone")
-		fmt.Println("2) Dettaglio zona")
-		fmt.Println("3) Aggiungi zona")
-		fmt.Println("4) Modifica zona")
-		fmt.Println("5) Elimina zona")
+		fmt.Println("2) Ricerca zona per ID")
+		fmt.Println("3) Ricerca zona per nome")
 		fmt.Println("0) Torna al menù principale")
 		fmt.Print("Seleziona un'opzione: ")
 		choice := utils.ReadInput()
@@ -21,13 +19,9 @@ func RegionMenu() {
 		case "1":
 			listRegions()
 		case "2":
-			getRegionDetails()
+			getRegionDetailsByID()
 		case "3":
-			// addRegion()
-		case "4":
-			// updateRegion()
-		case "5":
-			// deleteRegion()
+			getRegionDetailsByName()
 		case "0":
 			return
 		default:

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"SensorContinuum/internal/api-backend/region"
 	"SensorContinuum/pkg/structure"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -10,10 +12,18 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	regions := []structure.Region{
-		{Name: "region-001", Longitude: 9.19, Latitude: 45.46},
-		{Name: "region-002", Longitude: 13.36, Latitude: 38.11},
-		{Name: "region-003", Longitude: 12.50, Latitude: 41.89},
+	ctx := context.Background()
+	regions, err := region.GetAllRegions(ctx)
+	if err != nil {
+		errBody, _ := json.Marshal(structure.ErrorResponse{
+			Error:  "Errore nel recupero delle regioni",
+			Detail: err.Error(),
+		})
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       string(errBody),
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
 	}
 
 	body, err := json.Marshal(regions)
