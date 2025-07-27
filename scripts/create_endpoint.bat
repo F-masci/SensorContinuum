@@ -32,21 +32,45 @@ for /r lambda %%F in (*.zip) do (
 
     REM Mappa nome funzione in path
     set "PATH_PART="
+    set "HAS_ID="
+    set "HAS_REGION_ID="
+    set "HAS_NAME="
     if /i "!FUNC!"=="regionList" (
         set "PATH_PART=list"
-    ) else if /i "!FUNC!"=="regionDetail" (
-        set "PATH_PART=detail"
+    ) else if /i "!FUNC!"=="regionSearchId" (
+        set "PATH_PART=search/id"
         set "HAS_ID=1"
+    ) else if /i "!FUNC!"=="regionSearchName" (
+        set "PATH_PART=search/name"
+        set "HAS_NAME=1"
+    ) else if /i "!FUNC!"=="buildingList" (
+        set "PATH_PART=list"
+    ) else if /i "!FUNC!"=="buildingSearchId" (
+        set "PATH_PART=search/id"
+        set "HAS_ID=1"
+    ) else if /i "!FUNC!"=="buildingSearchName" (
+        set "PATH_PART=search/name"
+        set "HAS_NAME=1"
+    ) else if /i "!FUNC!"=="buildingSearchRegion" (
+        set "PATH_PART=search/region"
+        set "HAS_REGION_ID=1"
     ) else (
         set "PATH_PART=!FUNC!"
     )
 
-    REM Crea la risorsa secondaria (es: /region/list o /region/detail/{id})
+    REM Crea la risorsa secondaria (es: /region/list o /region/search/name/{name})
     if defined HAS_ID (
         for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !SUBFOLDER_ID! --path-part !PATH_PART! --query "id" --output text') do set RESOURCE_ID=%%i
         for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !RESOURCE_ID! --path-part "{id}" --query "id" --output text') do set RESOURCE_ID=%%i
         set "RESOURCE_PATH=!SUBFOLDER!/!PATH_PART!/{id}"
-        set "HAS_ID="
+    ) else if defined HAS_REGION_ID (
+        for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !SUBFOLDER_ID! --path-part !PATH_PART! --query "id" --output text') do set RESOURCE_ID=%%i
+        for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !RESOURCE_ID! --path-part "{region_id}" --query "id" --output text') do set RESOURCE_ID=%%i
+        set "RESOURCE_PATH=!SUBFOLDER!/!PATH_PART!/{region_id}"
+    ) else if defined HAS_NAME (
+        for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !SUBFOLDER_ID! --path-part !PATH_PART! --query "id" --output text') do set RESOURCE_ID=%%i
+        for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !RESOURCE_ID! --path-part "{name}" --query "id" --output text') do set RESOURCE_ID=%%i
+        set "RESOURCE_PATH=!SUBFOLDER!/!PATH_PART!/{name}"
     ) else (
         for /f "tokens=*" %%i in ('aws --endpoint-url=%ENDPOINT% apigateway create-resource --rest-api-id !API_ID! --parent-id !SUBFOLDER_ID! --path-part !PATH_PART! --query "id" --output text') do set RESOURCE_ID=%%i
         set "RESOURCE_PATH=!SUBFOLDER!/!PATH_PART!"

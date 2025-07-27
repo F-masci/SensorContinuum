@@ -1,32 +1,50 @@
 package main
 
 import (
-	"SensorContinuum/internal/api-backend/region"
+	"SensorContinuum/internal/api-backend/building"
 	"SensorContinuum/pkg/structure"
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	ctx := context.Background()
-	regions, err := region.GetAllRegions(ctx)
+	idStr := request.PathParameters["id"]
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		errBody, _ := json.Marshal(structure.ErrorResponse{
-			Error:  "Errore nel recupero delle regioni",
+			Error:  "ID non valido",
 			Detail: err.Error(),
 		})
 		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
+			StatusCode: http.StatusBadRequest,
 			Body:       string(errBody),
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}
 
-	body, err := json.Marshal(regions)
+	ctx := context.Background()
+	buildingDetail, err := building.GetBuildingByID(ctx, id)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       `{"error":"Errore nel recupero dell'edificio"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+	if buildingDetail == nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNotFound,
+			Body:       `{"error":"Edificio non trovato"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+
+	body, err := json.Marshal(buildingDetail)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}

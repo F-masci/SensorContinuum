@@ -2,6 +2,7 @@ package region
 
 import (
 	"SensorContinuum/internal/client/comunication/api"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/utils"
 	"fmt"
 )
@@ -9,63 +10,52 @@ import (
 func listRegions() {
 	regions, err := api.GetRegions()
 	if err != nil {
-		fmt.Printf("Errore nel recupero delle regioni: %v\n", err)
+		logger.Log.Error("Error retrieving regions: ", err)
 		return
 	}
+	logger.Log.Debug("Founded ", len(regions), " regions")
 	fmt.Println("Zone disponibili:")
 	for _, r := range regions {
-		fmt.Printf("- %s (Lat: %.2f, Lon: %.2f)\n", r.Name, r.Latitude, r.Longitude)
+		fmt.Printf("- %s (ID: %d, Edifici: %d)\n", r.Name, r.Id, r.BuildingCount)
 	}
 }
 
-func getRegionDetails() {
-	fmt.Print("Nome della zona: ")
-	name := utils.ReadInput()
-	region, err := api.GetRegion(name)
+func getRegionDetailsByID() {
+	fmt.Print("ID della zona: ")
+	id := utils.ReadInput()
+	region, err := api.GetRegionById(id)
 	if err != nil {
-		fmt.Printf("Errore nel recupero della zona: %v\n", err)
+		logger.Log.Error("Error retrieving region: ", err)
 		return
 	}
-	fmt.Printf("Dettagli zona:\nNome: %s\nLatitudine: %.2f\nLongitudine: %.2f\n", region.Name, region.Latitude, region.Longitude)
-}
-
-/*func addRegion() {
-	var r structure.Region
-	fmt.Print("Nome nuova zona: ")
-	r.Name = utils.ReadInput()
-	fmt.Print("Latitudine: ")
-	fmt.Scanf("%f\n", &r.Latitude)
-	fmt.Print("Longitudine: ")
-	fmt.Scanf("%f\n", &r.Longitude)
-	if err := api.CreateRegion(r); err != nil {
-		fmt.Printf("Errore nell'aggiunta: %v\n", err)
+	logger.Log.Debug("Found region detail: ", region)
+	fmt.Printf("Dettagli zona:\nNome: %s\nID: %d\nNumero edifici: %d\n", region.Name, region.Id, region.BuildingCount)
+	if len(region.Buildings) > 0 {
+		fmt.Println("Edifici:")
+		for _, b := range region.Buildings {
+			fmt.Printf("- %s (ID: %d, Lat: %.6f, Lon: %.6f)\n", b.Name, b.Id, b.Lat, b.Lon)
+		}
 	} else {
-		fmt.Println("Zona aggiunta con successo.")
+		fmt.Println("Nessun edificio associato.")
 	}
 }
 
-func updateRegion() {
-	var r structure.Region
-	fmt.Print("Nome zona da modificare: ")
-	r.Name = utils.ReadInput()
-	fmt.Print("Nuova latitudine: ")
-	fmt.Scanf("%f\n", &r.Latitude)
-	fmt.Print("Nuova longitudine: ")
-	fmt.Scanf("%f\n", &r.Longitude)
-	if err := api.UpdateRegion(r); err != nil {
-		fmt.Printf("Errore nella modifica: %v\n", err)
-	} else {
-		fmt.Println("Zona modificata con successo.")
-	}
-}
-
-func deleteRegion() {
-	fmt.Print("Nome zona da eliminare: ")
+func getRegionDetailsByName() {
+	fmt.Print("Nome della zona: ")
 	name := utils.ReadInput()
-	if err := api.DeleteRegion(name); err != nil {
-		fmt.Printf("Errore nell'eliminazione: %v\n", err)
+	region, err := api.GetRegionByName(name)
+	if err != nil {
+		logger.Log.Error("Error retrieving region: ", err)
+		return
+	}
+	logger.Log.Debug("Found region detail: ", region)
+	fmt.Printf("Dettagli zona:\nNome: %s\nID: %d\nNumero edifici: %d\n", region.Name, region.Id, region.BuildingCount)
+	if len(region.Buildings) > 0 {
+		fmt.Println("Edifici:")
+		for _, b := range region.Buildings {
+			fmt.Printf("- %s (ID: %d, Lat: %.6f, Lon: %.6f)\n", b.Name, b.Id, b.Lat, b.Lon)
+		}
 	} else {
-		fmt.Println("Zona eliminata con successo.")
+		fmt.Println("Nessun edificio associato.")
 	}
 }
-*/

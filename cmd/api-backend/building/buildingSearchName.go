@@ -1,8 +1,7 @@
 package main
 
 import (
-	"SensorContinuum/internal/api-backend/region"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/internal/api-backend/building"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -12,21 +11,26 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	name := request.PathParameters["name"]
+
 	ctx := context.Background()
-	regions, err := region.GetAllRegions(ctx)
+	buildingDetail, err := building.GetBuildingByName(ctx, name)
 	if err != nil {
-		errBody, _ := json.Marshal(structure.ErrorResponse{
-			Error:  "Errore nel recupero delle regioni",
-			Detail: err.Error(),
-		})
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       string(errBody),
+			Body:       `{"error":"Errore nel recupero dell'edificio"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+	if buildingDetail == nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNotFound,
+			Body:       `{"error":"Edificio non trovato"}`,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}
 
-	body, err := json.Marshal(regions)
+	body, err := json.Marshal(buildingDetail)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}

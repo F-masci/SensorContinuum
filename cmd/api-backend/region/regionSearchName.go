@@ -1,7 +1,8 @@
 package main
 
 import (
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/internal/api-backend/region"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -10,24 +11,18 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id := request.PathParameters["id"]
+	name := request.PathParameters["name"]
 
-	// Esempio: cerca la regione con quell'id
-	regions := []structure.Region{
-		{Name: "region-001", Longitude: 9.19, Latitude: 45.46},
-		{Name: "region-002", Longitude: 13.36, Latitude: 38.11},
-		{Name: "region-003", Longitude: 12.50, Latitude: 41.89},
+	ctx := context.Background()
+	regionDetail, err := region.GetRegionByName(ctx, name)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       `{"error":"Errore nel recupero della regione"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
 	}
-
-	var found *structure.Region
-	for _, r := range regions {
-		if r.Name == id {
-			found = &r
-			break
-		}
-	}
-
-	if found == nil {
+	if regionDetail == nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       `{"error":"Regione non trovata"}`,
@@ -35,7 +30,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	body, err := json.Marshal(found)
+	body, err := json.Marshal(regionDetail)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}

@@ -4,11 +4,7 @@ import (
 	"SensorContinuum/internal/client/comunication"
 	"SensorContinuum/internal/client/environment"
 	"SensorContinuum/pkg/structure"
-	// "bytes"
 	"encoding/json"
-	// "fmt"
-	// "io/ioutil"
-	// "net/http"
 	"strings"
 )
 
@@ -24,8 +20,8 @@ func GetRegions() ([]structure.Region, error) {
 	return regions, nil
 }
 
-func GetRegion(name string) (*structure.Region, error) {
-	url := strings.Replace(environment.RegionDetailUrl, "{id}", name, 1)
+func GetRegionById(id string) (*structure.Region, error) {
+	url := strings.Replace(environment.RegionSearchIdUrl, "{id}", id, 1)
 	body, err := comunication.GetApiData(url)
 	if err != nil {
 		return nil, err
@@ -37,61 +33,15 @@ func GetRegion(name string) (*structure.Region, error) {
 	return &region, nil
 }
 
-/*func CreateRegion(region structure.Region) error {
-	url := strings.Replace(environment.RegionUrl, "{id}", name, 1)
+func GetRegionByName(name string) (*structure.Region, error) {
+	url := strings.Replace(environment.RegionSearchNameUrl, "{name}", name, 1)
 	body, err := comunication.GetApiData(url)
-	data, _ := json.Marshal(region)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("errore HTTP: %s, %s", resp.Status, string(body))
+	var region structure.Region
+	if err := json.Unmarshal([]byte(body), &region); err != nil {
+		return nil, err
 	}
-	return nil
+	return &region, nil
 }
-
-func UpdateRegion(region structure.Region) error {
-	url := strings.Replace(environment.RegionUrl, "{id}", name, 1)
-	body, err := comunication.GetApiData(url)
-	data, _ := json.Marshal(region)
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(data))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("errore HTTP: %s, %s", resp.Status, string(body))
-	}
-	return nil
-}
-
-func DeleteRegion(name string) error {
-	url := strings.Replace(environment.RegionUrl, "{id}", name, 1)
-	body, err := comunication.GetApiData(url)
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
-	if err != nil {
-		return err
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("errore HTTP: %s, %s", resp.Status, string(body))
-	}
-	return nil
-}
-*/

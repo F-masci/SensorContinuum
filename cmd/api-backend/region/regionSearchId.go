@@ -6,27 +6,45 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	ctx := context.Background()
-	regions, err := region.GetAllRegions(ctx)
+	idStr := request.PathParameters["id"]
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		errBody, _ := json.Marshal(structure.ErrorResponse{
-			Error:  "Errore nel recupero delle regioni",
+			Error:  "ID non valido",
 			Detail: err.Error(),
 		})
 		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
+			StatusCode: http.StatusBadRequest,
 			Body:       string(errBody),
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}
 
-	body, err := json.Marshal(regions)
+	ctx := context.Background()
+	regionDetail, err := region.GetRegionByID(ctx, id)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       `{"error":"Errore nel recupero della regione"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+	if regionDetail == nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNotFound,
+			Body:       `{"error":"Regione non trovata"}`,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
+
+	body, err := json.Marshal(regionDetail)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}
