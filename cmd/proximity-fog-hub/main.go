@@ -33,8 +33,9 @@ func main() {
 	logger.Log.Info("Building ID: ", environment.BuildingID)
 	logger.Log.Info("Hub ID: ", environment.HubID)
 
-	filteredDataChannel := make(chan structure.SensorData)
-	go comunication.SetupMQTTConnection(filteredDataChannel)
+	filteredDataChannel := make(chan structure.SensorData, 100)
+	// inizializza connessione MQTT in maniera sincrona
+	comunication.SetupMQTTConnection(filteredDataChannel)
 
 	go proximity_fog_hub.ProcessEdgeHubData(filteredDataChannel)
 
