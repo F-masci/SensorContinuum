@@ -65,19 +65,17 @@ services:
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://kafka-broker:9094
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@:9093
+      # --- CORREZIONE QUI ---
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-broker:9093
       - ALLOW_PLAINTEXT_LISTENER=yes
-    depends_on:
-      zookeeper:
-        condition: service_healthy
+    # --- RIMOSSO depends_on: zookeeper ---
     healthcheck:
-      test: [ "CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "kafka:9092" ]
+      test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server kafka:9092" ]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5 # Aumentiamo un po' i tentativi per dare tempo a Kafka di avviarsi
     networks:
       - iot-net
-
   mosquitto:
     build:
       context: ../..
@@ -125,10 +123,13 @@ services:
       - HUB_ID=proximity-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
+      - MQTT_BROKER_ADDRESS=mosquitto-broker
       # - EDGE_HUB_TOPIC=raw-data-edge-hub_build-0001
       # - EDGE_HUB_TOPIC_PARTITION=0
     hostname: proximity-fog-hub
     depends_on:
+      mosquitto:
+        condition: service_healthy
       kafka:
         condition: service_healthy
     networks:

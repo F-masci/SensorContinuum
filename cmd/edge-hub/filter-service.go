@@ -10,22 +10,13 @@ import (
 	"os"
 )
 
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "edge-hub-filter",
-		"building": environment.BuildingID,
-		"floor":    environment.FloorID,
-		"hub":      environment.HubID,
-	}
-}
-
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
-
-	logger.CreateLogger(getContext())
+	const service = "edge-hub-filter"
+	logger.CreateLogger(logger.GetContext(service, environment.BuildingID, environment.FloorID, environment.HubID))
 	logger.Log.Info("Starting Edge Hub - Filtering service...")
 
 	// Avvia il produttore (MQTT)

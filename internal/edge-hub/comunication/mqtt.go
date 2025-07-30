@@ -36,11 +36,14 @@ func makeSensorDataHandler(sensorDataChannel chan structure.SensorData) MQTT.Mes
 	}
 }
 
+// funzione che viene chiamata quando la connessione MQTT è già riuscita e quello che facciamo ora è
+// fare la subscribe al topic dei dati del sensore. Cioè praticamente stiamo dicendo che l edge hub è sottoscritto
+// alla ricezione dei dati da parte dei sensori e quindi li riceve
 func makeConnectionHandler(sensorDataChannel chan structure.SensorData) MQTT.OnConnectHandler {
 	return func(client MQTT.Client) {
 		topic := environment.SensorDataTopic + "/#"
 		logger.Log.Info("Successfully connected to MQTT broker. Subscribing to topic: ", topic)
-		// QoS 0, sottoscrivi al topic per ricevere i dati
+		// QoS 0, sottoscrivi al topic per ricevere i dati dai sensori
 		token := client.Subscribe(topic, 0, makeSensorDataHandler(sensorDataChannel)) // Il message handler è globale
 		logger.Log.Info("Subscribed to topic: ", topic)
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
@@ -80,7 +83,6 @@ func connectAndManage(sensorDataChannel chan structure.SensorData) {
 	// e permette di sottoscrivere ai topic desiderati.
 	// In questo caso, sottoscrive al topic dei dati del sensore.
 	opts.SetOnConnectHandler(makeConnectionHandler(sensorDataChannel))
-
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
 		logger.Log.Warn("Sensor lost connection to MQTT broker: ", err.Error())
 	})
@@ -116,6 +118,9 @@ func SetupMQTTConnection(sensorDataChannel chan structure.SensorData) {
 }
 
 // PublishFilteredData pubblica i dati filtrati al broker MQTT
+// Praticamente sopra abbiamo fatto la subscribe nel ricevere i dati dai sensori, ora invece
+// facciamo diventare l edge hub un attore che pubblica i dati filtrati ( che saranno presi dal
+// proximity fog, il quale farà a sua volta la subscribe al broker mqtt  per rievere i dati
 func PublishFilteredData(filteredDataChannel chan structure.SensorData) {
 
 	// Non procedere se la connessione non è attiva.
@@ -133,6 +138,7 @@ func PublishFilteredData(filteredDataChannel chan structure.SensorData) {
 		}
 
 		topic := environment.FilteredDataTopic + "/" + filteredData.SensorID
+		// invia i dati al broker MQTT
 		token := client.Publish(topic, 0, false, payload)
 
 		// Usiamo WaitTimeout per non bloccare il sensore all'infinito,

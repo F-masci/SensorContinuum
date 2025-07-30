@@ -9,22 +9,14 @@ import (
 	"time"
 )
 
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "edge-hub-health-clean",
-		"building": environment.BuildingID,
-		"floor":    environment.FloorID,
-		"hub":      environment.HubID,
-	}
-}
-
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
+	const service = "edge-hub-health-clean"
+	logger.CreateLogger(logger.GetContext(service, environment.BuildingID, environment.FloorID, environment.HubID))
 
-	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Edge Hub - Health&Clean service...")
 
 	if environment.OperationMode == "loop" {
