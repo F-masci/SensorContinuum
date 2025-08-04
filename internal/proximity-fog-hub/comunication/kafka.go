@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/segmentio/kafka-go"
+	"time"
 )
 
 var kafkaWriter *kafka.Writer = nil
@@ -37,9 +38,13 @@ func SendAggregatedData(data structure.SensorData) error {
 		return err
 	}
 
-	// Invia il messaggio sulla partizione desiderata
-	logger.Log.Debug("Sending message to Kafka topic: ", environment.ProximityDataTopic)
-	return kafkaWriter.WriteMessages(context.Background(),
+	// Creiamo un contesto con un timeout di 5 secondi.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	logger.Log.Debug("Sending message to Kafka topic", "topic", environment.ProximityDataTopic)
+	// Usiamo il contesto nella chiamata di scrittura.
+	return kafkaWriter.WriteMessages(ctx,
 		kafka.Message{
 			Key:   []byte(environment.ProximityDataTopicPartition),
 			Value: msgBytes,
