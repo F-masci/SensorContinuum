@@ -7,6 +7,7 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"SensorContinuum/pkg/utils"
+	"os"
 )
 
 // getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
@@ -33,7 +34,15 @@ func main() {
 	logger.Log.Info("Hub ID: ", environment.HubID)
 
 	dataChannel := make(chan structure.SensorData)
-	go comunication.PullAggregatedData(dataChannel)
+	go func() {
+		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+		// Questo farà terminare l'applicazione.
+		err := comunication.PullAggregatedData(dataChannel)
+		if err != nil {
+			logger.Log.Error("Kafka consumer has stopped", "error", err.Error())
+			os.Exit(1)
+		}
+	}()
 
 	// Avvia il processo di gestione dei dati intermedi
 	go intermediate_fog_hub.ProcessProximityFogHubData(dataChannel)
