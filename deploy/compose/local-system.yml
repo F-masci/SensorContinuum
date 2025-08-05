@@ -124,13 +124,18 @@ services:
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
       - MQTT_BROKER_ADDRESS=mosquitto-broker
-      # - EDGE_HUB_TOPIC=raw-data-edge-hub_build-0001
-      # - EDGE_HUB_TOPIC_PARTITION=0
+      - POSTGRES_HOST=timescaledb-host
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=adminpass
+      - POSTGRES_DATABASE=sensorcontinuum
     hostname: proximity-fog-hub
     depends_on:
       mosquitto:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      timescaledb:
         condition: service_healthy
     networks:
       - iot-net
