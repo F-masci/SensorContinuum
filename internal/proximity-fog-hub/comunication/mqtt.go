@@ -74,30 +74,30 @@ func connectAndManage(filteredDataChannel chan structure.SensorData) {
 		topic := environment.FilteredDataTopic + "/#"
 		token := c.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
-			logger.Log.Error("Failed to re-subscribe to topic", "error", token.Error())
+			logger.Log.Error("Failed to re-subscribe to topic, error", token.Error())
 		}
 	})
 
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
-		logger.Log.Warn("Lost connection to MQTT broker", "error", err.Error())
+		logger.Log.Warn("Lost connection to MQTT broker, error ", err.Error())
 	})
 
 	client = MQTT.NewClient(opts)
 
 	logger.Log.Info("Attempting to connect to MQTT broker...")
 	if token := client.Connect(); token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		logger.Log.Error("Failed to connect to MQTT broker on startup", "error", token.Error())
+		logger.Log.Error("Failed to connect to MQTT broker on startup, error: ", token.Error())
 		os.Exit(1)
 	}
 
 	logger.Log.Info("Successfully connected to MQTT broker. Now subscribing...")
 	topic := environment.FilteredDataTopic + "/#"
 	if token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)); token.WaitTimeout(5*time.Second) && token.Error() != nil {
-		logger.Log.Error("Failed to subscribe on initial connection", "topic", topic, "error", token.Error())
+		logger.Log.Error("Failed to subscribe on initial connection/n topic: ", topic, "/n error: ", token.Error())
 		os.Exit(1)
 	}
 
-	logger.Log.Info("Successfully subscribed to topic", "topic", topic)
+	logger.Log.Info("Successfully subscribed to topic", topic)
 }
 
 func SetupMQTTConnection(filteredDataChannel chan structure.SensorData) {
@@ -118,6 +118,6 @@ func makeReconnectionHandler(client MQTT.Client, filteredDataChannel chan struct
 	logger.Log.Info("RE-CONNECTED to MQTT broker. Re-subscribing to topic: ", topic)
 	token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
 	if token.WaitTimeout(5*time.Second) && token.Error() != nil {
-		logger.Log.Error("Failed to re-subscribe to topic:", topic, "error:", token.Error())
+		logger.Log.Error("Failed to re-subscribe to topic: ", topic, "/n error:", token.Error())
 	}
 }
