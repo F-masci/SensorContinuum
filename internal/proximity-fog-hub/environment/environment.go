@@ -20,6 +20,16 @@ var KafkaBroker string
 var KafkaPort string
 var ProximityDataTopic string
 var ProximityDataTopicPartition string
+var KafkaAggregatedStatsTopic string // --- NUOVA VARIABILE ---
+
+// --- NUOVE VARIABILI PER POSTGRES ---
+var PostgresUser string
+var PostgresPass string
+var PostgresHost string
+var PostgresPort string
+var PostgresDatabase string
+
+// --- FINE NUOVE VARIABILI ---
 
 func SetupEnvironment() error {
 
@@ -70,6 +80,37 @@ func SetupEnvironment() error {
 	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
 	if !exists {
 		ProximityDataTopicPartition = BuildingID
+	}
+
+	// --- NUOVA LOGICA ---
+	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
+	if !exists {
+		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
+	}
+
+	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")
+	if !exists {
+		PostgresUser = "admin"
+	}
+
+	PostgresPass, exists = os.LookupEnv("POSTGRES_PASSWORD")
+	if !exists {
+		PostgresPass = "adminpass"
+	}
+
+	PostgresHost, exists = os.LookupEnv("POSTGRES_HOST")
+	if !exists {
+		PostgresHost = "timescaledb-host" // Deve puntare al servizio del DB
+	}
+
+	PostgresPort, exists = os.LookupEnv("POSTGRES_PORT")
+	if !exists {
+		PostgresPort = "5432"
+	}
+
+	PostgresDatabase, exists = os.LookupEnv("POSTGRES_DATABASE")
+	if !exists {
+		PostgresDatabase = "sensorcontinuum"
 	}
 
 	return nil

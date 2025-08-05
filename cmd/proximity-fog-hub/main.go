@@ -1,16 +1,18 @@
 package main
 
 import (
-	proximity_fog_hub "SensorContinuum/internal/proximity-fog-hub"
+	"SensorContinuum/internal/proximity-fog-hub"
+	"SensorContinuum/internal/proximity-fog-hub/aggregation"
 	"SensorContinuum/internal/proximity-fog-hub/comunication"
 	"SensorContinuum/internal/proximity-fog-hub/environment"
+	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"SensorContinuum/pkg/utils"
 	"os"
+	"time"
 )
 
-// getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
 func getContext() logger.Context {
 	return logger.Context{
 		"service":  "proximity-fog-hub",
@@ -20,24 +22,41 @@ func getContext() logger.Context {
 }
 
 func main() {
-
-	// Inizializza l'ambiente
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
 
-	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Proximity Fog Hub...")
-	logger.Log.Info("Building ID: ", environment.BuildingID)
-	logger.Log.Info("Hub ID: ", environment.HubID)
+
+	// Connessione al DB per la cache
+	if err := storage.InitDatabaseConnection(); err != nil {
+		logger.Log.Error("failed to connect with local db, error: ", err)
+		os.Exit(1)
+	}
 
 	filteredDataChannel := make(chan structure.SensorData, 100)
-	// inizializza connessione MQTT in maniera sincrona
 	comunication.SetupMQTTConnection(filteredDataChannel)
 
 	go proximity_fog_hub.ProcessEdgeHubData(filteredDataChannel)
+
+	// Avvio del ticker per l'aggregazione periodica, per ora metto ogni 2 minuti ma poi passa a ogni 5
+	statsTicker := time.NewTicker(2 * time.Minute)
+	logger.Log.Info("Ticker started, aggregating data every 2 minutes from now.")
+	defer statsTicker.Stop()
+
+	go func() {
+		// Esegui subito la prima volta per non aspettare 5 minuti
+		aggregation.PerformAggregationAndSend()
+		// Iniziamo poi con il loop infinito
+		for {
+			select {
+			case <-statsTicker.C:
+				aggregation.PerformAggregationAndSend()
+			}
+		}
+	}()
 
 	logger.Log.Info("Proximity Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()
