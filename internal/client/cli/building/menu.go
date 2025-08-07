@@ -6,25 +6,22 @@ import (
 )
 
 // BuildingMenu mostra il menù di gestione degli edifici e gestisce le interazioni dell'utente
-func BuildingMenu() {
+func BuildingMenu(regionName string) {
 	for {
-		fmt.Println("\n--- Gestione Edifici ---")
+		fmt.Println("\n--- Gestione Edifici (" + regionName + ") ---")
 		fmt.Println("1) Lista edifici")
 		fmt.Println("2) Cerca edificio per ID")
 		fmt.Println("3) Cerca edificio per nome")
-		fmt.Println("4) Lista edifici per regione")
 		fmt.Println("0) Torna al menu principale")
 		fmt.Print("Seleziona un'opzione: ")
 		choice := utils.ReadInput()
 		switch choice {
 		case "1":
-			listBuildings()
+			listBuildings(regionName)
 		case "2":
-			getBuildingByID()
+			getBuildingByID(regionName)
 		case "3":
-			getBuildingByName()
-		case "4":
-			getBuildingsByRegion()
+			getBuildingByName(regionName)
 		case "0":
 			return
 		default:

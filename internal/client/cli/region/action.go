@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func listRegions() {
+func ListRegions() {
 	regions, err := api.GetRegions()
 	if err != nil {
 		logger.Log.Error("Error retrieving regions: ", err)
@@ -16,11 +16,11 @@ func listRegions() {
 	logger.Log.Debug("Founded ", len(regions), " regions")
 	fmt.Println("Zone disponibili:")
 	for _, r := range regions {
-		fmt.Printf("- %s (ID: %d, Edifici: %d)\n", r.Name, r.Id, r.BuildingCount)
+		fmt.Printf("- %s (ID: %d)\n", r.Name, r.Id)
 	}
 }
 
-func getRegionDetailsByID() {
+func GetRegionDetailsByID() {
 	fmt.Print("ID della zona: ")
 	id := utils.ReadInput()
 	region, err := api.GetRegionById(id)
@@ -40,7 +40,7 @@ func getRegionDetailsByID() {
 	}
 }
 
-func getRegionDetailsByName() {
+func GetRegionDetailsByName() {
 	fmt.Print("Nome della zona: ")
 	name := utils.ReadInput()
 	region, err := api.GetRegionByName(name)

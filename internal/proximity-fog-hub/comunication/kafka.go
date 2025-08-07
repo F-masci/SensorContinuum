@@ -12,7 +12,8 @@ import (
 )
 
 var kafkaWriter *kafka.Writer = nil
-var statsKafkaWriter *kafka.Writer = nil // --- NUOVO WRITER PER LE STATISTICHE ---
+var statsKafkaWriter *kafka.Writer = nil         // --- NUOVO WRITER PER LE STATISTICHE ---
+var configurationKafkaWriter *kafka.Writer = nil // --- NUOVO WRITER PER LA CONFIGURAZIONE ---
 
 func connect() {
 	if kafkaWriter != nil {
@@ -34,7 +35,16 @@ func connect() {
 		RequiredAcks: kafka.RequireOne,
 		Balancer:     &kafka.Hash{},
 	}
-	logger.Log.Info("Connected (write) to Kafka topic for real-time data, topic:", environment.KafkaAggregatedStatsTopic)
+	logger.Log.Info("Connected (write) to Kafka topic for stats data, topic: ", environment.KafkaAggregatedStatsTopic)
+
+	// --- NUOVA LOGICA: Connessione per il topic della configurazione ---
+	configurationKafkaWriter = &kafka.Writer{
+		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
+		Topic:        environment.ProximityConfigurationTopic,
+		RequiredAcks: kafka.RequireOne,
+		Balancer:     &kafka.Hash{},
+	}
+	logger.Log.Info("Connected (write) to Kafka topic for configuration data, topic:", environment.ProximityConfigurationTopic)
 }
 
 func SendAggregatedData(data structure.SensorData) error {
@@ -67,6 +77,30 @@ func SendData(stats storage.AggregatedStats) error {
 	return statsKafkaWriter.WriteMessages(ctx,
 		kafka.Message{
 			Key:   []byte(environment.BuildingID), // Partizioniamo per edificio
+			Value: msgBytes,
+		},
+	)
+}
+
+func SendRegistrationMessage() error {
+	connect()
+
+	msg := structure.ConfigurationMsg{
+		MsgType:    "new_building",
+		BuildingID: environment.BuildingID,
+		Timestamp:  time.Now().Unix(),
+	}
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return configurationKafkaWriter.WriteMessages(ctx,
+		kafka.Message{
+			Key:   []byte(environment.BuildingID),
 			Value: msgBytes,
 		},
 	)

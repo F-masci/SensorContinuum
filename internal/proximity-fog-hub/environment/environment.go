@@ -19,6 +19,7 @@ var FilteredDataTopic string
 var KafkaBroker string
 var KafkaPort string
 var ProximityDataTopic string
+var ProximityConfigurationTopic string
 var ProximityDataTopicPartition string
 var KafkaAggregatedStatsTopic string // --- NUOVA VARIABILE ---
 
@@ -72,9 +73,14 @@ func SetupEnvironment() error {
 		KafkaPort = kafka.PORT
 	}
 
-	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC")
+	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_TOPIC + "_" + BuildingID
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + BuildingID
+	}
+
+	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
+	if !exists {
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + BuildingID
 	}
 
 	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
@@ -100,7 +106,7 @@ func SetupEnvironment() error {
 
 	PostgresHost, exists = os.LookupEnv("POSTGRES_HOST")
 	if !exists {
-		PostgresHost = "timescaledb-host" // Deve puntare al servizio del DB
+		PostgresHost = "localhost" // Deve puntare al servizio del DB
 	}
 
 	PostgresPort, exists = os.LookupEnv("POSTGRES_PORT")

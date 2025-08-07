@@ -13,13 +13,29 @@ var HubID string
 var KafkaBroker string
 var KafkaPort string
 var ProximityDataTopic string
+var ProximityConfigurationTopic string
 var IntermediateDataTopic string
 
-var PostgresUser string
-var PostgresPass string
-var PostgresHost string
-var PostgresPort string
-var PostgresDatabase string
+// Variabili per il DB Region
+var PostgresRegionUser string
+var PostgresRegionPass string
+var PostgresRegionHost string
+var PostgresRegionPort string
+var PostgresRegionDatabase string
+
+// Variabili per il DB Cloud
+var PostgresCloudUser string
+var PostgresCloudPass string
+var PostgresCloudHost string
+var PostgresCloudPort string
+var PostgresCloudDatabase string
+
+// Variabili per il DB Sensor
+var PostgresSensorUser string
+var PostgresSensorPass string
+var PostgresSensorHost string
+var PostgresSensorPort string
+var PostgresSensorDatabase string
 
 func SetupEnvironment() error {
 
@@ -45,9 +61,14 @@ func SetupEnvironment() error {
 		KafkaPort = kafka.PORT
 	}
 
-	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC")
+	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_TOPIC + "_" + BuildingID
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + BuildingID
+	}
+
+	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
+	if !exists {
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + BuildingID
 	}
 
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")
@@ -55,29 +76,70 @@ func SetupEnvironment() error {
 		IntermediateDataTopic = kafka.INTERMEDIATE_FOG_HUB_TOPIC
 	}
 
-	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")
+	// Inizializzazione variabili DB Region
+	PostgresRegionUser, exists = os.LookupEnv("POSTGRES_REGION_USER")
 	if !exists {
-		PostgresUser = "admin"
+		PostgresRegionUser = "admin"
+	}
+	PostgresRegionPass, exists = os.LookupEnv("POSTGRES_REGION_PASSWORD")
+	if !exists {
+		PostgresRegionPass = "adminpass"
+	}
+	PostgresRegionHost, exists = os.LookupEnv("POSTGRES_REGION_HOST")
+	if !exists {
+		PostgresRegionHost = "localhost"
+	}
+	PostgresRegionPort, exists = os.LookupEnv("POSTGRES_REGION_PORT")
+	if !exists {
+		PostgresRegionPort = "5434"
+	}
+	PostgresRegionDatabase, exists = os.LookupEnv("POSTGRES_REGION_DATABASE")
+	if !exists {
+		PostgresRegionDatabase = "sensorcontinuum"
 	}
 
-	PostgresPass, exists = os.LookupEnv("POSTGRES_PASSWORD")
+	// Inizializzazione variabili DB Cloud
+	PostgresCloudUser, exists = os.LookupEnv("POSTGRES_CLOUD_USER")
 	if !exists {
-		PostgresPass = "adminpass"
+		PostgresCloudUser = "admin"
+	}
+	PostgresCloudPass, exists = os.LookupEnv("POSTGRES_CLOUD_PASSWORD")
+	if !exists {
+		PostgresCloudPass = "adminpass"
+	}
+	PostgresCloudHost, exists = os.LookupEnv("POSTGRES_CLOUD_HOST")
+	if !exists {
+		PostgresCloudHost = "localhost"
+	}
+	PostgresCloudPort, exists = os.LookupEnv("POSTGRES_CLOUD_PORT")
+	if !exists {
+		PostgresCloudPort = "5433"
+	}
+	PostgresCloudDatabase, exists = os.LookupEnv("POSTGRES_CLOUD_DATABASE")
+	if !exists {
+		PostgresCloudDatabase = "sensorcontinuum"
 	}
 
-	PostgresHost, exists = os.LookupEnv("POSTGRES_HOST")
+	// Inizializzazione variabili DB Sensor
+	PostgresSensorUser, exists = os.LookupEnv("POSTGRES_SENSOR_USER")
 	if !exists {
-		PostgresHost = "localhost"
+		PostgresSensorUser = "admin"
 	}
-
-	PostgresPort, exists = os.LookupEnv("POSTGRES_PORT")
+	PostgresSensorPass, exists = os.LookupEnv("POSTGRES_SENSOR_PASSWORD")
 	if !exists {
-		PostgresPort = "5432"
+		PostgresSensorPass = "adminpass"
 	}
-
-	PostgresDatabase, exists = os.LookupEnv("POSTGRES_DATABASE")
+	PostgresSensorHost, exists = os.LookupEnv("POSTGRES_SENSOR_HOST")
 	if !exists {
-		PostgresDatabase = "sensorcontinuum"
+		PostgresSensorHost = "localhost"
+	}
+	PostgresSensorPort, exists = os.LookupEnv("POSTGRES_SENSOR_PORT")
+	if !exists {
+		PostgresSensorPort = "5432"
+	}
+	PostgresSensorDatabase, exists = os.LookupEnv("POSTGRES_SENSOR_DATABASE")
+	if !exists {
+		PostgresSensorDatabase = "sensorcontinuum"
 	}
 
 	return nil

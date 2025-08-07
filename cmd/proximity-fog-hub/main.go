@@ -30,6 +30,13 @@ func main() {
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Proximity Fog Hub...")
 
+	// Invia il messaggio di configurazione al Region Hub
+	if err := comunication.SendRegistrationMessage(); err != nil {
+		logger.Log.Error("Failed to send configuration message to Region Hub, error: ", err)
+		os.Exit(1)
+	}
+	logger.Log.Info("Configuration message sent to Intermediate Fog Hub successfully.")
+
 	// Connessione al DB per la cache
 	if err := storage.InitDatabaseConnection(); err != nil {
 		logger.Log.Error("failed to connect with local db, error: ", err)

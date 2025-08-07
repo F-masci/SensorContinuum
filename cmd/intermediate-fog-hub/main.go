@@ -44,8 +44,22 @@ func main() {
 		}
 	}()
 
+	msgChannel := make(chan structure.ConfigurationMsg)
+	go func() {
+		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+		// Questo farà terminare l'applicazione.
+		err := comunication.PullConfigurationMessage(msgChannel)
+		if err != nil {
+			logger.Log.Error("Kafka consumer has stopped", "error", err.Error())
+			os.Exit(1)
+		}
+	}()
+
 	// Avvia il processo di gestione dei dati intermedi
 	go intermediate_fog_hub.ProcessProximityFogHubData(dataChannel)
+
+	// Avvia il processo di gestione dei messaggi di configurazione
+	go intermediate_fog_hub.ProcessProximityFogHubConfiguration(msgChannel)
 
 	logger.Log.Info("Intermediate Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()
