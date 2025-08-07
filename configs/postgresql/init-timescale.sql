@@ -41,3 +41,18 @@ SELECT create_hypertable('proximity_hub_measurements', 'time');
 
 -- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 6 ore
 SELECT add_retention_policy('proximity_hub_measurements', INTERVAL '6 hours');
+
+-- =========================================================================================================================================
+-- ======== NUOVA TABELLA PER STATISTICHE AGGREGATE CHE IL PROXIMITY FOG CALCOLA OGNI TOT MINUTI E INVIA ALL INTERMEDIATE ==================
+-- =========================================================================================================================================
+
+CREATE TABLE IF NOT EXISTS aggregated_statistics (
+                                                     time         TIMESTAMPTZ       NOT NULL,
+                                                     building_id  TEXT              NOT NULL,
+                                                     type         TEXT              NOT NULL,
+                                                     min_value    DOUBLE PRECISION  NOT NULL,
+                                                     max_value    DOUBLE PRECISION  NOT NULL,
+                                                     avg_value    DOUBLE PRECISION  NOT NULL
+);
+
+SELECT create_hypertable('aggregated_statistics', 'time', if_not_exists => TRUE);

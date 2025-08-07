@@ -20,16 +20,14 @@ var KafkaBroker string
 var KafkaPort string
 var ProximityDataTopic string
 var ProximityDataTopicPartition string
-var KafkaAggregatedStatsTopic string // --- NUOVA VARIABILE ---
+var KafkaAggregatedStatsTopic string
 
-// --- NUOVE VARIABILI PER POSTGRES ---
+// VARIABILI PER POSTGRES
 var PostgresUser string
 var PostgresPass string
 var PostgresHost string
 var PostgresPort string
 var PostgresDatabase string
-
-// --- FINE NUOVE VARIABILI ---
 
 func SetupEnvironment() error {
 
