@@ -2,7 +2,6 @@ package comunication
 
 import (
 	"SensorContinuum/internal/proximity-fog-hub/environment"
-	"SensorContinuum/internal/proximity-fog-hub/storage" // --- NUOVA IMPORTAZIONE ---
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
 	"context"
@@ -11,14 +10,18 @@ import (
 	"time"
 )
 
+// writer per le misurazioni in tempo reale
 var kafkaWriter *kafka.Writer = nil
-var statsKafkaWriter *kafka.Writer = nil // --- NUOVO WRITER PER LE STATISTICHE ---
+
+// writer per le statistiche aggregate
+var statsKafkaWriter *kafka.Writer = nil
 
 func connect() {
 	if kafkaWriter != nil {
 		return
 	}
 
+	// connessione per il topic delle misurazioni in tempo reale
 	kafkaWriter = &kafka.Writer{
 		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
 		Topic:        environment.ProximityDataTopic,
@@ -27,7 +30,7 @@ func connect() {
 	}
 	logger.Log.Info("Connected (write) to Kafka topic for real-time data, topic: ", environment.ProximityDataTopic)
 
-	// --- NUOVA LOGICA: Connessione per il topic delle statistiche ---
+	// Connessione per il topic delle statistiche
 	statsKafkaWriter = &kafka.Writer{
 		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
 		Topic:        environment.KafkaAggregatedStatsTopic,
@@ -37,7 +40,7 @@ func connect() {
 	logger.Log.Info("Connected (write) to Kafka topic for real-time data, topic:", environment.KafkaAggregatedStatsTopic)
 }
 
-func SendAggregatedData(data structure.SensorData) error {
+func SendRealTimeData(data structure.SensorData) error {
 	connect()
 	msgBytes, err := json.Marshal(data)
 	if err != nil {
@@ -54,7 +57,7 @@ func SendAggregatedData(data structure.SensorData) error {
 }
 
 // SendData invia le statistiche aggregate al topic Kafka dedicato
-func SendData(stats storage.AggregatedStats) error {
+func SendData(stats structure.AggregatedStats) error {
 	connect()
 
 	msgBytes, err := json.Marshal(stats)

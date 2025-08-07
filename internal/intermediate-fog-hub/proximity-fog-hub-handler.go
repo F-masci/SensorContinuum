@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ProcessProximityFogHubData(dataChannel chan structure.SensorData) {
+func ProcessRealTimeData(dataChannel chan structure.SensorData) {
 
 	// Connessione al DB
 	dbURL := fmt.Sprintf(

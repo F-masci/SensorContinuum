@@ -28,6 +28,7 @@ func makeSensorDataHandler(sensorDataChannel chan structure.SensorData) MQTT.Mes
 		// select non bloccante, il ricevitore MQTT non viene mai bloccato dal processore
 		// Se il canale è pieno, scarta il messaggio per non rallentare la ricezione.
 		select {
+
 		case sensorDataChannel <- sensorData:
 			// Messaggio inviato correttamente
 		default:
