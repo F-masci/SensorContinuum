@@ -7,18 +7,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
-
-// Definiamo una struttura per i risultati delle aggregazioni
-
-type AggregatedStats struct {
-	Timestamp  string  `json:"timestamp"`
-	BuildingID string  `json:"building_id"`
-	Type       string  `json:"type"`
-	Min        float64 `json:"min"`
-	Max        float64 `json:"max"`
-	Avg        float64 `json:"avg"`
-}
 
 var DBPool *pgxpool.Pool
 
@@ -55,8 +45,7 @@ func InsertSensorData(ctx context.Context, d structure.SensorData) error {
 	return err
 }
 
-// GetStatsLastFiveMinutes interroga il DB per calcolare min, max e avg degli ultimi 5 minuti
-func GetValueToSend(ctx context.Context) ([]AggregatedStats, error) {
+func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]structure.AggregatedStats, error) {
 	query := `
         SELECT 
             type,
@@ -64,18 +53,18 @@ func GetValueToSend(ctx context.Context) ([]AggregatedStats, error) {
             MAX(value) as max_val,
             AVG(value) as avg_val
         FROM proximity_hub_measurements
-        WHERE time >= NOW() - INTERVAL '5 minutes'
+        WHERE time >= $1 AND time < $2 -- Usa i parametri di inizio e fine
         GROUP BY type
     `
-	rows, err := DBPool.Query(ctx, query)
+	rows, err := DBPool.Query(ctx, query, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("aggregation query failed: %w", err)
 	}
 	defer rows.Close()
 
-	var stats []AggregatedStats
+	var stats []structure.AggregatedStats
 	for rows.Next() {
-		var s AggregatedStats
+		var s structure.AggregatedStats
 		if err := rows.Scan(&s.Type, &s.Min, &s.Max, &s.Avg); err != nil {
 			logger.Log.Error("Error scanning statistics row, error:", err)
 			continue

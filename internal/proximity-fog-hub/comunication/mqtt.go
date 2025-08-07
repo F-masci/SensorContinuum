@@ -18,20 +18,24 @@ func makeSensorDataHandler(filteredDataChannel chan structure.SensorData) MQTT.M
 	return func(client MQTT.Client, msg MQTT.Message) {
 		logger.Log.Debug("Received message on topic: ", msg.Topic())
 
+		//convertiamo il messaggio grezzo MQTT nella struttura dati SensorData
 		sensorData, err := structure.CreateSensorDataFromMQTT(msg)
 		if err != nil {
 			logger.Log.Error("Error parsing sensor data from MQTT message: ", err.Error())
 			return
 		}
 
-		// select non bloccante, il ricevitore MQTT non viene mai bloccato dal processore
-		// Se il canale è pieno, scarta il messaggio per non rallentare la ricezione.
+		// tento nel mettere il dato nel canale, se il canale è pieno lo scarto
 		select {
+		// questa è l'operazione dove metto il dato nel canale "filteredDataChannel"
+		// se va a buon fine l'inserimento allora si attiva la goroutine ProcessEdgeHubData avviata dal main
+		// che era in attesa di ricevere dati nel canale "filteredDataChannel"
 		case filteredDataChannel <- sensorData:
-			// Messaggio inviato correttamente
+			// Messaggio inviato correttamente, la funzione termina il suo lavoro
 			logger.Log.Debug("Sent sensor data to channel")
 			break
 		default:
+			// se il canale è pieno scartiamo il messaggio per non bloccare la ricezione dei nuovi
 			logger.Log.Warn("Data channel is full. Discarding message from sensor: ", sensorData.SensorID)
 		}
 	}
@@ -45,7 +49,7 @@ func makeConnectionHandler(filteredDataChannel chan structure.SensorData) MQTT.O
 		token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)) // Il message handler è globale
 		logger.Log.Info("Subscribed to topic: ", topic)
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
-			logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
+			logger.Log.Error("Failed to subscribe to topic:", topic, ", Error:", token.Error())
 			os.Exit(1) // Esci se non riesci a sottoscrivere
 		}
 	}
@@ -72,14 +76,15 @@ func connectAndManage(filteredDataChannel chan structure.SensorData) {
 	opts.SetOnConnectHandler(func(c MQTT.Client) {
 		logger.Log.Info("RE-CONNECTED to MQTT broker. Re-subscribing...")
 		topic := environment.FilteredDataTopic + "/#"
+		// ogni volta che ricevi un messaggio a questo topic, esegui la funzione makeSensorDataHandler
 		token := c.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
-			logger.Log.Error("Failed to re-subscribe to topic, error", token.Error())
+			logger.Log.Error("Failed to re-subscribe to topic, error: ", token.Error())
 		}
 	})
 
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
-		logger.Log.Warn("Lost connection to MQTT broker, error ", err.Error())
+		logger.Log.Warn("Lost connection to MQTT broker, error: ", err.Error())
 	})
 
 	client = MQTT.NewClient(opts)
@@ -93,7 +98,7 @@ func connectAndManage(filteredDataChannel chan structure.SensorData) {
 	logger.Log.Info("Successfully connected to MQTT broker. Now subscribing...")
 	topic := environment.FilteredDataTopic + "/#"
 	if token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)); token.WaitTimeout(5*time.Second) && token.Error() != nil {
-		logger.Log.Error("Failed to subscribe on initial connection/n topic: ", topic, "/n error: ", token.Error())
+		logger.Log.Error("Failed to subscribe on initial connection, topic: ", topic, ", Error: ", token.Error())
 		os.Exit(1)
 	}
 
@@ -118,6 +123,6 @@ func makeReconnectionHandler(client MQTT.Client, filteredDataChannel chan struct
 	logger.Log.Info("RE-CONNECTED to MQTT broker. Re-subscribing to topic: ", topic)
 	token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
 	if token.WaitTimeout(5*time.Second) && token.Error() != nil {
-		logger.Log.Error("Failed to re-subscribe to topic: ", topic, "/n error:", token.Error())
+		logger.Log.Error("Failed to re-subscribe to topic: ", topic, ", error:", token.Error())
 	}
 }

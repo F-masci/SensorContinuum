@@ -12,6 +12,7 @@ var HubID string
 
 var KafkaBroker string
 var KafkaPort string
+var KafkaAggregatedStatsTopic string
 var ProximityDataTopic string
 var IntermediateDataTopic string
 
@@ -53,6 +54,11 @@ func SetupEnvironment() error {
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")
 	if !exists {
 		IntermediateDataTopic = kafka.INTERMEDIATE_FOG_HUB_TOPIC
+	}
+
+	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
+	if !exists {
+		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
 	}
 
 	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")

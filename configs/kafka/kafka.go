@@ -21,6 +21,6 @@ const PROXIMITY_FOG_HUB_TOPIC = "aggregated-data-proximity-fog-hub"
 const INTERMEDIATE_FOG_HUB_TOPIC = "persistence-data-intermediate-fog-hub"
 
 // AGGREGATED_STATS_TOPIC trasporta le statistiche aggregate (min, max, media)
-// calcolate dal Proximity-Fog-Hub ogni 5 minuti.
+// calcolate dal Proximity-Fog-Hub ogni tot minuti.
 // Questo topic è separato per distinguere i dati riassuntivi da quelli in tempo reale.
 const AGGREGATED_STATS_TOPIC = "statistics-data-proximity-fog-hub"
