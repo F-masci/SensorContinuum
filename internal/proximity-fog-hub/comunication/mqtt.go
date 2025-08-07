@@ -51,49 +51,53 @@ func makeConnectionHandler(filteredDataChannel chan structure.SensorData) MQTT.O
 	}
 }
 
-// connectAndManage gestisce la connessione una sola volta.
 func connectAndManage(filteredDataChannel chan structure.SensorData) {
-	// Se il client è già definito e connesso, non fare nulla.
 	if client != nil && client.IsConnected() {
 		return
 	}
 
 	mqttId := environment.BuildingID + "_" + environment.HubID
-	logger.Log.Info(fmt.Sprintf("MQTT Client ID: %s", mqttId))
 	brokerURL := fmt.Sprintf("%s://%s:%s", environment.MosquittoProtocol, environment.MosquittoBroker, environment.MosquittoPort)
-	logger.Log.Info(fmt.Sprintf("Broker URL: %s", brokerURL))
+
+	logger.Log.Info("MQTT configuration", "clientID", mqttId, "brokerURL", brokerURL)
 
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
 	opts.SetClientID(mqttId)
-	opts.SetProtocolVersion(5)
-
-	// --- Impostazioni di Resilienza ---
-
-	// la libreria paho gestisce automaticamente la riconnessione in background,
 	opts.SetAutoReconnect(true)
-	//controlla la frequenza di tenta della riconnessione
 	opts.SetMaxReconnectInterval(10 * time.Second)
 	opts.SetConnectRetry(true)
 
-	// Imposta il callback per la connessione riuscita
-	// Questo handler viene chiamato quando la connessione è stabilita con successo
-	// e permette di sottoscrivere ai topic desiderati.
-	// In questo caso, sottoscrive al topic dei dati del sensore.
-	opts.SetOnConnectHandler(makeConnectionHandler(filteredDataChannel))
+	// La callback di riconnessione
+	opts.SetOnConnectHandler(func(c MQTT.Client) {
+		logger.Log.Info("RE-CONNECTED to MQTT broker. Re-subscribing...")
+		topic := environment.FilteredDataTopic + "/#"
+		token := c.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
+		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
+			logger.Log.Error("Failed to re-subscribe to topic, error", token.Error())
+		}
+	})
 
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
-		logger.Log.Warn("Sensor lost connection to MQTT broker: ", err.Error())
+		logger.Log.Warn("Lost connection to MQTT broker, error ", err.Error())
 	})
 
 	client = MQTT.NewClient(opts)
 
-	logger.Log.Info("Sensor attempting to connect to MQTT broker at ", brokerURL)
+	logger.Log.Info("Attempting to connect to MQTT broker...")
 	if token := client.Connect(); token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		//L'errore di connessione inziale viene solo loggato, il meccanismo di
-		//AutoReconnect continuerà a tentare in background
-		logger.Log.Error("Sensor failed to connect initially:", token.Error())
+		logger.Log.Error("Failed to connect to MQTT broker on startup, error: ", token.Error())
+		os.Exit(1)
 	}
+
+	logger.Log.Info("Successfully connected to MQTT broker. Now subscribing...")
+	topic := environment.FilteredDataTopic + "/#"
+	if token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)); token.WaitTimeout(5*time.Second) && token.Error() != nil {
+		logger.Log.Error("Failed to subscribe on initial connection/n topic: ", topic, "/n error: ", token.Error())
+		os.Exit(1)
+	}
+
+	logger.Log.Info("Successfully subscribed to topic", topic)
 }
 
 func SetupMQTTConnection(filteredDataChannel chan structure.SensorData) {
@@ -106,12 +110,14 @@ func SetupMQTTConnection(filteredDataChannel chan structure.SensorData) {
 
 	// Inizializza la connessione MQTT
 	connectAndManage(filteredDataChannel)
+}
 
-	// Non procedere se la connessione non è attiva.
-	if !client.IsConnected() {
-		logger.Log.Warn("MQTT client not connected. Exiting setup.")
-		os.Exit(1)
+// Rinominiamo la vecchia funzione, ora si occuperà solo di RI-connessioni
+func makeReconnectionHandler(client MQTT.Client, filteredDataChannel chan structure.SensorData) {
+	topic := environment.FilteredDataTopic + "/#"
+	logger.Log.Info("RE-CONNECTED to MQTT broker. Re-subscribing to topic: ", topic)
+	token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel))
+	if token.WaitTimeout(5*time.Second) && token.Error() != nil {
+		logger.Log.Error("Failed to re-subscribe to topic: ", topic, "/n error:", token.Error())
 	}
-
-	logger.Log.Info("MQTT connection established successfully.")
 }
