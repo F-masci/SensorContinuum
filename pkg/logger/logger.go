@@ -17,6 +17,17 @@ type Logger struct {
 	debugLogger   *defaultLogger.Logger
 }
 
+type Level int
+
+const (
+	InfoLevel Level = iota
+	WarningLevel
+	ErrorLevel
+	DebugLevel
+)
+
+var currentLevel Level = DebugLevel
+
 // formatContext formatta il contesto in una stringa per essere utilizzata nei log
 func formatContext(ctx Context) string {
 	if len(ctx) == 0 {
@@ -42,7 +53,9 @@ func (l *Logger) Info(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
 	}
-	l.log(l.infoLogger, v...)
+	if currentLevel > InfoLevel {
+		l.log(l.infoLogger, v...)
+	}
 }
 
 // Warn scrive un messaggio di log di livello di avviso
@@ -50,7 +63,9 @@ func (l *Logger) Warn(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
 	}
-	l.log(l.warningLogger, v...)
+	if currentLevel > WarningLevel {
+		l.log(l.warningLogger, v...)
+	}
 }
 
 // Error scrive un messaggio di log di livello di errore
@@ -58,7 +73,9 @@ func (l *Logger) Error(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
 	}
-	l.log(l.errorLogger, v...)
+	if currentLevel > ErrorLevel {
+		l.log(l.errorLogger, v...)
+	}
 }
 
 // Debug scrive un messaggio di log di livello di debug
@@ -66,7 +83,9 @@ func (l *Logger) Debug(v ...interface{}) {
 	if l == nil {
 		return // Se il logger non è inizializzato, non fare nulla
 	}
-	l.log(l.debugLogger, v...)
+	if currentLevel > DebugLevel {
+		l.log(l.debugLogger, v...)
+	}
 }
 
 // Log è il logger globale che può essere utilizzato in tutto il pacchetto
@@ -81,6 +100,10 @@ func CreateLogger(ctx Context) {
 		errorLogger:   defaultLogger.New(os.Stderr, "[ERROR]   "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
 		debugLogger:   defaultLogger.New(os.Stdout, "[DEBUG]   "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
 	}
+}
+
+func SetLoggerLevel(level Level) {
+	currentLevel = level
 }
 
 func GetContext(service, BuildingID, FloorID, HubID string) Context {

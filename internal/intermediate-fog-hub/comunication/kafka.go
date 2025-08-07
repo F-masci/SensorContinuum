@@ -8,34 +8,53 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-var kafkaReader *kafka.Reader = nil
+var kafkaDataReader *kafka.Reader = nil
+var kafkaConfigurationReader *kafka.Reader = nil
 
-func connect() {
-	if kafkaReader != nil {
+func connectProximityData() {
+	if kafkaDataReader != nil {
 		return // already connected
 	}
 
+	logger.Log.Debug("Connecting to Kafka topic: ", environment.ProximityDataTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+
 	// Configure the Kafka reader
-	kafkaReader = kafka.NewReader(kafka.ReaderConfig{
+	kafkaDataReader = kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{environment.KafkaBroker + ":" + environment.KafkaPort},
 		Topic:   environment.ProximityDataTopic,
-		GroupID: environment.BuildingID,
+		GroupID: "intermediate-fog-hub", // Il fog gestisce una singola regione
 	})
 	logger.Log.Info("Connected to Kafka topic: ", environment.ProximityDataTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
 }
 
+func connectProximityConfiguration() {
+	if kafkaConfigurationReader != nil {
+		return // already connected
+	}
+
+	logger.Log.Debug("Connecting to Kafka topic: ", environment.ProximityConfigurationTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+
+	// Configure the Kafka reader
+	kafkaConfigurationReader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{environment.KafkaBroker + ":" + environment.KafkaPort},
+		Topic:   environment.ProximityConfigurationTopic,
+		GroupID: "intermediate-fog-hub", // Il fog gestisce una singola regione
+	})
+	logger.Log.Info("Connected to Kafka topic: ", environment.ProximityConfigurationTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+}
+
 func PullAggregatedData(dataChannel chan structure.SensorData) error {
 
-	connect()
+	connectProximityData()
 
 	ctx := context.Background()
 	for {
-		m, err := kafkaReader.ReadMessage(ctx)
-		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
+		m, err := kafkaDataReader.ReadMessage(ctx)
 		if err != nil {
 			logger.Log.Error("Error reading message: ", err.Error())
 			return err
 		}
+		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
 		var data structure.SensorData
 		data, err = structure.CreateSensorDataFromKafka(m)
 		if err != nil {
@@ -43,6 +62,29 @@ func PullAggregatedData(dataChannel chan structure.SensorData) error {
 			continue
 		}
 		dataChannel <- data
+	}
+
+}
+
+func PullConfigurationMessage(msgChannel chan structure.ConfigurationMsg) error {
+
+	connectProximityConfiguration()
+
+	ctx := context.Background()
+	for {
+		m, err := kafkaConfigurationReader.ReadMessage(ctx)
+		if err != nil {
+			logger.Log.Error("Error reading message: ", err.Error())
+			return err
+		}
+		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
+		var msg structure.ConfigurationMsg
+		msg, err = structure.CreateConfigurationMsgFromKafka(m)
+		if err != nil {
+			logger.Log.Error("Error unmarshalling Sensor Data: ", err.Error())
+			continue
+		}
+		msgChannel <- msg
 	}
 
 }

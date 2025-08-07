@@ -13,6 +13,7 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	region := request.PathParameters["region"]
 	idStr := request.PathParameters["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -28,11 +29,11 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	ctx := context.Background()
-	buildingDetail, err := building.GetBuildingByID(ctx, id)
+	buildingDetail, err := building.GetBuildingByID(ctx, region, id)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       `{"error":"Errore nel recupero dell'edificio"}`,
+			Body:       `{"error":"Errore nel recupero dell'edificio", "detail":"` + err.Error() + `"}`,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}

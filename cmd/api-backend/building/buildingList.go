@@ -12,8 +12,10 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	region := request.PathParameters["region"]
+
 	ctx := context.Background()
-	buildings, err := building.GetAllBuildings(ctx)
+	buildings, err := building.GetBuildingsList(ctx, region)
 	if err != nil {
 		errBody, _ := json.Marshal(structure.ErrorResponse{
 			Error:  "Errore nel recupero degli edifici",

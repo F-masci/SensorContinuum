@@ -7,20 +7,29 @@ import (
 	"fmt"
 )
 
-// Menù principale stateless
+// MainMenu Menù principale
 func MainMenu() {
 	for {
 		fmt.Println("\n--- Menù Principale ---")
-		fmt.Println("1) Gestione zone")
-		fmt.Println("2) Gestione edifici")
+		fmt.Println("1) Lista zone disponibili")
+		fmt.Println("2) Ricerca zona per ID")
+		fmt.Println("3) Ricerca zona per nome")
+		fmt.Println("4) Gestione Edifici")
 		fmt.Println("0) Esci")
 		fmt.Print("Seleziona un'opzione: ")
 		choice := utils.ReadInput()
 		switch choice {
 		case "1":
-			region.RegionMenu()
+			region.ListRegions()
 		case "2":
-			building.BuildingMenu()
+			region.GetRegionDetailsByID()
+		case "3":
+			region.GetRegionDetailsByName()
+		case "4":
+			fmt.Print("Nome della regione: ")
+			regionName := utils.ReadInput()
+			// Passa il nome della regione al menù degli edifici
+			building.BuildingMenu(regionName)
 		case "0":
 			fmt.Println("Uscita...")
 			return

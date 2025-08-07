@@ -13,15 +13,15 @@ services:
     volumes:
       - ../../configs/postgresql/init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "sensorcontinuum" ]
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
       timeout: 5s
       retries: 3
 
-  metadatadb:
+  cloud_metadatadb:
     image: postgis/postgis:latest
-    container_name: metadatadb-compose
-    hostname: metadatadb-host
+    container_name: metadatadb-cloud-compose
+    hostname: metadatadb-cloud-host
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
@@ -29,9 +29,27 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ../../configs/postgresql/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+      - ../../configs/postgresql/init-cloud-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "sensorcontinuum" ]
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  region_metadatadb:
+    image: postgis/postgis:latest
+    container_name: metadatadb-region-compose
+    hostname: metadatadb-region-host
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: sensorcontinuum
+    ports:
+      - "5434:5432"
+    volumes:
+      - ../../configs/postgresql/init-region-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
       timeout: 5s
       retries: 3

@@ -11,10 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	apigateway "github.com/aws/aws-sdk-go-v2/service/apigateway"
+
+	"path/filepath"
 )
 
 const localstackEndpoint = "http://localhost:4566"
-const envFilePath = "../internal/client/environment/.env"
+
+var envFilePath = filepath.Join("internal", "client", "environment", ".env")
 
 type LambdaFunc struct {
 	Name      string
@@ -51,7 +54,6 @@ func main() {
 		{"buildingList", "building"},
 		{"buildingSearchId", "building"},
 		{"buildingSearchName", "building"},
-		{"buildingSearchRegion", "building"},
 	}
 
 	apiIDs := make(map[string]string)
@@ -104,44 +106,34 @@ func main() {
 			subfolderID = subfolderIDs[lambda.Subfolder]
 		}
 
-		var pathPart string
-		var param string
+		var segments []string
 		var envKey string
 		switch lambda.Name {
 		case "regionList":
-			pathPart = "list"
+			segments = []string{"list"}
 			envKey = "REGION_LIST_URL"
 		case "buildingList":
-			pathPart = "list"
+			segments = []string{"list", "{region}"}
 			envKey = "BUILDING_LIST_URL"
 		case "regionSearchId":
-			pathPart = "search/id"
-			param = "{id}"
+			segments = []string{"search", "id", "{id}"}
 			envKey = "REGION_SEARCH_ID_URL"
 		case "buildingSearchId":
-			pathPart = "search/id"
-			param = "{id}"
+			segments = []string{"search", "id", "{region}", "{id}"}
 			envKey = "BUILDING_SEARCH_ID_URL"
 		case "regionSearchName":
-			pathPart = "search/name"
-			param = "{name}"
+			segments = []string{"search", "name", "{name}"}
 			envKey = "REGION_SEARCH_NAME_URL"
 		case "buildingSearchName":
-			pathPart = "search/name"
-			param = "{name}"
+			segments = []string{"search", "name", "{region}", "{name}"}
 			envKey = "BUILDING_SEARCH_NAME_URL"
-		case "buildingSearchRegion":
-			pathPart = "search/region"
-			param = "{region_id}"
-			envKey = "BUILDING_SEARCH_REGION_URL"
 		default:
-			pathPart = lambda.Name
+			segments = []string{lambda.Name}
 			envKey = strings.ToUpper(lambda.Name) + "_URL"
 		}
 
 		// Crea risorse per ogni segmento del path
 		parent := subfolderID
-		segments := strings.Split(pathPart, "/")
 		for _, seg := range segments {
 			logger.Log.Info("Creo risorsa path: ", seg)
 			res, err := apiClient.CreateResource(ctx, &apigateway.CreateResourceInput{
@@ -156,21 +148,6 @@ func main() {
 			parent = *res.Id
 		}
 		resourceID := parent
-
-		// Se c'è un parametro, crea la risorsa parametro
-		if param != "" {
-			logger.Log.Info("Creo risorsa parametro: ", param)
-			res2, err := apiClient.CreateResource(ctx, &apigateway.CreateResourceInput{
-				RestApiId: aws.String(apiID),
-				ParentId:  aws.String(resourceID),
-				PathPart:  aws.String(param),
-			})
-			if err != nil {
-				logger.Log.Error("Errore CreateResource param: ", err)
-				os.Exit(1)
-			}
-			resourceID = *res2.Id
-		}
 
 		logger.Log.Info("Creo metodo GET su risorsa: ", lambda.Name)
 		_, err = apiClient.PutMethod(ctx, &apigateway.PutMethodInput{
@@ -210,10 +187,7 @@ func main() {
 		}
 
 		// Costruisci il path finale per la stampa
-		resourcePath := lambda.Subfolder + "/" + strings.ReplaceAll(pathPart, "/", "/")
-		if param != "" {
-			resourcePath += "/" + param
-		}
+		resourcePath := lambda.Subfolder + "/" + strings.Join(segments, "/")
 		url := fmt.Sprintf("http://localhost:4566/restapis/%s/dev/_user_request_/%s", apiID, resourcePath)
 		envVars[envKey] = url
 		logger.Log.Info("Endpoint creato: ", lambda.Name, " ", url)

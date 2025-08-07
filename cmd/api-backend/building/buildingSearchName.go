@@ -11,10 +11,11 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	region := request.PathParameters["region"]
 	name := request.PathParameters["name"]
 
 	ctx := context.Background()
-	buildingDetail, err := building.GetBuildingByName(ctx, name)
+	buildingDetail, err := building.GetBuildingByName(ctx, region, name)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
