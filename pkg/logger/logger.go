@@ -82,3 +82,12 @@ func CreateLogger(ctx Context) {
 		debugLogger:   defaultLogger.New(os.Stdout, "[DEBUG]   "+prefix, defaultLogger.Ldate|defaultLogger.Ltime|defaultLogger.Lshortfile),
 	}
 }
+
+func GetContext(service, BuildingID, FloorID, HubID string) Context {
+	return Context{
+		"service":  service,
+		"building": BuildingID,
+		"floor":    FloorID,
+		"hub":      HubID,
+	}
+}

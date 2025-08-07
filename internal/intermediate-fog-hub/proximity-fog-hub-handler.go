@@ -4,9 +4,8 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/structure"
-	"fmt"
-
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"

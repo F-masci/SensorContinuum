@@ -11,46 +11,47 @@ import (
 	"time"
 )
 
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "edge-hub",
-		"building": environment.BuildingID,
-		"floor":    environment.FloorID,
-		"hub":      environment.HubID,
-	}
-}
-
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
-
-	logger.CreateLogger(getContext())
+	const service = "edge-hub"
+	logger.CreateLogger(logger.GetContext(service, environment.BuildingID, environment.FloorID, environment.HubID))
 	logger.Log.Info("Starting Edge Hub...")
 
-	// Avvia il produttore (MQTT)
+	//creazione del canale per i dati ricevuti dai sensori
 	sensorDataChannel := make(chan structure.SensorData, 100)
+	// inizializza connessione MQTT in maniera sincrona
 	comunication.SetupMQTTConnection(sensorDataChannel)
 
 	// Avvia il filtro in un'altra goroutine.
 	go edge_hub.FilterSensorData(sensorDataChannel)
 
+	// creazione del canale per i dati filtrati
+	filteredDataChannel := make(chan structure.SensorData, 100)
+	// Aspettiamo che arrivino i dati sul canale filterdDataChannel e li invia via MQTT
+	go comunication.PublishFilteredData(filteredDataChannel)
+
+	// creazione di un timer per i dati aggregati che invia un segnale, ogni minuto, sul suo canale "C".
 	aggregateTicker := time.NewTicker(time.Minute)
 	defer aggregateTicker.Stop()
 
-	filteredDataChannel := make(chan structure.SensorData, 100)
-	go comunication.PublishFilteredData(filteredDataChannel)
-
+	// avvia una goroutine che vivrà per sempre
 	go func() {
+		//loop infinito
 		for {
+			// mettiti in attesa
 			select {
+			//il codice si blocca aspettando che il ticker invii il segnale (ogni minuto)
+			// quando arriva il segnale, viene chiamata AggregateAllSensorsData per l'aggregazione dei dati filtrati.
 			case <-aggregateTicker.C:
 				edge_hub.AggregateAllSensorsData(filteredDataChannel)
 			}
 		}
 	}()
 
+	// duale a sopra solo rivolto al caso del processo di clean.
 	cleanHealthTicker := time.NewTicker(time.Minute)
 	defer cleanHealthTicker.Stop()
 

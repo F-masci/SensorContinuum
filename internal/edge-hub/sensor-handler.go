@@ -91,6 +91,7 @@ func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
 
 		// Invia il risultato al canale di dati filtrati
 		select {
+		// invia il risultato al canale filteredDataChannel
 		case filteredDataChannel <- result:
 			logger.Log.Debug("Sent aggregated data for sensor: ", sensorID)
 		default:
