@@ -2,7 +2,7 @@ package simulation
 
 import (
 	"SensorContinuum/configs/simulation"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"os"
 	"time"
 
@@ -34,7 +34,7 @@ func setupSimulator() error {
 	return nil
 }
 
-func Simulate(nValue int, dataChannel chan structure.SensorData) error {
+func Simulate(nValue int, dataChannel chan types.SensorData) error {
 
 	err := setupSimulator()
 	if err != nil {
@@ -52,9 +52,9 @@ func Simulate(nValue int, dataChannel chan structure.SensorData) error {
 
 		sensorData := generateSensorData()
 
-		logger.Log.Debug("Sensor reading: ", sensorData.Data)
+		logger.Log.Info("Sensor reading: ", sensorData.Data)
 
-		if dataChannel != nil && sensorData != (structure.SensorData{}) {
+		if dataChannel != nil && sensorData != (types.SensorData{}) {
 			select {
 			case dataChannel <- sensorData:
 			default:
@@ -74,7 +74,7 @@ func Simulate(nValue int, dataChannel chan structure.SensorData) error {
 	return nil
 }
 
-func SimulateForever(dataChannel chan structure.SensorData) {
+func SimulateForever(dataChannel chan types.SensorData) {
 	logger.Log.Info("Starting sensor simulator loop...")
 	for {
 		if err := Simulate(infiniteValue, dataChannel); err != nil {

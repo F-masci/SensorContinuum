@@ -7,19 +7,11 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"os"
 	"time"
 )
-
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "proximity-fog-hub",
-		"building": environment.BuildingID,
-		"hub":      environment.HubID,
-	}
-}
 
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
@@ -27,7 +19,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.CreateLogger(getContext())
+	logger.CreateLogger(logger.GetProximityHubContext(environment.EdgeMacrozone, environment.HubID))
+	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Proximity Fog Hub...")
 
 	// Invia il messaggio di configurazione al Region Hub
@@ -43,10 +36,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	filteredDataChannel := make(chan structure.SensorData, 100)
-	comunication.SetupMQTTConnection(filteredDataChannel)
+	filteredDataChannel := make(chan types.SensorData, 1000)
+	configurationMessageChannel := make(chan types.ConfigurationMsg, 100)
+	comunication.SetupMQTTConnection(filteredDataChannel, configurationMessageChannel)
 
 	go proximity_fog_hub.ProcessEdgeHubData(filteredDataChannel)
+
+	go proximity_fog_hub.ProcessEdgeHubConfiguration(configurationMessageChannel)
 
 	// Avvio del ticker per l'aggregazione periodica, per ora metto ogni 2 minuti ma poi passa a ogni 5
 	statsTicker := time.NewTicker(2 * time.Minute)

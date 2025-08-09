@@ -6,20 +6,10 @@ import (
 	"SensorContinuum/internal/sensor-agent/health"
 	"SensorContinuum/internal/sensor-agent/simulation"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
+	"SensorContinuum/pkg/utils"
 	"os"
 )
-
-// getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "sensor-agent",
-		"building": environment.BuildingID,
-		"floor":    environment.FloorID,
-		"sensor":   environment.SensorID,
-		"type":     environment.SensorType,
-	}
-}
 
 func main() {
 
@@ -30,20 +20,22 @@ func main() {
 	}
 
 	// Inizializza il logger con il contesto
-	logger.CreateLogger(getContext())
+	logger.CreateLogger(logger.GetSensorAgentContext(environment.EdgeMacrozone, environment.EdgeZone, environment.SensorId))
+	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Sensor Agent...")
-	logger.Log.Info("Building ID: ", environment.BuildingID)
-	logger.Log.Info("Floor ID: ", environment.FloorID)
-	logger.Log.Info("Sensor ID: ", environment.SensorID)
 	logger.Log.Info("Sensor Location: ", environment.SensorLocation)
 	logger.Log.Info("Sensor Type: ", environment.SensorType)
 	logger.Log.Info("Sensor Reference: ", environment.SimulationSensorReference)
 
+	// Registra il sensore all'edge hub
+	comunication.SendRegistrationMessage()
+	logger.Log.Info("Sensor registration message sent.")
+
 	// Inizializza la comunicazione con il simulatore del sensore
-	sensorChannelSource := make(chan structure.SensorData, 100)
+	sensorChannelSource := make(chan types.SensorData, 100)
 	go simulation.SimulateForever(sensorChannelSource)
 
-	sensorChannelTarget := make(chan structure.SensorData, 100)
+	sensorChannelTarget := make(chan types.SensorData, 100)
 	// Invia i dati al broker MQTT
 	go comunication.PublishData(sensorChannelTarget)
 
@@ -61,9 +53,19 @@ func main() {
 	}()
 
 	// Abilita il canale di comunicazione per health check
-	if err := health.StartHealthCheckServer(":8080"); err != nil {
-		logger.Log.Error("Failed to enable health check channel: ", err.Error())
-		os.Exit(1)
+	if environment.HealthzServer {
+		logger.Log.Info("Enabling health check channel on port " + environment.HealthzServerPort)
+		go func() {
+			if err := health.StartHealthCheckServer(":" + environment.HealthzServerPort); err != nil {
+				logger.Log.Error("Failed to enable health check channel: ", err.Error())
+				os.Exit(1)
+			}
+		}()
 	}
+
+	utils.WaitForTerminationSignal()
+
+	logger.Log.Info("Sensor agent is terminating")
+	logger.Log.Info("Shutting down Sensor Agent...")
 
 }

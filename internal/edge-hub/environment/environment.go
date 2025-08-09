@@ -2,6 +2,8 @@ package environment
 
 import (
 	"SensorContinuum/configs/mosquitto"
+	"SensorContinuum/pkg/logger"
+	"SensorContinuum/pkg/types"
 	"errors"
 	"github.com/google/uuid"
 	"os"
@@ -9,22 +11,58 @@ import (
 	"time"
 )
 
-// I valori validi per OperationMode sono:
+// OperationMode: I valori validi sono:
 // - "loop": per eseguire in un ciclo continuo di aggregazione|pulizia dei dati. (default)
 // - "once": per eseguire una singola iterazione di aggregazione|pulizia dei dati.
+type OperationModeType string
+
+const (
+	OperationModeLoop OperationModeType = "loop"
+	OperationModeOnce OperationModeType = "once"
+)
 
 // OperationMode specifica la modalità di funzionamento del servizio.
-var OperationMode string
+var OperationMode OperationModeType
 
-var BuildingID string
-var FloorID string
+var ServiceMode types.Service
+
+var EdgeMacrozone string
+var EdgeZone string
 var HubID string
 
-var MosquittoProtocol string
-var MosquittoBroker string
-var MosquittoPort string
+// Queste impostazioni sono utilizzate per la connessione tra SensorAgent e EdgeHub.
+
+// MqttSensorBrokerProtocol specifica il protocollo (es. "tcp", "ws") tra SensorAgent ed EdgeHub.
+var MqttSensorBrokerProtocol string
+
+// MqttSensorBrokerAddress specifica l'indirizzo del broker MQTT per la comunicazione tra SensorAgent ed EdgeHub.
+var MqttSensorBrokerAddress string
+
+// MqttSensorBrokerPort specifica la porta del broker MQTT per la comunicazione tra SensorAgent ed EdgeHub.
+var MqttSensorBrokerPort string
+
+// Queste impostazioni sono utilizzate per la connessione tra EdgeHub e Proximity Hub.
+
+// MqttHubBrokerProtocol specifica il protocollo (es. "tcp", "ws") tra EdgeHub e Proximity Hub.
+var MqttHubBrokerProtocol string
+
+// MqttHubBrokerAddress specifica l'indirizzo del broker MQTT per la comunicazione tra EdgeHub e Proximity Hub.
+var MqttHubBrokerAddress string
+
+// MqttHubBrokerPort specifica la porta del broker MQTT per la comunicazione tra EdgeHub e Proximity Hub.
+var MqttHubBrokerPort string
+
+// SensorDataTopic specifica il topic MQTT per i dati dei sensori.
 var SensorDataTopic string
+
+// FilteredDataTopic specifica il topic MQTT per i dati filtrati.
 var FilteredDataTopic string
+
+// HubConfigurationTopic specifica il topic MQTT per i messaggi di configurazione del hub.
+var HubConfigurationTopic string
+
+// SensorConfigurationTopic specifica il topic MQTT per i messaggi di configurazione dei sensori.
+var SensorConfigurationTopic string
 
 var RedisAddress string
 var RedisPort string
@@ -32,28 +70,65 @@ var RedisPort string
 var HistoryWindowSize int = 25
 var FilteringMinSamples int = 5
 var FilteringStdDevFactor float64 = 5
-var FilteringMinTreshold float64 = 0.0
-var FilteringMaxTreshold float64 = 60.0
+var FilteringMinThreshold float64 = 0.0
+var FilteringMaxThreshold float64 = 60.0
 
 var UnhealthySensorTimeout time.Duration = 5 * time.Minute
+var RegistrationSensorTimeout time.Duration = 6 * time.Hour
 
 func SetupEnvironment() error {
 
 	var exists bool
 
-	OperationMode, exists = os.LookupEnv("OPERATION_MODE")
+	/* ----- OPERATION MODE ----- */
+
+	var OperationModeStr string
+	OperationModeStr, exists = os.LookupEnv("OPERATION_MODE")
 	if !exists {
-		OperationMode = "loop"
+		OperationMode = OperationModeLoop
+	} else {
+		switch OperationModeStr {
+		case string(OperationModeLoop):
+			OperationMode = OperationModeLoop
+		case string(OperationModeOnce):
+			OperationMode = OperationModeOnce
+		default:
+			return errors.New("invalid value for OPERATION_MODE: " + OperationModeStr + ". Valid values are 'loop' or 'once'.")
+		}
 	}
 
-	BuildingID, exists = os.LookupEnv("BUILDING_ID")
+	/* ----- SERVICE MODE ----- */
+
+	ServiceModeStr, exists := os.LookupEnv("SERVICE_MODE")
 	if !exists {
-		return errors.New("environment variable BUILDING_ID not set")
+		ServiceMode = types.EdgeHubService
+	} else {
+		switch ServiceModeStr {
+		case string(types.EdgeHubService):
+			ServiceMode = types.EdgeHubService
+		case string(types.EdgeHubFilterService):
+			ServiceMode = types.EdgeHubFilterService
+		case string(types.EdgeHubAggregatorService):
+			ServiceMode = types.EdgeHubAggregatorService
+		case string(types.EdgeHubCleanerService):
+			ServiceMode = types.EdgeHubCleanerService
+		case string(types.EdgeHubConfigurationService):
+			ServiceMode = types.EdgeHubConfigurationService
+		default:
+			return errors.New("invalid value for SERVICE_MODE: " + ServiceModeStr + ". Valid values are 'edge-hub', 'edge-hub-filter', 'edge-hub-aggregator', 'edge-hub-cleaner' or 'edge-hub-configuration'.")
+		}
 	}
 
-	FloorID, exists = os.LookupEnv("FLOOR_ID")
+	/* ----- ENVIRONMENT SETTINGS ----- */
+
+	EdgeMacrozone, exists = os.LookupEnv("EDGE_MACROZONE")
 	if !exists {
-		return errors.New("environment variable FLOOR_ID not set")
+		return errors.New("environment variable EDGE_MACROZONE not set")
+	}
+
+	EdgeZone, exists = os.LookupEnv("EDGE_ZONE")
+	if !exists {
+		return errors.New("environment variable EDGE_ZONE not set")
 	}
 
 	HubID, exists = os.LookupEnv("HUB_ID")
@@ -61,23 +136,62 @@ func SetupEnvironment() error {
 		HubID = uuid.New().String()
 	}
 
-	MosquittoProtocol, exists = os.LookupEnv("MQTT_BROKER_PROTOCOL")
+	/* ----- MQTT BROKER SETTINGS ----- */
+
+	// La configurazione del broker MQTT è divisa in due parti:
+	// 1. MqttSensorBroker: per la comunicazione tra SensorAgent e EdgeHub.
+	// SensorAgent ---> MqttSensorBroker ---> EdgeHub
+	// 2. MqttHubBroker: per la comunicazione tra EdgeHub e Proximity Hub.
+	// EdgeHub ---> MqttHubBroker ---> Proximity Hub
+
+	// Recupera le configurazioni comuni una sola volta
+	commonProtocol, exists := os.LookupEnv("MQTT_BROKER_PROTOCOL")
 	if !exists {
-		MosquittoProtocol = mosquitto.PROTOCOL
+		commonProtocol = mosquitto.PROTOCOL
+	}
+	commonBroker, exists := os.LookupEnv("MQTT_BROKER_ADDRESS")
+	if !exists {
+		commonBroker = mosquitto.BROKER
+	}
+	commonPort, exists := os.LookupEnv("MQTT_BROKER_PORT")
+	if !exists {
+		commonPort = mosquitto.PORT
 	}
 
-	MosquittoBroker, exists = os.LookupEnv("MQTT_BROKER_ADDRESS")
+	// Sensor Broker
+	MqttSensorBrokerProtocol, exists = os.LookupEnv("MQTT_SENSOR_BROKER_PROTOCOL")
 	if !exists {
-		MosquittoBroker = mosquitto.BROKER
+		MqttSensorBrokerProtocol = commonProtocol
+	}
+	MqttSensorBrokerAddress, exists = os.LookupEnv("MQTT_SENSOR_BROKER_ADDRESS")
+	if !exists {
+		MqttSensorBrokerAddress = commonBroker
+	}
+	MqttSensorBrokerPort, exists = os.LookupEnv("MQTT_SENSOR_BROKER_PORT")
+	if !exists {
+		MqttSensorBrokerPort = commonPort
 	}
 
-	MosquittoPort, exists = os.LookupEnv("MQTT_BROKER_PORT")
+	// Hub Broker
+	MqttHubBrokerProtocol, exists = os.LookupEnv("MQTT_HUB_BROKER_PROTOCOL")
 	if !exists {
-		MosquittoPort = mosquitto.PORT
+		MqttHubBrokerProtocol = commonProtocol
+	}
+	MqttHubBrokerAddress, exists = os.LookupEnv("MQTT_HUB_BROKER_ADDRESS")
+	if !exists {
+		MqttHubBrokerAddress = commonBroker
+	}
+	MqttHubBrokerPort, exists = os.LookupEnv("MQTT_HUB_BROKER_PORT")
+	if !exists {
+		MqttHubBrokerPort = commonPort
 	}
 
-	SensorDataTopic = "$share/edge-hub-filtering/sensor-data/" + BuildingID + "/" + FloorID
-	FilteredDataTopic = "filtered-data/" + BuildingID + "/" + FloorID
+	SensorDataTopic = "$share/edge-hub-data/sensor-data/" + EdgeMacrozone + "/" + EdgeZone
+	FilteredDataTopic = "filtered-data/" + EdgeMacrozone + "/" + EdgeZone
+	HubConfigurationTopic = "configuration/hub/" + EdgeMacrozone + "/" + EdgeZone
+	SensorConfigurationTopic = "configuration/sensor/" + EdgeMacrozone + "/" + EdgeZone
+
+	/* ----- REDIS CACHE SETTINGS ----- */
 
 	RedisAddress, exists = os.LookupEnv("REDIS_ADDRESS")
 	if !exists {
@@ -98,22 +212,28 @@ func SetupEnvironment() error {
 		}
 	}
 
-	FilteringMinTresholdStr, exists := os.LookupEnv("FILTERING_MIN_TRESHOLD")
+	FilteringMinThresholdStr, exists := os.LookupEnv("FILTERING_MIN_TRESHOLD")
 	if exists {
 		var err error
-		FilteringMinTreshold, err = strconv.ParseFloat(FilteringMinTresholdStr, 64)
+		FilteringMinThreshold, err = strconv.ParseFloat(FilteringMinThresholdStr, 64)
 		if err != nil {
-			return errors.New("invalid value for FILTERING_MIN_TRESHOLD: " + FilteringMinTresholdStr)
+			return errors.New("invalid value for FILTERING_MIN_TRESHOLD: " + FilteringMinThresholdStr)
 		}
 	}
 
-	FilteringMaxTresholdStr, exists := os.LookupEnv("FILTERING_MAX_TRESHOLD")
+	FilteringMaxThresholdStr, exists := os.LookupEnv("FILTERING_MAX_TRESHOLD")
 	if exists {
 		var err error
-		FilteringMaxTreshold, err = strconv.ParseFloat(FilteringMaxTresholdStr, 64)
+		FilteringMaxThreshold, err = strconv.ParseFloat(FilteringMaxThresholdStr, 64)
 		if err != nil {
-			return errors.New("invalid value for FILTERING_MAX_TRESHOLD: " + FilteringMaxTresholdStr)
+			return errors.New("invalid value for FILTERING_MAX_TRESHOLD: " + FilteringMaxThresholdStr)
 		}
+	}
+
+	/* ----- LOGGER SETTINGS ----- */
+
+	if err := logger.LoadLoggerFromEnv(); err != nil {
+		return err
 	}
 
 	return nil

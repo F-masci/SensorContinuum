@@ -8,23 +8,21 @@ import (
 )
 
 const (
-	BuildingSearchIdUrlEnv     = "BUILDING_SEARCH_ID_URL"
-	BuildingSearchNameUrlEnv   = "BUILDING_SEARCH_NAME_URL"
-	BuildingSearchRegionUrlEnv = "BUILDING_SEARCH_REGION_URL"
-	BuildingListUrlEnv         = "BUILDING_LIST_URL"
-	RegionListUrlEnv           = "REGION_LIST_URL"
-	RegionSearchIdUrlEnv       = "REGION_SEARCH_ID_URL"
-	RegionSearchNameUrlEnv     = "REGION_SEARCH_NAME_URL"
+	RegionListUrlEnv          = "REGION_LIST_URL"
+	RegionSearchNameUrlEnv    = "REGION_SEARCH_NAME_URL"
+	MacrozoneListUrlEnv       = "MACROZONE_LIST_URL"
+	MacrozoneSearchNameUrlEnv = "MACROZONE_SEARCH_NAME_URL"
+	ZoneListUrlEnv            = "ZONE_LIST_URL"
+	ZoneSearchNameUrlEnv      = "ZONE_SEARCH_NAME_URL"
 )
 
 var (
-	BuildingSearchIdUrl     string
-	BuildingSearchNameUrl   string
-	BuildingSearchRegionUrl string
-	BuildingListUrl         string
-	RegionListUrl           string
-	RegionSearchIdUrl       string
-	RegionSearchNameUrl     string
+	RegionListUrl          string
+	RegionSearchNameUrl    string
+	MacrozoneListUrl       string
+	MacrozoneSearchNameUrl string
+	ZoneListUrl            string
+	ZoneSearchNameUrl      string
 )
 
 func SetupEnvironment() error {
@@ -39,41 +37,41 @@ func SetupEnvironment() error {
 
 	var exists bool
 
-	BuildingSearchIdUrl, exists = os.LookupEnv(BuildingSearchIdUrlEnv)
-	if !exists {
-		return os.ErrNotExist
-	}
-	logger.Log.Debug("Building search id url: ", BuildingSearchIdUrl)
-
-	BuildingSearchNameUrl, exists = os.LookupEnv(BuildingSearchNameUrlEnv)
-	if !exists {
-		return os.ErrNotExist
-	}
-	logger.Log.Debug("Building search name url: ", BuildingSearchNameUrl)
-
-	BuildingListUrl, exists = os.LookupEnv(BuildingListUrlEnv)
-	if !exists {
-		return os.ErrNotExist
-	}
-	logger.Log.Debug("Building list url: ", BuildingListUrl)
-
 	RegionListUrl, exists = os.LookupEnv(RegionListUrlEnv)
 	if !exists {
 		return os.ErrNotExist
 	}
 	logger.Log.Debug("Region list url: ", RegionListUrl)
 
-	RegionSearchIdUrl, exists = os.LookupEnv(RegionSearchIdUrlEnv)
-	if !exists {
-		return os.ErrNotExist
-	}
-	logger.Log.Debug("Region search id url: ", RegionSearchIdUrl)
-
 	RegionSearchNameUrl, exists = os.LookupEnv(RegionSearchNameUrlEnv)
 	if !exists {
 		return os.ErrNotExist
 	}
 	logger.Log.Debug("Region search name url: ", RegionSearchNameUrl)
+
+	MacrozoneListUrl, exists = os.LookupEnv(MacrozoneListUrlEnv)
+	if !exists {
+		return os.ErrNotExist
+	}
+	logger.Log.Debug("Macrozone list url: ", MacrozoneListUrl)
+
+	MacrozoneSearchNameUrl, exists = os.LookupEnv(MacrozoneSearchNameUrlEnv)
+	if !exists {
+		return os.ErrNotExist
+	}
+	logger.Log.Debug("Macrozone search name url: ", MacrozoneSearchNameUrl)
+
+	ZoneListUrl, exists = os.LookupEnv(ZoneListUrlEnv)
+	if !exists {
+		return os.ErrNotExist
+	}
+	logger.Log.Debug("Zone list url: ", ZoneListUrl)
+
+	ZoneSearchNameUrl, exists = os.LookupEnv(ZoneSearchNameUrlEnv)
+	if !exists {
+		return os.ErrNotExist
+	}
+	logger.Log.Debug("Zone search name url: ", ZoneSearchNameUrl)
 
 	return nil
 }

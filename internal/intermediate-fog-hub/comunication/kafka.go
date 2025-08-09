@@ -3,7 +3,7 @@ package comunication
 import (
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"context"
 	"github.com/segmentio/kafka-go"
 )
@@ -43,7 +43,7 @@ func connectProximityConfiguration() {
 	logger.Log.Info("Connected to Kafka topic: ", environment.ProximityConfigurationTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
 }
 
-func PullAggregatedData(dataChannel chan structure.SensorData) error {
+func PullAggregatedData(dataChannel chan types.SensorData) error {
 
 	connectProximityData()
 
@@ -55,8 +55,8 @@ func PullAggregatedData(dataChannel chan structure.SensorData) error {
 			return err
 		}
 		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
-		var data structure.SensorData
-		data, err = structure.CreateSensorDataFromKafka(m)
+		var data types.SensorData
+		data, err = types.CreateSensorDataFromKafka(m)
 		if err != nil {
 			logger.Log.Error("Error unmarshalling Sensor Data: ", err.Error())
 			continue
@@ -66,7 +66,7 @@ func PullAggregatedData(dataChannel chan structure.SensorData) error {
 
 }
 
-func PullConfigurationMessage(msgChannel chan structure.ConfigurationMsg) error {
+func PullConfigurationMessage(msgChannel chan types.ConfigurationMsg) error {
 
 	connectProximityConfiguration()
 
@@ -78,8 +78,8 @@ func PullConfigurationMessage(msgChannel chan structure.ConfigurationMsg) error 
 			return err
 		}
 		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
-		var msg structure.ConfigurationMsg
-		msg, err = structure.CreateConfigurationMsgFromKafka(m)
+		var msg types.ConfigurationMsg
+		msg, err = types.CreateConfigurationMsgFromKafka(m)
 		if err != nil {
 			logger.Log.Error("Error unmarshalling Sensor Data: ", err.Error())
 			continue

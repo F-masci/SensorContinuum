@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-var BuildingID string
+var EdgeMacrozone string
 var HubID string
 
 var KafkaBroker string
@@ -41,9 +41,9 @@ func SetupEnvironment() error {
 
 	var exists bool
 
-	BuildingID, exists = os.LookupEnv("BUILDING_ID")
+	EdgeMacrozone, exists = os.LookupEnv("EDGE_MACROZONE")
 	if !exists {
-		return errors.New("environment variable BUILDING_ID not set")
+		return errors.New("environment variable EDGE_MACROZONE not set")
 	}
 
 	HubID, exists = os.LookupEnv("HUB_ID")
@@ -63,12 +63,12 @@ func SetupEnvironment() error {
 
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + BuildingID
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + EdgeMacrozone
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
 	if !exists {
-		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + BuildingID
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + EdgeMacrozone
 	}
 
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")

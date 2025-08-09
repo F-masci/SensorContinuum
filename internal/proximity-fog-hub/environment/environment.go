@@ -3,18 +3,21 @@ package environment
 import (
 	"SensorContinuum/configs/kafka"
 	"SensorContinuum/configs/mosquitto"
+	"SensorContinuum/pkg/logger"
 	"errors"
 	"github.com/google/uuid"
 	"os"
 )
 
-var BuildingID string
+var Region string
+var EdgeMacrozone string
 var HubID string
 
 var MosquittoProtocol string
 var MosquittoBroker string
 var MosquittoPort string
 var FilteredDataTopic string
+var HubConfigurationTopic string
 
 var KafkaBroker string
 var KafkaPort string
@@ -36,9 +39,14 @@ func SetupEnvironment() error {
 
 	var exists bool
 
-	BuildingID, exists = os.LookupEnv("BUILDING_ID")
+	Region, exists = os.LookupEnv("REGION")
 	if !exists {
-		return errors.New("environment variable BUILDING_ID not set")
+		return errors.New("environment variable REGION not set")
+	}
+
+	EdgeMacrozone, exists = os.LookupEnv("EDGE_MACROZONE")
+	if !exists {
+		return errors.New("environment variable EDGE_MACROZONE not set")
 	}
 
 	HubID, exists = os.LookupEnv("HUB_ID")
@@ -61,7 +69,8 @@ func SetupEnvironment() error {
 		MosquittoPort = mosquitto.PORT
 	}
 
-	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + BuildingID
+	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + EdgeMacrozone
+	HubConfigurationTopic = "$share/proximity-fog-hub/configuration/hub/" + EdgeMacrozone
 
 	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {
@@ -75,23 +84,23 @@ func SetupEnvironment() error {
 
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + BuildingID
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + EdgeMacrozone
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
 	if !exists {
-		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + BuildingID
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + EdgeMacrozone
 	}
 
 	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
 	if !exists {
-		ProximityDataTopicPartition = BuildingID
+		ProximityDataTopicPartition = EdgeMacrozone
 	}
 
 	// --- NUOVA LOGICA ---
 	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
 	if !exists {
-		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
+		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC + "_" + EdgeMacrozone
 	}
 
 	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")
@@ -117,6 +126,12 @@ func SetupEnvironment() error {
 	PostgresDatabase, exists = os.LookupEnv("POSTGRES_DATABASE")
 	if !exists {
 		PostgresDatabase = "sensorcontinuum"
+	}
+
+	/* ----- LOGGER SETTINGS ----- */
+
+	if err := logger.LoadLoggerFromEnv(); err != nil {
+		return err
 	}
 
 	return nil

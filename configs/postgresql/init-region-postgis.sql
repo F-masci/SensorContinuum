@@ -1,30 +1,40 @@
--- Abilita estensioni necessarie
-CREATE EXTENSION IF NOT EXISTS postgis;
-
--- 1. Tabella edifici con coordinate geografiche
-CREATE TABLE IF NOT EXISTS buildings (
-    id                  SERIAL PRIMARY KEY,
-    name                TEXT NOT NULL,
-    location            geometry(Point, 4326) NOT NULL,
+-- Tabella degli hub della regione (intermediate fog hub)
+CREATE TABLE IF NOT EXISTS region_hubs (
+    id                  TEXT PRIMARY KEY,           -- UUID o identificativo univoco
+    service             TEXT NOT NULL,              -- tipo di servizio/ruolo
     registration_time   TIMESTAMP,
-    last_comunication   TIMESTAMP
+    last_seen           TIMESTAMP
 );
 
--- Indice spaziale per ricerche geografiche
-CREATE INDEX IF NOT EXISTS idx_buildings_location ON buildings USING GIST (location);
-
--- 2. Tabella piani
-CREATE TABLE IF NOT EXISTS floors (
-    id                SERIAL PRIMARY KEY,
-    building_id       INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
-    name              TEXT NOT NULL,
-    lastComunication  TIMESTAMP
+-- Tabella degli hub di macrozona (proximity fog hub)
+CREATE TABLE IF NOT EXISTS macrozone_hubs (
+    id                  TEXT NOT NULL,
+    macrozone_name      TEXT NOT NULL,
+    service             TEXT NOT NULL,
+    registration_time   TIMESTAMP,
+    last_seen           TIMESTAMP,
+    PRIMARY KEY (id, macrozone_name)
 );
 
--- 3. Tabella sensori
+-- Tabella degli hub di zona (edge hub)
+CREATE TABLE IF NOT EXISTS zone_hubs (
+    id                  TEXT NOT NULL,
+    macrozone_name      TEXT NOT NULL,
+    zone_name           TEXT NOT NULL,
+    service             TEXT NOT NULL,
+    registration_time   TIMESTAMP,
+    last_seen           TIMESTAMP,
+    PRIMARY KEY (id, macrozone_name, zone_name)
+);
+
+-- Tabella dei sensori associati agli edge hub
 CREATE TABLE IF NOT EXISTS sensors (
-    id                SERIAL PRIMARY KEY,
-    floor_id          INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
-    name              TEXT NOT NULL,
-    lastComunication  TIMESTAMP
+    id                  TEXT NOT NULL,
+    macrozone_name      TEXT NOT NULL,
+    zone_name           TEXT NOT NULL,
+    type                TEXT,
+    reference           TEXT,
+    registration_time   TIMESTAMP,
+    last_seen           TIMESTAMP,
+    PRIMARY KEY (id, macrozone_name, zone_name)
 );

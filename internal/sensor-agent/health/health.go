@@ -1,6 +1,9 @@
 package health
 
-import "time"
+import (
+	"SensorContinuum/internal/sensor-agent/comunication"
+	"time"
+)
 
 var lastValueTimestamp time.Time
 
@@ -11,5 +14,5 @@ func UpdateLastValueTimestamp() {
 
 // IsHealthy verifica se l'ultimo valore ricevuto è entro il timeout di salute
 func isHealthy() bool {
-	return time.Since(lastValueTimestamp) < 5*time.Minute
+	return time.Since(lastValueTimestamp) < 5*time.Minute && comunication.IsConnected()
 }
