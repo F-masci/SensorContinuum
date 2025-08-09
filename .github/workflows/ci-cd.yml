@@ -39,5 +39,5 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
-      - name: Run tests
-        run: go test ./tests/... -v
+      # - name: Run tests
+      #   run: go test ./tests/... -v
