@@ -5,30 +5,34 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
-	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ProcessRealTimeData(dataChannel chan types.SensorData) {
-
+// setupSensorDbConnection stabilisce la connessione al database dei sensori.
+func setupSensorDbConnection() {
 	err := storage.SetupSensorDbConnection()
 	if err != nil {
 		logger.Log.Error("Failed to connect to the sensor database: ", err)
 		os.Exit(1)
 	}
-	defer storage.CloseSensorDbConnection()
+}
 
-	err = storage.SetupRegionDbConnection()
+// setupRegionDbConnection stabilisce la connessione al database delle regioni.
+func setupRegionDbConnection() {
+	err := storage.SetupRegionDbConnection()
 	if err != nil {
 		logger.Log.Error("Failed to connect to the region database: ", err)
 		os.Exit(1)
 	}
-	defer storage.CloseRegionDbConnection()
+}
+
+// ProcessRealTimeData gestisce i dati in tempo reale ricevuti dai sensori e li salva in batch.
+func ProcessRealTimeData(dataChannel chan types.SensorData) {
+
+	setupSensorDbConnection()
+	setupRegionDbConnection()
 
 	var batch = types.NewSensorDataBatch()
 
@@ -42,11 +46,11 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 
 			if batch.Count() >= environment.SensorDataBatchSize {
 				logger.Log.Info("Inserting batch data into the database")
-				if err = storage.InsertSensorDataBatch(batch); err != nil {
+				if err := storage.InsertSensorDataBatch(batch); err != nil {
 					logger.Log.Error("Failed to insert sensor data batch: ", err)
 				}
 				logger.Log.Info("Updating last seen for batch sensors")
-				if err = storage.UpdateLastSeenBatch(batch); err != nil {
+				if err := storage.UpdateLastSeenBatch(batch); err != nil {
 					logger.Log.Error("Failed to update last seen for sensors: ", err)
 				}
 				logger.Log.Info("Clearing batch after processing")
@@ -61,11 +65,11 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 		case <-timer.C:
 			if batch.Count() > 0 {
 				logger.Log.Info("Inserting batch data into the database")
-				if err = storage.InsertSensorDataBatch(batch); err != nil {
+				if err := storage.InsertSensorDataBatch(batch); err != nil {
 					logger.Log.Error("Failed to insert sensor data batch: ", err)
 				}
 				logger.Log.Info("Updating last seen for batch sensors")
-				if err = storage.UpdateLastSeenBatch(batch); err != nil {
+				if err := storage.UpdateLastSeenBatch(batch); err != nil {
 					logger.Log.Error("Failed to update last seen for sensors: ", err)
 				}
 				logger.Log.Info("Clearing batch after processing")
@@ -76,37 +80,43 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 	}
 }
 
+// ProcessStatisticsData gestisce le statistiche aggregate e le salva.
+func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
+
+	setupSensorDbConnection()
+
+	for stats := range statsChannel {
+		logger.Log.Info("Aggregated statistics received: ", stats.Type, " - avg ", stats.Avg)
+		if err := storage.InsertStatisticsData(stats); err != nil {
+			logger.Log.Error("Failed to insert statistics: ", err)
+			// Non usiamo Fatalf per non far crashare l'intero servizio
+		} else {
+			logger.Log.Info("Statistics successfully inserted into the database")
+		}
+	}
+}
+
+// ProcessProximityFogHubConfiguration gestisce i messaggi di configurazione per il Proximity Fog Hub.
 func ProcessProximityFogHubConfiguration(msgChannel chan types.ConfigurationMsg) {
 
-	// Connessione al DB
-	dbURL := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		environment.PostgresRegionUser, environment.PostgresRegionPass, environment.PostgresRegionHost, environment.PostgresRegionPort, environment.PostgresRegionDatabase,
-	)
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
-	}
-	defer pool.Close()
+	setupRegionDbConnection()
 
 	for msg := range msgChannel {
 		logger.Log.Info("Received configuration message: ", msg)
 
 		if msg.MsgType == types.NewProximityMsgType {
 			logger.Log.Debug("Registration of new macrozone hub: ", msg.EdgeMacrozone, ". Hub ID: ", msg.HubID)
-			if err := registerMacrozoneHub(ctx, pool, msg); err != nil {
+			if err := storage.RegisterMacrozoneHub(msg); err != nil {
 				log.Fatalf("Registration failed: %v", err)
 			}
 		} else if msg.MsgType == types.NewEdgeMsgType {
 			logger.Log.Debug("Registration of new zone hub: ", msg.EdgeZone, ". Hub ID: ", msg.HubID)
-			if err := registerZoneHub(ctx, pool, msg); err != nil {
+			if err := storage.RegisterZoneHub(msg); err != nil {
 				log.Fatalf("Registration failed: %v", err)
 			}
 		} else if msg.MsgType == types.NewSensorMsgType {
 			logger.Log.Debug("Registration of new sensor: ", msg.SensorID, ". Zone Hub ID: ", msg.HubID)
-			if err := registerSensor(ctx, pool, msg); err != nil {
+			if err := storage.RegisterSensor(msg); err != nil {
 				log.Fatalf("Registration failed: %v", err)
 			}
 		} else {
@@ -116,64 +126,4 @@ func ProcessProximityFogHubConfiguration(msgChannel chan types.ConfigurationMsg)
 		logger.Log.Info("Configuration message processed: ", msg)
 
 	}
-}
-
-// Registra o aggiorna un hub di macrozona (proximity fog hub)
-func registerMacrozoneHub(ctx context.Context, db *pgxpool.Pool, msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
-	query := `
-		INSERT INTO macrozone_hubs (id, macrozone_name, service, registration_time, last_seen)
-		VALUES ($1, $2, $3, $4, $4)
-		ON CONFLICT (id, macrozone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
-	`
-	_, err := db.Exec(ctx, query, msg.HubID, msg.EdgeMacrozone, msg.Service, timestamp)
-	return err
-}
-
-// Registra o aggiorna un hub di zona (edge hub)
-func registerZoneHub(ctx context.Context, db *pgxpool.Pool, msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
-	query := `
-		INSERT INTO zone_hubs (id, macrozone_name, zone_name, service, registration_time, last_seen)
-		VALUES ($1, $2, $3, $4, $5, $5)
-		ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
-	`
-	_, err := db.Exec(ctx, query, msg.HubID, msg.EdgeMacrozone, msg.EdgeZone, msg.Service, timestamp)
-	return err
-}
-
-// Registra o aggiorna un sensore associato a un edge hub
-func registerSensor(ctx context.Context, db *pgxpool.Pool, msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
-	query := `
-        INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
-        VALUES ($1, $2, $3, $4, $5, $6, $6)
-        ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
-    `
-	_, err := db.Exec(ctx, query, msg.SensorID, msg.EdgeMacrozone, msg.EdgeZone, msg.SensorType, msg.SensorReference, timestamp)
-	return err
-}
-
-func Register() error {
-
-	// Connessione al DB
-	dbURL := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		environment.PostgresRegionUser, environment.PostgresRegionPass, environment.PostgresRegionHost, environment.PostgresRegionPort, environment.PostgresRegionDatabase,
-	)
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
-	}
-	defer pool.Close()
-
-	query := `
-	INSERT INTO region_hubs (id, service, registration_time, last_seen)
-	VALUES ($1, $2, NOW(), NOW())
-	ON CONFLICT (id) DO UPDATE SET last_seen = EXCLUDED.last_seen
-`
-	_, err = pool.Exec(ctx, query, environment.HubID, types.IntrermediateHubService)
-	return err
 }
