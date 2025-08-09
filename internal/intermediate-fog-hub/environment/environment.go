@@ -38,6 +38,9 @@ var PostgresSensorHost string
 var PostgresSensorPort string
 var PostgresSensorDatabase string
 
+var SensorDataBatchSize int = 10    // Dimensione del batch per i dati dei sensori
+var SensorDataBatchTimeout int = 10 // Timeout in secondi per il batch dei dati dei sensori
+
 func SetupEnvironment() error {
 
 	var exists bool

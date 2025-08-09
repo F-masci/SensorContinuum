@@ -25,6 +25,10 @@ var (
 	ZoneSearchNameUrl      string
 )
 
+// UnhealthyTime indica quanto tempo (in minuti) le risorse possono non comunicare
+// prima di essere mostrate come non più attive.
+var UnhealthyTime = 10
+
 func SetupEnvironment() error {
 
 	logger.Log.Debug("Loading environment variables from .env file")

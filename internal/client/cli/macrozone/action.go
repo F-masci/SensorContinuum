@@ -2,10 +2,12 @@ package macrozone
 
 import (
 	"SensorContinuum/internal/client/comunication/api"
+	"SensorContinuum/internal/client/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/utils"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func listMacrozones(regionName string) {
@@ -72,10 +74,19 @@ func getMacrozoneByName(regionName string) {
 		fmt.Printf("%-36s │ %-18s │ %-19s │ %-19s\n", "ID", "Servizio", "Registrato", "Ultima attività")
 		fmt.Println(strings.Repeat(sepLight, 100))
 		for _, h := range macrozone.Hubs {
-			fmt.Printf("%-36s │ %-18s │ %-19s │ %-19s\n",
+			color := reset
+			if int(time.Now().Sub(h.LastSeen).Minutes()) > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-36s │ %-18s │ %-19s │ %-19s%s\n",
+				color,
 				h.Id, h.Service,
 				h.RegistrationTime.Format("2006-01-02 15:04:05"),
-				h.LastSeen.Format("2006-01-02 15:04:05"))
+				h.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
+			)
 		}
 	} else {
 		fmt.Println("  🚫 Nessun hub associato alla macrozona.")
@@ -88,10 +99,19 @@ func getMacrozoneByName(regionName string) {
 		fmt.Printf("%-38s │ %-22s │ %-22s │ %-20s │ %-19s │ %-19s\n", "ID", "Macrozona", "Zona", "Servizio", "Registrato", "Ultima attività")
 		fmt.Println(strings.Repeat(sepLight, 160))
 		for _, zh := range macrozone.ZoneHubs {
-			fmt.Printf("%-38.38s │ %-22.22s │ %-22.22s │ %-20.20s │ %-19s │ %-19s\n",
+			color := reset
+			if int(time.Now().Sub(zh.LastSeen).Minutes()) > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-38.38s │ %-22.22s │ %-22.22s │ %-20.20s │ %-19s │ %-19s%s\n",
+				color,
 				zh.Id, zh.MacrozoneName, zh.ZoneName, zh.Service,
 				zh.RegistrationTime.Format("2006-01-02 15:04:05"),
-				zh.LastSeen.Format("2006-01-02 15:04:05"))
+				zh.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
+			)
 		}
 	} else {
 		fmt.Println("  🚫 Nessun hub di zona associato alla macrozona.")
@@ -104,10 +124,19 @@ func getMacrozoneByName(regionName string) {
 		fmt.Printf("%-36s │ %-20s │ %-20s │ %-12s │ %-18s │ %-19s │ %-19s\n", "ID", "Macrozona", "Zona", "Tipo", "Riferimento", "Registrato", "Ultima attività")
 		fmt.Println(strings.Repeat(sepLight, 160))
 		for _, s := range macrozone.Sensors {
-			fmt.Printf("%-36s │ %-20s │ %-20s │ %-12s │ %-18s │ %-19s │ %-19s\n",
+			color := reset
+			if int(time.Now().Sub(s.LastSeen).Minutes()) > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-36s │ %-20s │ %-20s │ %-12s │ %-18s │ %-19s │ %-19s%s\n",
+				color,
 				s.Id, s.MacrozoneName, s.ZoneName, s.Type, s.Reference,
 				s.RegistrationTime.Format("2006-01-02 15:04:05"),
-				s.LastSeen.Format("2006-01-02 15:04:05"))
+				s.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
+			)
 		}
 	} else {
 		fmt.Println("  🛰 Nessun sensore associato alla macrozona.")

@@ -2,13 +2,16 @@ package region
 
 import (
 	"SensorContinuum/internal/client/comunication/api"
+	"SensorContinuum/internal/client/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/utils"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const (
+	red      = "\033[31m"
 	green    = "\033[32m"
 	yellow   = "\033[33m"
 	cyanBold = "\033[1;36m"
@@ -20,7 +23,7 @@ const (
 func ListRegions() {
 	regions, err := api.GetRegions()
 	if err != nil {
-		logger.Log.Error("Ultima Errore nel recupero delle regioni: ", err)
+		logger.Log.Error("Errore nel recupero delle regioni: ", err)
 		return
 	}
 	logger.Log.Debug("🔎 Trovate ", len(regions), " regioni")
@@ -45,7 +48,7 @@ func GetRegionDetailsByName() {
 	name := utils.ReadInput()
 	region, err := api.GetRegionByName(name)
 	if err != nil {
-		logger.Log.Error("Ultima Errore nel recupero della regione: ", err)
+		logger.Log.Error("Errore nel recupero della regione: ", err)
 		return
 	}
 	if region == nil {
@@ -78,10 +81,20 @@ func GetRegionDetailsByName() {
 		fmt.Printf("%-36s │ %-18s │ %-19s │ %-19s\n", "ID", "Servizio", "Registrato", "Ultima attività")
 		fmt.Println(strings.Repeat(sepLight, 100))
 		for _, h := range region.Hubs {
-			fmt.Printf("%-36s │ %-18s │ %-19s │ %-19s\n",
+			color := reset
+			diff := int(time.Now().Sub(h.LastSeen).Minutes())
+			if diff > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-36s │ %-18s │ %-19s │ %-19s%s\n",
+				color,
 				h.Id, h.Service,
 				h.RegistrationTime.Format("2006-01-02 15:04:05"),
-				h.LastSeen.Format("2006-01-02 15:04:05"))
+				h.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
+			)
 		}
 	} else {
 		fmt.Println("  🚫 Nessun hub associato alla regione.")

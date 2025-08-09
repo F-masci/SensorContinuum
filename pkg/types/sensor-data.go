@@ -27,6 +27,36 @@ func CreateSensorDataFromKafka(msg kafka.Message) (SensorData, error) {
 	return data, err
 }
 
+type SensorDataBatch struct {
+	SensorData []SensorData `json:"sensor_data"`
+	counter    int
+}
+
+// NewSensorDataBatch crea un nuovo batch di dati sensori
+func NewSensorDataBatch() SensorDataBatch {
+	return SensorDataBatch{
+		SensorData: make([]SensorData, 0),
+		counter:    0,
+	}
+}
+
+// AddSensorData aggiunge un nuovo dato sensore al batch e incrementa il contatore
+func (sdb *SensorDataBatch) AddSensorData(data SensorData) {
+	sdb.SensorData = append(sdb.SensorData, data)
+	sdb.counter++
+}
+
+// Count restituisce il numero di dati sensori nel batch
+func (sdb SensorDataBatch) Count() int {
+	return sdb.counter
+}
+
+// Clear resetta il batch di dati sensori
+func (sdb *SensorDataBatch) Clear() {
+	sdb.SensorData = make([]SensorData, 0)
+	sdb.counter = 0
+}
+
 // AggregatedStats contiene i dati statistici calcolati ogni tot minuti dal Proximity-Fog-Hub
 // e inviati tramite kafka all' intermediate-fog-hub
 type AggregatedStats struct {
