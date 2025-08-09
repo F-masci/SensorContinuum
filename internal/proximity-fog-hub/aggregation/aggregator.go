@@ -44,7 +44,7 @@ func PerformAggregationAndSend() {
 	for _, stat := range stats {
 		// Arricchiamo la statistica con dati contestuali
 		stat.Timestamp = alignedEndTime.Format(time.RFC3339)
-		stat.Macrozone = environment.BuildingID
+		stat.Macrozone = environment.EdgeMacrozone
 
 		logger.Log.Info("Statistics calculated for the type: ", stat.Type, ", min: ", stat.Min, ", max: ", stat.Max, ", avg: ", stat.Avg)
 

@@ -49,14 +49,14 @@ func InitDatabaseConnection() error {
 // InsertSensorData inserisce un nuovo dato nella tabella della cache
 func InsertSensorData(ctx context.Context, d types.SensorData) error {
 	query := `
-        INSERT INTO proximity_hub_measurements (time, building_id, floor_id, sensor_id, type, value)
+        INSERT INTO proximity_hub_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
 	_, err := DBPool.Exec(ctx, query, d.Timestamp, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
 	return err
 }
 
-func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]structure.AggregatedStats, error) {
+func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]types.AggregatedStats, error) {
 	query := `
         SELECT 
             type,

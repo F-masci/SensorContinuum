@@ -57,7 +57,7 @@ func main() {
 		// Questo farà terminare l'applicazione.
 		err := comunication.PullConfigurationMessage(msgChannel)
 		if err != nil {
-			logger.Log.Error("Kafka consumer has stopped", "error", err.Error())
+			logger.Log.Error("Kafka consumer has stopped - error: ", err.Error())
 			os.Exit(1)
 		}
 	}()
@@ -66,11 +66,11 @@ func main() {
 	go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel)
 
 	// Canale per i dati statistici
-	statsDataChannel := make(chan structure.AggregatedStats)
+	statsDataChannel := make(chan types.AggregatedStats)
 	go func() {
 		err := comunication.PullStatisticsData(statsDataChannel)
 		if err != nil {
-			logger.Log.Error("Consumatore Kafka per statistiche si è fermato", "error", err)
+			logger.Log.Error("Kafka consumer for statistics has stopped - error: ", err)
 			os.Exit(1)
 		}
 	}()

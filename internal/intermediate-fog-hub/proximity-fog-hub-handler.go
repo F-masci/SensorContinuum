@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ProcessProximityFogHubData(dataChannel chan types.SensorData) {
+func ProcessRealTimeData(dataChannel chan types.SensorData) {
 
 	// Connessione al DB
 	dbURL := fmt.Sprintf(
@@ -41,7 +41,7 @@ func ProcessProximityFogHubData(dataChannel chan types.SensorData) {
 
 func insertSensorData(ctx context.Context, db *pgxpool.Pool, d types.SensorData) error {
 	query := `
-        INSERT INTO sensor_measurements (time, building_id, floor_id, sensor_id, type, value)
+        INSERT INTO sensor_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
 	_, err := db.Exec(ctx, query, d.Timestamp, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)

@@ -78,6 +78,7 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 		avg := aggregation.AverageInMinute(readings, minuteStart)
 		edgeMacrozone := readings[0].EdgeMacrozone
 		edgeZone := readings[0].EdgeZone
+		sensorType := readings[0].Type
 
 		result := types.SensorData{
 			EdgeMacrozone: edgeMacrozone,
@@ -85,6 +86,7 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 			SensorID:      sensorID,
 			Data:          avg,
 			Timestamp:     minuteStart.Format(time.RFC3339),
+			Type:          sensorType,
 		}
 		logger.Log.Info("Average for minute ", minuteStart.Format(time.RFC3339), " sensor "+sensorID+": ", avg)
 

@@ -64,12 +64,12 @@ func SetupEnvironment() error {
 
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + EdgeMacrozone
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
 	if !exists {
-		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + EdgeMacrozone
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC
 	}
 
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")

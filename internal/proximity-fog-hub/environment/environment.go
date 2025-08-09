@@ -82,12 +82,12 @@ func SetupEnvironment() error {
 
 	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC + "_" + EdgeMacrozone
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
 	if !exists {
-		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC + "_" + EdgeMacrozone
+		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC
 	}
 
 	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
@@ -95,10 +95,9 @@ func SetupEnvironment() error {
 		ProximityDataTopicPartition = EdgeMacrozone
 	}
 
-	// --- NUOVA LOGICA ---
 	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
 	if !exists {
-		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC + "_" + EdgeMacrozone
+		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
 	}
 
 	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")

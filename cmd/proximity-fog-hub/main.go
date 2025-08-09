@@ -58,7 +58,7 @@ func main() {
 	// --inizio primo punto di sopra nella descrizione--
 
 	// creazione del canale dove ricevere i dati inviati dall'edge-hub tramite broker MQTT
-	filteredDataChannel := make(chan structure.SensorData, 100)
+	filteredDataChannel := make(chan types.SensorData, 100)
 	configurationMessageChannel := make(chan types.ConfigurationMsg, 100)
 	//connessione e sottoscrizione al topic desiderato del broker MQTT
 	comunication.SetupMQTTConnection(filteredDataChannel, configurationMessageChannel)
