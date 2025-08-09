@@ -2,12 +2,12 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- 1. Crea la tabella base
 CREATE TABLE IF NOT EXISTS sensor_measurements (
-    time         TIMESTAMPTZ       NOT NULL,
-    building_id  TEXT              NOT NULL,
-    floor_id     TEXT              NOT NULL,
-    sensor_id    TEXT              NOT NULL,
-    type         TEXT              NOT NULL,
-    value        DOUBLE PRECISION  NOT NULL
+    time            TIMESTAMPTZ       NOT NULL,
+    macrozone_name  TEXT              NOT NULL,
+    zone_name       TEXT              NOT NULL,
+    sensor_id       TEXT              NOT NULL,
+    type            TEXT              NOT NULL,
+    value           DOUBLE PRECISION  NOT NULL
 );
 
 -- 2. Crea la hypertable (solo se non esiste già)
@@ -26,20 +26,20 @@ CREATE INDEX IF NOT EXISTS idx_sensor_type_time ON sensor_measurements (type, ti
 -- =========== NUOVA TABELLA PER CACHE PROXIMITY-FOG-HUB ==============
 -- ===================================================================
 
--- 1. Creiamo la tabella per la cache locale del proximity-hub
+-- 6. Creiamo la tabella per la cache locale del proximity-hub
 CREATE TABLE proximity_hub_measurements (
-    time        TIMESTAMPTZ       NOT NULL,
-    building_id VARCHAR(255)      NOT NULL,
-    floor_id    VARCHAR(255)      NOT NULL,
-    sensor_id   VARCHAR(255)      NOT NULL,
-    type        VARCHAR(50)       NOT NULL,
-    value       DOUBLE PRECISION  NOT NULL
+    time            TIMESTAMPTZ       NOT NULL,
+    macrozone_name  VARCHAR(255)      NOT NULL,
+    zone_name       VARCHAR(255)      NOT NULL,
+    sensor_id       VARCHAR(255)      NOT NULL,
+    type            VARCHAR(50)       NOT NULL,
+    value           DOUBLE PRECISION  NOT NULL
 );
 
--- 2. La trasformiamo in un'ipertabella, partizionata per tempo
+-- 7. La trasformiamo in un'ipertabella, partizionata per tempo
 SELECT create_hypertable('proximity_hub_measurements', 'time');
 
--- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 6 ore
+-- 8. Impostiamo una politica di retention per cancellare dati più vecchi di 6 ore
 SELECT add_retention_policy('proximity_hub_measurements', INTERVAL '6 hours');
 
 -- =========================================================================================================================================
@@ -47,12 +47,12 @@ SELECT add_retention_policy('proximity_hub_measurements', INTERVAL '6 hours');
 -- =========================================================================================================================================
 
 CREATE TABLE IF NOT EXISTS aggregated_statistics (
-                                                     time         TIMESTAMPTZ       NOT NULL,
-                                                     building_id  TEXT              NOT NULL,
-                                                     type         TEXT              NOT NULL,
-                                                     min_value    DOUBLE PRECISION  NOT NULL,
-                                                     max_value    DOUBLE PRECISION  NOT NULL,
-                                                     avg_value    DOUBLE PRECISION  NOT NULL
+    time            TIMESTAMPTZ       NOT NULL,
+    macrozone_name  TEXT              NOT NULL,
+    type            TEXT              NOT NULL,
+    min_value       DOUBLE PRECISION  NOT NULL,
+    max_value       DOUBLE PRECISION  NOT NULL,
+    avg_value       DOUBLE PRECISION  NOT NULL
 );
 
 SELECT create_hypertable('aggregated_statistics', 'time', if_not_exists => TRUE);

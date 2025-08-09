@@ -115,7 +115,7 @@ func GetMacrozoneByName(ctx context.Context, regionName string, name string) (*t
 
 	// Carica i sensori associati alla macrozona
 	sensorRows, err := regionDb.Conn().Query(ctx, `
-		SELECT id, macrozone_name, zone_name, types, reference, registration_time, last_seen
+		SELECT id, macrozone_name, zone_name, type, reference, registration_time, last_seen
 		FROM sensors
 		WHERE macrozone_name = $1
 	`, name)

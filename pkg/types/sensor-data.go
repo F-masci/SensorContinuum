@@ -30,12 +30,12 @@ func CreateSensorDataFromKafka(msg kafka.Message) (SensorData, error) {
 // AggregatedStats contiene i dati statistici calcolati ogni tot minuti dal Proximity-Fog-Hub
 // e inviati tramite kafka all' intermediate-fog-hub
 type AggregatedStats struct {
-	Timestamp  string  `json:"timestamp"`
-	BuildingID string  `json:"building_id"`
-	Type       string  `json:"type"`
-	Min        float64 `json:"min"`
-	Max        float64 `json:"max"`
-	Avg        float64 `json:"avg"`
+	Timestamp string  `json:"timestamp"`
+	Macrozone string  `json:"macrozone"`
+	Type      string  `json:"type"`
+	Min       float64 `json:"min"`
+	Max       float64 `json:"max"`
+	Avg       float64 `json:"avg"`
 }
 
 // CreateAggregatedStatsFromKafka deserializza un messaggio Kafka in AggregatedStats
