@@ -2,15 +2,17 @@ package zone
 
 import (
 	"SensorContinuum/internal/client/comunication/api"
+	"SensorContinuum/internal/client/environment"
 	"SensorContinuum/pkg/logger"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func listZones(regionName, macrozoneName string) {
 	zones, err := api.GetZones(regionName, macrozoneName)
 	if err != nil {
-		logger.Log.Error("Ultima Errore nel recupero delle zone: ", err)
+		logger.Log.Error("Errore nel recupero delle zone: ", err)
 		return
 	}
 	line := strings.Repeat(sepHeavy, 70)
@@ -50,11 +52,20 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 		fmt.Printf("%-36s │ %-22s │ %-19s │ %-19s\n", "ID", "Servizio", "Registrazione", "Ultima attività")
 		fmt.Println(strings.Repeat("─", 105))
 		for _, hub := range zone.Hubs {
-			fmt.Printf("%-36s │ %-22s │ %-19s │ %-19s\n",
+			diff := int(time.Now().Sub(hub.LastSeen).Minutes())
+			color := reset
+			if diff > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-36s │ %-22s │ %-19s │ %-19s%s\n",
+				color,
 				hub.Id,
 				hub.Service,
 				hub.RegistrationTime.Format("2006-01-02 15:04:05"),
 				hub.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
 			)
 		}
 	} else {
@@ -69,13 +80,22 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 			"ID", "Macrozona", "Zona", "Tipo", "Registrazione", "Ultima attività")
 		fmt.Println(strings.Repeat("─", 130))
 		for _, sensor := range zone.Sensors {
-			fmt.Printf("%-36s │ %-15s │ %-15s │ %-15s │ %-20s │ %-20s\n",
+			diff := int(time.Now().Sub(sensor.LastSeen).Minutes())
+			color := reset
+			if diff > environment.UnhealthyTime {
+				color = red
+			} else {
+				color = green
+			}
+			fmt.Printf("%s%-36s │ %-15s │ %-15s │ %-15s │ %-20s │ %-20s%s\n",
+				color,
 				sensor.Id,
 				sensor.MacrozoneName,
 				sensor.ZoneName,
 				sensor.Type,
 				sensor.RegistrationTime.Format("2006-01-02 15:04:05"),
 				sensor.LastSeen.Format("2006-01-02 15:04:05"),
+				reset,
 			)
 		}
 	} else {

@@ -2,11 +2,13 @@ package intermediate_fog_hub
 
 import (
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
+	"SensorContinuum/internal/intermediate-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,38 +16,64 @@ import (
 
 func ProcessRealTimeData(dataChannel chan types.SensorData) {
 
-	// Connessione al DB
-	dbURL := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		environment.PostgresSensorUser, environment.PostgresSensorPass, environment.PostgresSensorHost, environment.PostgresSensorPort, environment.PostgresSensorDatabase,
-	)
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, dbURL)
+	err := storage.SetupSensorDbConnection()
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
+		logger.Log.Error("Failed to connect to the sensor database: ", err)
+		os.Exit(1)
 	}
-	defer pool.Close()
+	defer storage.CloseSensorDbConnection()
 
-	for data := range dataChannel {
-		logger.Log.Info("Received Aggregated Data: ", data)
+	err = storage.SetupRegionDbConnection()
+	if err != nil {
+		logger.Log.Error("Failed to connect to the region database: ", err)
+		os.Exit(1)
+	}
+	defer storage.CloseRegionDbConnection()
 
-		if err := insertSensorData(ctx, pool, data); err != nil {
-			log.Fatalf("Insert failed: %v", err)
+	var batch = types.NewSensorDataBatch()
+
+	// Timer per la scrittura dei dati in batch
+	timer := time.NewTimer(time.Second * time.Duration(environment.SensorDataBatchTimeout))
+
+	for {
+		select {
+		case data := <-dataChannel:
+			logger.Log.Info("Received real-time Data from: ", data.SensorID)
+
+			if batch.Count() >= environment.SensorDataBatchSize {
+				logger.Log.Info("Inserting batch data into the database")
+				if err = storage.InsertSensorDataBatch(batch); err != nil {
+					logger.Log.Error("Failed to insert sensor data batch: ", err)
+				}
+				logger.Log.Info("Updating last seen for batch sensors")
+				if err = storage.UpdateLastSeenBatch(batch); err != nil {
+					logger.Log.Error("Failed to update last seen for sensors: ", err)
+				}
+				logger.Log.Info("Clearing batch after processing")
+				batch.Clear()
+				timer.Reset(time.Second * 10)
+				continue
+			}
+
+			logger.Log.Debug("Adding sensor data to batch: ", data.SensorID)
+			batch.AddSensorData(data)
+
+		case <-timer.C:
+			if batch.Count() > 0 {
+				logger.Log.Info("Inserting batch data into the database")
+				if err = storage.InsertSensorDataBatch(batch); err != nil {
+					logger.Log.Error("Failed to insert sensor data batch: ", err)
+				}
+				logger.Log.Info("Updating last seen for batch sensors")
+				if err = storage.UpdateLastSeenBatch(batch); err != nil {
+					logger.Log.Error("Failed to update last seen for sensors: ", err)
+				}
+				logger.Log.Info("Clearing batch after processing")
+				batch.Clear()
+			}
+			timer.Reset(time.Second * 10)
 		}
-
-		logger.Log.Info("Data inserted successfully into the database: ", data)
-
 	}
-}
-
-func insertSensorData(ctx context.Context, db *pgxpool.Pool, d types.SensorData) error {
-	query := `
-        INSERT INTO sensor_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
-        VALUES ($1, $2, $3, $4, $5, $6)
-    `
-	_, err := db.Exec(ctx, query, d.Timestamp, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
-	return err
 }
 
 func ProcessProximityFogHubConfiguration(msgChannel chan types.ConfigurationMsg) {
