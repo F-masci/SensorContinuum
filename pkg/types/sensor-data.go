@@ -1,4 +1,4 @@
-package structure
+package types
 
 import (
 	"encoding/json"
@@ -7,12 +7,12 @@ import (
 )
 
 type SensorData struct {
-	BuildingID string  `json:"building_id"`
-	FloorID    string  `json:"floor_id"`
-	SensorID   string  `json:"sensor_id"`
-	Timestamp  string  `json:"timestamp"`
-	Type       string  `json:"type"`
-	Data       float64 `json:"data"`
+	EdgeMacrozone string  `json:"macrozone"`
+	EdgeZone      string  `json:"zone"`
+	SensorID      string  `json:"sensor_id"`
+	Timestamp     string  `json:"timestamp"`
+	Type          string  `json:"type"`
+	Data          float64 `json:"data"`
 }
 
 func CreateSensorDataFromMQTT(msg MQTT.Message) (SensorData, error) {

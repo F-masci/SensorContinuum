@@ -48,12 +48,15 @@ func main() {
 	apiClient := apigateway.NewFromConfig(cfg)
 
 	lambdas := []LambdaFunc{
+		// region endpoints
 		{"regionList", "region"},
-		{"regionSearchId", "region"},
 		{"regionSearchName", "region"},
-		{"buildingList", "building"},
-		{"buildingSearchId", "building"},
-		{"buildingSearchName", "building"},
+		// macrozone endpoints
+		{"macrozoneList", "macrozone"},
+		{"macrozoneSearchName", "macrozone"},
+		// zone endpoints
+		{"zoneList", "zone"},
+		{"zoneSearchName", "zone"},
 	}
 
 	apiIDs := make(map[string]string)
@@ -112,21 +115,21 @@ func main() {
 		case "regionList":
 			segments = []string{"list"}
 			envKey = "REGION_LIST_URL"
-		case "buildingList":
-			segments = []string{"list", "{region}"}
-			envKey = "BUILDING_LIST_URL"
-		case "regionSearchId":
-			segments = []string{"search", "id", "{id}"}
-			envKey = "REGION_SEARCH_ID_URL"
-		case "buildingSearchId":
-			segments = []string{"search", "id", "{region}", "{id}"}
-			envKey = "BUILDING_SEARCH_ID_URL"
 		case "regionSearchName":
 			segments = []string{"search", "name", "{name}"}
 			envKey = "REGION_SEARCH_NAME_URL"
-		case "buildingSearchName":
+		case "macrozoneList":
+			segments = []string{"list", "{region}"}
+			envKey = "MACROZONE_LIST_URL"
+		case "macrozoneSearchName":
 			segments = []string{"search", "name", "{region}", "{name}"}
-			envKey = "BUILDING_SEARCH_NAME_URL"
+			envKey = "MACROZONE_SEARCH_NAME_URL"
+		case "zoneList":
+			segments = []string{"list", "{region}", "{macrozone}"}
+			envKey = "ZONE_LIST_URL"
+		case "zoneSearchName":
+			segments = []string{"search", "name", "{region}", "{macrozone}", "{name}"}
+			envKey = "ZONE_SEARCH_NAME_URL"
 		default:
 			segments = []string{lambda.Name}
 			envKey = strings.ToUpper(lambda.Name) + "_URL"

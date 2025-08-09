@@ -135,7 +135,7 @@ services:
     environment:
       - REGION_ID=1
       - REGION_NAME=region-001
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - HUB_ID=intermediate-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
@@ -157,7 +157,7 @@ services:
       dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
     container_name: proximity-fog-hub-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - HUB_ID=proximity-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
@@ -179,7 +179,7 @@ services:
       dockerfile: deploy/docker/edge-hub.Dockerfile
     container_name: edge-hub-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - HUB_ID=hub-001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
@@ -203,7 +203,7 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-1-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - SENSOR_ID=sensor-0001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
@@ -218,7 +218,7 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-2-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - SENSOR_ID=sensor-0002
       - MQTT_BROKER_ADDRESS=mosquitto-broker

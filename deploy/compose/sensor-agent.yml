@@ -6,14 +6,17 @@ services:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
-      - BUILDING_ID=build-0001
-      - FLOOR_ID=floor-001
+      - SENSOR_ID_GENERATOR=hostname
+      - EDGE_MACROZONE=build-0001
+      - EDGE_ZONE=floor-001
       - MQTT_BROKER_ADDRESS=floor-001.mosquitto.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 20s
-      timeout: 5s
-      retries: 5
+      interval: 60s
+      timeout: 30s
+      retries: 10
     restart: always
     extra_hosts:
       - "floor-001.mosquitto.local:192.168.0.10"

@@ -1,27 +1,34 @@
 package region
 
 import (
-	"SensorContinuum/internal/api-backend/building"
-	"SensorContinuum/internal/api-backend/comunication"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/internal/api-backend/macrozone"
+	"SensorContinuum/internal/api-backend/storage"
+	"SensorContinuum/pkg/types"
 	"context"
+	"database/sql"
+	"errors"
 )
 
-func GetAllRegions(ctx context.Context) ([]structure.Region, error) {
-	db, err := comunication.GetCloudPostgresDB(ctx)
+func GetAllRegions(ctx context.Context) ([]types.Region, error) {
+	db, err := storage.GetCloudPostgresDB(ctx)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Conn().Query(ctx, `SELECT r.id, r.name FROM regions r`)
+	rows, err := db.Conn().Query(ctx, `
+		SELECT r.name, COUNT(m.name) AS macrozone_count
+		FROM regions r
+		LEFT JOIN macrozones m ON m.region_name = r.name
+		GROUP BY r.name
+	`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var regions []structure.Region
+	var regions []types.Region
 	for rows.Next() {
-		var r structure.Region
-		if err := rows.Scan(&r.Id, &r.Name); err != nil {
+		var r types.Region
+		if err := rows.Scan(&r.Name, &r.MacrozoneCount); err != nil {
 			return nil, err
 		}
 		regions = append(regions, r)
@@ -29,46 +36,49 @@ func GetAllRegions(ctx context.Context) ([]structure.Region, error) {
 	return regions, nil
 }
 
-func GetRegionByName(ctx context.Context, name string) (*structure.Region, error) {
-	db, err := comunication.GetCloudPostgresDB(ctx)
+func GetRegionByName(ctx context.Context, name string) (*types.Region, error) {
+	cloudDb, err := storage.GetCloudPostgresDB(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var r structure.Region
-	err = db.Conn().QueryRow(ctx, `SELECT r.id, r.name FROM regions r WHERE r.name = $1`, name).Scan(&r.Id, &r.Name)
-	if err != nil {
-		return nil, err
+	var r types.Region
+	err = cloudDb.Conn().QueryRow(ctx, `SELECT r.name FROM regions r WHERE r.name = $1`, name).Scan(&r.Name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
 	}
-
-	// Carica i building associati
-	buildings, err := building.GetBuildingsList(ctx, r.Name)
-	if err != nil {
-		return nil, err
-	}
-	r.Buildings = buildings
-	r.BuildingCount = len(r.Buildings)
-
-	return &r, nil
-}
-
-func GetRegionByID(ctx context.Context, id int) (*structure.Region, error) {
-	db, err := comunication.GetCloudPostgresDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var r structure.Region
-	err = db.Conn().QueryRow(ctx, `SELECT r.id, r.name FROM regions r WHERE r.id = $1`, id).Scan(&r.Id, &r.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	// Carica i building associati
-	buildings, err := building.GetBuildingsList(ctx, r.Name)
+	// Carica le macrozone associate
+	macrozones, err := macrozone.GetMacrozonesList(ctx, r.Name)
 	if err != nil {
 		return nil, err
 	}
-	r.Buildings = buildings
-	r.BuildingCount = len(r.Buildings)
+	r.Macrozones = macrozones
+	r.MacrozoneCount = len(macrozones)
+
+	// Carica i region_hub associati
+	regionDb, err := storage.GetRegionPostgresDB(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := regionDb.Conn().Query(ctx, `
+		SELECT id, service, registration_time, last_seen
+		FROM region_hubs
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	r.Hubs = make([]types.RegionHub, 0)
+	for rows.Next() {
+		var hub types.RegionHub
+		if err := rows.Scan(&hub.Id, &hub.Service, &hub.RegistrationTime, &hub.LastSeen); err != nil {
+			return nil, err
+		}
+		r.Hubs = append(r.Hubs, hub)
+	}
 
 	return &r, nil
 }

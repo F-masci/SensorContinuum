@@ -59,7 +59,7 @@ func downloadRandomCSV() (string, error) {
 	}
 
 	pattern := ""
-	if environment.SensorLocation == "building" {
+	if environment.SensorLocation == "macrozone" {
 		pattern = fmt.Sprintf(`href="([^"]*(%s.*indoor|indoor.*%s)[^"]*\.csv)"`, environment.SimulationSensorReference, environment.SimulationSensorReference)
 	} else {
 		pattern = fmt.Sprintf(`href="([^"]*%s[^"]*\.csv)"`, environment.SimulationSensorReference)

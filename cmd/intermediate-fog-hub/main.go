@@ -5,7 +5,7 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"os"
 )
@@ -13,9 +13,9 @@ import (
 // getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
 func getContext() logger.Context {
 	return logger.Context{
-		"service":  "intermediate-fog-hub",
-		"building": environment.BuildingID,
-		"hub":      environment.HubID,
+		"service":   "intermediate-fog-hub",
+		"macrozone": environment.EdgeMacrozone,
+		"hub":       environment.HubID,
 	}
 }
 
@@ -30,10 +30,11 @@ func main() {
 	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Intermediate Fog Hub...")
-	logger.Log.Info("Building ID: ", environment.BuildingID)
+	intermediate_fog_hub.Register()
+	logger.Log.Info("Building ID: ", environment.EdgeMacrozone)
 	logger.Log.Info("Hub ID: ", environment.HubID)
 
-	dataChannel := make(chan structure.SensorData)
+	dataChannel := make(chan types.SensorData)
 	go func() {
 		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 		// Questo farà terminare l'applicazione.
@@ -44,7 +45,7 @@ func main() {
 		}
 	}()
 
-	msgChannel := make(chan structure.ConfigurationMsg)
+	msgChannel := make(chan types.ConfigurationMsg)
 	go func() {
 		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 		// Questo farà terminare l'applicazione.

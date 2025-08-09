@@ -1,12 +1,12 @@
 package aggregation
 
 import (
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"time"
 )
 
 // AverageInMinute calcola la media dei valori del minuto corrente.
-func AverageInMinute(readings []structure.SensorData, minute time.Time) float64 {
+func AverageInMinute(readings []types.SensorData, minute time.Time) float64 {
 	if len(readings) == 0 {
 		return 0
 	}

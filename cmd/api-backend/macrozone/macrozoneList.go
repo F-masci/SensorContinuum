@@ -1,8 +1,8 @@
 package main
 
 import (
-	"SensorContinuum/internal/api-backend/building"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/internal/api-backend/macrozone"
+	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -15,10 +15,10 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	region := request.PathParameters["region"]
 
 	ctx := context.Background()
-	buildings, err := building.GetBuildingsList(ctx, region)
+	buildings, err := macrozone.GetMacrozonesList(ctx, region)
 	if err != nil {
-		errBody, _ := json.Marshal(structure.ErrorResponse{
-			Error:  "Errore nel recupero degli edifici",
+		errBody, _ := json.Marshal(types.ErrorResponse{
+			Error:  "Errore nel recupero delle macrozone",
 			Detail: err.Error(),
 		})
 		return events.APIGatewayProxyResponse{

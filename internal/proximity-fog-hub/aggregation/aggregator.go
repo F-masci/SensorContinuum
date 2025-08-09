@@ -32,12 +32,12 @@ func PerformAggregationAndSend() {
 	for _, stat := range stats {
 		// Arricchiamo la statistica con dati contestuali
 		stat.Timestamp = now
-		stat.BuildingID = environment.BuildingID
+		stat.Macrozone = environment.EdgeMacrozone
 
-		logger.Log.Info("Statistics calculated for the type:", stat.Type, "/n avg:", stat.Avg)
+		logger.Log.Info("Statistics calculated for the type: ", stat.Type, " - avg:", stat.Avg)
 
 		if err := comunication.SendData(stat); err != nil {
-			logger.Log.Error("Failure to send statistics to Kafka, type", stat.Type, "/n error: ", err)
+			logger.Log.Error("Failure to send statistics to Kafka, type", stat.Type, " - error: ", err)
 			// Non ci fermiamo, proviamo a inviare le altre
 			continue
 		}

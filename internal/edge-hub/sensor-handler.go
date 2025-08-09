@@ -1,23 +1,24 @@
 package edge_hub
 
 import (
+	"SensorContinuum/internal/edge-hub/comunication"
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/internal/edge-hub/processing/aggregation"
 	"SensorContinuum/internal/edge-hub/processing/filtering"
 	"SensorContinuum/internal/edge-hub/storage"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"context"
 	"time"
 )
 
 // FilterSensorData orchestra il filtraggio dei dati dei sensori.
-func FilterSensorData(sensorDataChannel chan structure.SensorData) {
+func FilterSensorData(sensorDataChannel chan types.SensorData) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
 	for data := range sensorDataChannel {
-		logger.Log.Debug("Processing data for sensor: ", data.SensorID)
+		logger.Log.Info("Processing data for sensor ", data.SensorID, " - value: ", data.Data, ", timestamp: ", data.Timestamp)
 
 		// 1. Recupera la storia dal Redis
 		readings, err := storage.GetSensorHistory(ctx, data.SensorID, environment.HistoryWindowSize)
@@ -31,14 +32,12 @@ func FilterSensorData(sensorDataChannel chan structure.SensorData) {
 
 		// 3. IN BASE AL RISULTATO del controllo, decidiamo se scartare il dato.
 		if isOutlier {
-			logger.Log.Warn("Outlier detected and discarded for sensor " + data.SensorID)
-			logger.Log.Warn("value outliner detected: ", data.Data)
-			logger.Log.Warn("timestamp: ", data.Timestamp)
+			logger.Log.Warn("Outlier detected and discarded for sensor ", data.SensorID, " - value: ", data.Data, ", timestamp: ", data.Timestamp)
 			continue
 		}
 
 		// 4. Se il dato è valido, procedi con l'elaborazione successiva.
-		logger.Log.Debug("Data is valid for sensor: ", data.SensorID)
+		logger.Log.Info("Data is valid for sensor: ", data.SensorID)
 
 		// 5. Aggiungi il nuovo dato alla storia su Redis se non è un outlier.
 		if err := storage.AddSensorHistory(ctx, data); err != nil {
@@ -49,7 +48,7 @@ func FilterSensorData(sensorDataChannel chan structure.SensorData) {
 }
 
 // AggregateAllSensorsData esegue l'aggregazione per tutti i sensori presenti in Redis.
-func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
+func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
@@ -58,7 +57,7 @@ func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
 		logger.Log.Error("Error getting sensor IDs from Redis: ", err)
 	}
 
-	var results []structure.SensorData
+	var results []types.SensorData
 	now := time.Now().UTC()
 	minuteStart := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()-1, 0, 0, time.UTC)
 
@@ -77,15 +76,15 @@ func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
 		}
 
 		avg := aggregation.AverageInMinute(readings, minuteStart)
-		buildingID := readings[0].BuildingID
-		floorID := readings[0].FloorID
+		edgeMacrozone := readings[0].EdgeMacrozone
+		edgeZone := readings[0].EdgeZone
 
-		result := structure.SensorData{
-			BuildingID: buildingID,
-			FloorID:    floorID,
-			SensorID:   sensorID,
-			Data:       avg,
-			Timestamp:  minuteStart.Format(time.RFC3339),
+		result := types.SensorData{
+			EdgeMacrozone: edgeMacrozone,
+			EdgeZone:      edgeZone,
+			SensorID:      sensorID,
+			Data:          avg,
+			Timestamp:     minuteStart.Format(time.RFC3339),
 		}
 		logger.Log.Info("Average for minute ", minuteStart.Format(time.RFC3339), " sensor "+sensorID+": ", avg)
 
@@ -105,7 +104,7 @@ func AggregateAllSensorsData(filteredDataChannel chan structure.SensorData) {
 
 }
 
-func CleanUnhealthySensors() (unhealthySensors []string) {
+func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
@@ -122,15 +121,6 @@ func CleanUnhealthySensors() (unhealthySensors []string) {
 			continue
 		}
 
-		if len(readings) == 0 {
-			logger.Log.Warn("No readings found for sensor " + sensorID + ". Removing from Redis.")
-			if err := storage.RemoveSensorHistory(ctx, sensorID); err != nil {
-				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
-			}
-			unhealthySensors = append(unhealthySensors, sensorID)
-			continue
-		}
-
 		// Trova il timestamp più recente tra le letture
 		latestTime := time.Time{}
 		for _, reading := range readings {
@@ -143,9 +133,9 @@ func CleanUnhealthySensors() (unhealthySensors []string) {
 			}
 		}
 
-		// Se l'ultima lettura è più vecchia di 5 minuti, elimina la storia
+		// Caso: sensore non comunica da troppo tempo (UnhealthySensorTimeout) -> rimuovo la storia del sensore
 		if time.Since(latestTime) > environment.UnhealthySensorTimeout {
-			logger.Log.Warn("Sensor " + sensorID + " inactive for over 5 minutes. Removing from Redis.")
+			logger.Log.Warn("Sensor " + sensorID + " inactive for too times. Removing history from Redis.")
 			if err := storage.RemoveSensorHistory(ctx, sensorID); err != nil {
 				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
 			}
@@ -153,8 +143,17 @@ func CleanUnhealthySensors() (unhealthySensors []string) {
 			continue
 		}
 
-		logger.Log.Info("Sensor "+sensorID+" for healthy. Readings count: ", len(readings))
+		// Caso: sensore non comunica da troppo tempo (RegistrationSensorTimeout) -> rimuovo il sensore
+		if time.Since(latestTime) > environment.RegistrationSensorTimeout {
+			logger.Log.Warn("Sensor " + sensorID + " inactive for too times. Removing from Redis.")
+			if err := storage.RemoveSensor(ctx, sensorID); err != nil {
+				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
+			}
+			removedSensors = append(removedSensors, sensorID)
+			continue
+		}
 
+		logger.Log.Info("Checked sensor "+sensorID+" for healthy. Readings count: ", len(readings))
 	}
 
 	logger.Log.Info("Cleaned up unhealthy sensors. Total sensors checked: ", len(sensorIDs))
@@ -163,7 +162,45 @@ func CleanUnhealthySensors() (unhealthySensors []string) {
 	} else {
 		logger.Log.Info("No unhealthy sensors found.")
 	}
-	return unhealthySensors
+	if len(removedSensors) > 0 {
+		logger.Log.Warn("Removed sensors: ", removedSensors)
+	} else {
+		logger.Log.Info("No sensors removed.")
+	}
+	return unhealthySensors, removedSensors
+}
+
+func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubConfigurationMessageChannel chan types.ConfigurationMsg) {
+	storage.InitRedisConnection()
+	ctx := context.Background()
+
+	for configMsg := range sensorConfigurationMessageChannel {
+		logger.Log.Info("Processing configuration message for sensor: ", configMsg.SensorID)
+
+		// Esegui le operazioni necessarie in base al tipo di configurazione
+		switch configMsg.MsgType {
+		case types.NewSensorMsgType:
+			sensor := types.Sensor{
+				Id:            configMsg.SensorID,
+				ZoneName:      configMsg.EdgeZone,
+				MacrozoneName: configMsg.EdgeMacrozone,
+				Type:          configMsg.SensorType,
+				Reference:     configMsg.SensorReference,
+			}
+			if exists, err := storage.AddSensor(ctx, sensor); err != nil {
+				logger.Log.Error("Error adding sensor configuration: ", err)
+			} else if !exists {
+				logger.Log.Info("Sensor configuration added for sensor: ", configMsg.SensorID)
+				hubConfigurationMessageChannel <- configMsg
+				comunication.CleanRetationConfigurationMessage(configMsg)
+			} else {
+				logger.Log.Info("Sensor configuration already exists for sensor: ", configMsg.SensorID)
+				comunication.CleanRetationConfigurationMessage(configMsg)
+			}
+		default:
+			logger.Log.Warn("Unknown configuration types for sensor: ", configMsg.SensorID)
+		}
+	}
 }
 
 func NotifyUnhealthySensors(unhealthySensors []string) {
@@ -175,9 +212,17 @@ func NotifyUnhealthySensors(unhealthySensors []string) {
 	for _, sensorID := range unhealthySensors {
 		logger.Log.Warn("Notifying about unhealthy sensor: ", sensorID)
 		// TODO: Implement the actual notification logic
-		// err := comunication.NotifyUnhealthySensor(sensorID)
-		// if err != nil {
-		// 	 logger.Log.Error("Error notifying about unhealthy sensor ", sensorID, ": ", err)
-		// }
+	}
+}
+
+func NotifyRemovedSensors(removedSensors []string) {
+	if len(removedSensors) == 0 {
+		logger.Log.Info("No removed sensors to notify.")
+		return
+	}
+
+	for _, sensorID := range removedSensors {
+		logger.Log.Warn("Notifying about removed sensor: ", sensorID)
+		// TODO: Implement the actual notification logic
 	}
 }

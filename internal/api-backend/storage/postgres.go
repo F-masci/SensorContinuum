@@ -1,4 +1,4 @@
-package comunication
+package storage
 
 import (
 	"context"

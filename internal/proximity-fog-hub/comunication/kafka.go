@@ -4,7 +4,7 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/internal/proximity-fog-hub/storage" // --- NUOVA IMPORTAZIONE ---
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"github.com/segmentio/kafka-go"
@@ -44,10 +44,10 @@ func connect() {
 		RequiredAcks: kafka.RequireOne,
 		Balancer:     &kafka.Hash{},
 	}
-	logger.Log.Info("Connected (write) to Kafka topic for configuration data, topic:", environment.ProximityConfigurationTopic)
+	logger.Log.Info("Connected (write) to Kafka topic for configuration data, topic: ", environment.ProximityConfigurationTopic)
 }
 
-func SendAggregatedData(data structure.SensorData) error {
+func SendAggregatedData(data types.SensorData) error {
 	connect()
 	msgBytes, err := json.Marshal(data)
 	if err != nil {
@@ -76,20 +76,27 @@ func SendData(stats storage.AggregatedStats) error {
 
 	return statsKafkaWriter.WriteMessages(ctx,
 		kafka.Message{
-			Key:   []byte(environment.BuildingID), // Partizioniamo per edificio
+			Key:   []byte(environment.EdgeMacrozone), // Partizioniamo per edificio
 			Value: msgBytes,
 		},
 	)
 }
 
 func SendRegistrationMessage() error {
-	connect()
 
-	msg := structure.ConfigurationMsg{
-		MsgType:    "new_building",
-		BuildingID: environment.BuildingID,
-		Timestamp:  time.Now().Unix(),
+	msg := types.ConfigurationMsg{
+		MsgType:       types.NewProximityMsgType,
+		EdgeMacrozone: environment.EdgeMacrozone,
+		Timestamp:     time.Now().Unix(),
+		HubID:         environment.HubID,
+		Service:       types.ProximityHubService,
 	}
+
+	return SendConfigurationMessage(msg)
+}
+
+func SendConfigurationMessage(msg types.ConfigurationMsg) error {
+	connect()
 
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
@@ -100,7 +107,7 @@ func SendRegistrationMessage() error {
 
 	return configurationKafkaWriter.WriteMessages(ctx,
 		kafka.Message{
-			Key:   []byte(environment.BuildingID),
+			Key:   []byte(environment.EdgeMacrozone),
 			Value: msgBytes,
 		},
 	)

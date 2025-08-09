@@ -1,12 +1,11 @@
 package main
 
 import (
-	"SensorContinuum/internal/api-backend/building"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/internal/api-backend/zone"
+	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -14,38 +13,31 @@ import (
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	region := request.PathParameters["region"]
-	idStr := request.PathParameters["id"]
-	id, err := strconv.Atoi(idStr)
+	macrozone := request.PathParameters["macrozone"]
+	name := request.PathParameters["name"]
+
+	ctx := context.Background()
+	zoneDetail, err := zone.GetZoneByName(ctx, region, macrozone, name)
 	if err != nil {
-		errBody, _ := json.Marshal(structure.ErrorResponse{
-			Error:  "ID non valido",
+		errBody, _ := json.Marshal(types.ErrorResponse{
+			Error:  "Errore nel recupero delle zona",
 			Detail: err.Error(),
 		})
 		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusBadRequest,
+			StatusCode: http.StatusInternalServerError,
 			Body:       string(errBody),
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}
-
-	ctx := context.Background()
-	buildingDetail, err := building.GetBuildingByID(ctx, region, id)
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusInternalServerError,
-			Body:       `{"error":"Errore nel recupero dell'edificio", "detail":"` + err.Error() + `"}`,
-			Headers:    map[string]string{"Content-Type": "application/json"},
-		}, nil
-	}
-	if buildingDetail == nil {
+	if zoneDetail == nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
-			Body:       `{"error":"Edificio non trovato"}`,
+			Body:       `{"error":"Zona non trovata"}`,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}
 
-	body, err := json.Marshal(buildingDetail)
+	body, err := json.Marshal(zoneDetail)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}

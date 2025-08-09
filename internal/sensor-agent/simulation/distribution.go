@@ -4,7 +4,7 @@ import (
 	"SensorContinuum/configs/simulation"
 	"SensorContinuum/internal/sensor-agent/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"math"
 	"math/rand"
 	"time"
@@ -41,16 +41,16 @@ func setupDistribution(filePath string) error {
 }
 
 // generateSensorData genera letture randomiche basate sulla distribuzione
-func generateSensorData() structure.SensorData {
+func generateSensorData() types.SensorData {
 	now := time.Now().UTC()
 	reading := generateRandomReading(now)
-	return structure.SensorData{
-		BuildingID: environment.BuildingID,
-		FloorID:    environment.FloorID,
-		SensorID:   environment.SensorID,
-		Timestamp:  reading.Timestamp.Format(time.RFC3339),
-		Type:       environment.SensorType,
-		Data:       reading.Value,
+	return types.SensorData{
+		EdgeMacrozone: environment.EdgeMacrozone,
+		EdgeZone:      environment.EdgeZone,
+		SensorID:      environment.SensorId,
+		Timestamp:     reading.Timestamp.Format(time.RFC3339),
+		Type:          string(environment.SensorType),
+		Data:          reading.Value,
 	}
 }
 
@@ -90,7 +90,7 @@ func generateRandomReading(datetime time.Time) sensorReading {
 	logger.Log.Debug("Generating random reading for hour: ", datetime.Hour(), " with mean: ", stats.Mean, " and std: ", stats.Std)
 
 	if rand.Float64() < simulation.MISSING_PROBABILITY {
-		logger.Log.Debug("Generating missing value")
+		logger.Log.Info("Generating missing value")
 		return sensorReading{}
 	}
 
@@ -99,7 +99,7 @@ func generateRandomReading(datetime time.Time) sensorReading {
 
 	// Aggiunge un outlier con una probabilità definita
 	if rand.Float64() < simulation.OUTLIER_PROBABILITY {
-		logger.Log.Debug("Generating outlier")
+		logger.Log.Info("Generating outlier")
 		tmp *= simulation.OUTLIER_MULTIPLIER // Moltiplica per il moltiplicatore per generare un outlier
 		tmp += simulation.OUTLIER_ADDITION   // Aggiunge un valore per aumentare il centro dell'outlier
 	}
