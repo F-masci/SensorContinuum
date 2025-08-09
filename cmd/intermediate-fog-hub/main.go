@@ -4,6 +4,7 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub"
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
+	"SensorContinuum/internal/intermediate-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
@@ -38,7 +39,7 @@ func main() {
 	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Intermediate Fog Hub...")
-	intermediate_fog_hub.Register()
+	storage.Register()
 
 	realTimeDataChannel := make(chan types.SensorData)
 	go func() {

@@ -249,3 +249,66 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 
 	return nil
 }
+
+// InsertStatisticsData inserisce i dati aggregati delle statistiche nel database
+func InsertStatisticsData(s types.AggregatedStats) error {
+	query := `
+        INSERT INTO aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    `
+	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, s.Timestamp, s.Macrozone, s.Type, s.Min, s.Max, s.Avg)
+	return err
+}
+
+// RegisterMacrozoneHub Registra o aggiorna un hub di macrozona (proximity fog hub)
+func RegisterMacrozoneHub(msg types.ConfigurationMsg) error {
+	timestamp := time.Unix(msg.Timestamp, 0)
+	query := `
+		INSERT INTO macrozone_hubs (id, macrozone_name, service, registration_time, last_seen)
+		VALUES ($1, $2, $3, $4, $4)
+		ON CONFLICT (id, macrozone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+	`
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.Service, timestamp)
+	return err
+}
+
+// RegisterZoneHub Registra o aggiorna un hub di zona (edge hub)
+func RegisterZoneHub(msg types.ConfigurationMsg) error {
+	timestamp := time.Unix(msg.Timestamp, 0)
+	query := `
+		INSERT INTO zone_hubs (id, macrozone_name, zone_name, service, registration_time, last_seen)
+		VALUES ($1, $2, $3, $4, $5, $5)
+		ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+	`
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.EdgeZone, msg.Service, timestamp)
+	return err
+}
+
+// RegisterSensor Registra o aggiorna un sensore associato a un edge hub
+func RegisterSensor(msg types.ConfigurationMsg) error {
+	timestamp := time.Unix(msg.Timestamp, 0)
+	query := `
+        INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
+        VALUES ($1, $2, $3, $4, $5, $6, $6)
+        ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+    `
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.SensorID, msg.EdgeMacrozone, msg.EdgeZone, msg.SensorType, msg.SensorReference, timestamp)
+	return err
+}
+
+func Register() error {
+
+	err := SetupRegionDbConnection()
+	if err != nil {
+		logger.Log.Error("Failed to connect to the sensor database: ", err)
+		os.Exit(1)
+	}
+
+	query := `
+	INSERT INTO region_hubs (id, service, registration_time, last_seen)
+	VALUES ($1, $2, NOW(), NOW())
+	ON CONFLICT (id) DO UPDATE SET last_seen = EXCLUDED.last_seen
+`
+	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, types.IntrermediateHubService)
+	return err
+}
