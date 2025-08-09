@@ -13,12 +13,46 @@ services:
     volumes:
       - ../../configs/postgresql/init-timescale.sql:/docker-entrypoint-initdb.d/init-timescale.sql:ro
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "sensorcontinuum" ]
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
       timeout: 5s
       retries: 3
-    networks:
-      - iot-net
+
+  cloud_metadatadb:
+    image: postgis/postgis:latest
+    container_name: metadatadb-cloud-compose
+    hostname: metadatadb-cloud-host
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: sensorcontinuum
+    ports:
+      - "5433:5432"
+    volumes:
+      - ../../configs/postgresql/init-cloud-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  region_metadatadb:
+    image: postgis/postgis:latest
+    container_name: metadatadb-region-compose
+    hostname: metadatadb-region-host
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: sensorcontinuum
+    ports:
+      - "5434:5432"
+    volumes:
+      - ../../configs/postgresql/init-region-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   redis:
     image: redis:latest
@@ -98,13 +132,17 @@ services:
       dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
     container_name: intermediate-fog-hub-compose
     environment:
-      - BUILDING_ID=building-0001
+      - REGION_ID=1
+      - REGION_NAME=region-001
+      - BUILDING_ID=macrozone-0001
       - HUB_ID=intermediate-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
       # - EDGE_HUB_TOPIC=raw-data-edge-hub_build-0001
       # - EDGE_HUB_TOPIC_PARTITION=1
-      - POSTGRES_HOST=timescaledb-host
+      - POSTGRES_CLOUD_HOST=metadatadb-cloud-compose
+      - POSTGRES_REGION_HOST=metadatadb-region-compose
+      - POSTGRES_SENSOR_HOST=timescaledb-compose
     hostname: intermediate-fog-hub
     depends_on:
       kafka:
@@ -118,16 +156,11 @@ services:
       dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
     container_name: proximity-fog-hub-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - HUB_ID=proximity-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
       - MQTT_BROKER_ADDRESS=mosquitto-broker
-      - POSTGRES_HOST=timescaledb-host
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=adminpass
-      - POSTGRES_DATABASE=sensorcontinuum
     hostname: proximity-fog-hub
     depends_on:
       mosquitto:
@@ -145,7 +178,7 @@ services:
       dockerfile: deploy/docker/edge-hub.Dockerfile
     container_name: edge-hub-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - HUB_ID=hub-001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
@@ -169,7 +202,7 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-1-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - SENSOR_ID=sensor-0001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
@@ -184,7 +217,7 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-2-compose
     environment:
-      - BUILDING_ID=building-0001
+      - BUILDING_ID=macrozone-0001
       - FLOOR_ID=floor-001
       - SENSOR_ID=sensor-0002
       - MQTT_BROKER_ADDRESS=mosquitto-broker

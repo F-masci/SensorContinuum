@@ -3,43 +3,36 @@ package api
 import (
 	"SensorContinuum/internal/client/comunication"
 	"SensorContinuum/internal/client/environment"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"encoding/json"
+	"errors"
 	"strings"
 )
 
-func GetRegions() ([]structure.Region, error) {
+const regionNameSearchPlaceholder = "{name}"
+
+func GetRegions() ([]types.Region, error) {
 	body, err := comunication.GetApiData(environment.RegionListUrl)
 	if err != nil {
 		return nil, err
 	}
-	var regions []structure.Region
+	var regions []types.Region
 	if err := json.Unmarshal([]byte(body), &regions); err != nil {
 		return nil, err
 	}
 	return regions, nil
 }
 
-func GetRegionById(id string) (*structure.Region, error) {
-	url := strings.Replace(environment.RegionSearchIdUrl, "{id}", id, 1)
+func GetRegionByName(name string) (*types.Region, error) {
+	url := strings.Replace(environment.RegionSearchNameUrl, regionNameSearchPlaceholder, name, 1)
 	body, err := comunication.GetApiData(url)
 	if err != nil {
+		if errors.Is(err, comunication.ErrNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	var region structure.Region
-	if err := json.Unmarshal([]byte(body), &region); err != nil {
-		return nil, err
-	}
-	return &region, nil
-}
-
-func GetRegionByName(name string) (*structure.Region, error) {
-	url := strings.Replace(environment.RegionSearchNameUrl, "{name}", name, 1)
-	body, err := comunication.GetApiData(url)
-	if err != nil {
-		return nil, err
-	}
-	var region structure.Region
+	var region types.Region
 	if err := json.Unmarshal([]byte(body), &region); err != nil {
 		return nil, err
 	}

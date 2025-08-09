@@ -17,7 +17,7 @@ spec:
           image: edge-hub-filter:latest
           env:
             - name: BUILDING_ID
-              value: "building-0001"
+              value: "macrozone-0001"
             - name: FLOOR_ID
               value: "floor-001"
             - name: HUB_ID

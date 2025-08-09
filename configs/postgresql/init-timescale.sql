@@ -28,12 +28,12 @@ CREATE INDEX IF NOT EXISTS idx_sensor_type_time ON sensor_measurements (type, ti
 
 -- 1. Creiamo la tabella per la cache locale del proximity-hub
 CREATE TABLE proximity_hub_measurements (
-                                            time        TIMESTAMPTZ       NOT NULL,
-                                            building_id VARCHAR(255)      NOT NULL,
-                                            floor_id    VARCHAR(255)      NOT NULL,
-                                            sensor_id   VARCHAR(255)      NOT NULL,
-                                            type        VARCHAR(50)       NOT NULL,
-                                            value       DOUBLE PRECISION  NOT NULL
+    time        TIMESTAMPTZ       NOT NULL,
+    building_id VARCHAR(255)      NOT NULL,
+    floor_id    VARCHAR(255)      NOT NULL,
+    sensor_id   VARCHAR(255)      NOT NULL,
+    type        VARCHAR(50)       NOT NULL,
+    value       DOUBLE PRECISION  NOT NULL
 );
 
 -- 2. La trasformiamo in un'ipertabella, partizionata per tempo

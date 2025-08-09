@@ -4,6 +4,10 @@ ARG LAMBDA_PATH=
 WORKDIR /app
 COPY . .
 
+# Scarica tutte le dipendenze Go dichiarate in go.mod/go.sum
+# RUN go mod tidy
+RUN go mod download
+
 RUN if [ -n "$LAMBDA_PATH" ]; then \
       src="$LAMBDA_PATH"; \
       case "$src" in *.go) src="${src%.go}";; esac; \

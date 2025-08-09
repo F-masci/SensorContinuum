@@ -3,22 +3,22 @@ package filtering
 import (
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"math"
 )
 
 // IsOutlier controlla se un dato è un outlier basandosi sulla storia recente.
-func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData) bool {
+func IsOutlier(data types.SensorData, historyReadings []types.SensorData) bool {
 
 	// Se i valori superano dei trashold, li consideriamo outlier.
-	if data.Data >= environment.FilteringMaxTreshold || data.Data <= environment.FilteringMinTreshold {
-		logger.Log.Debug("Data for sensor ", data.SensorID, "is out of bounds. Value:", data.Data)
+	if data.Data >= environment.FilteringMaxThreshold || data.Data <= environment.FilteringMinThreshold {
+		logger.Log.Info("Data for sensor ", data.SensorID, "is out of bounds. Value: ", data.Data)
 		return true
 	}
 
 	// Se non abbiamo abbastanza dati, non possiamo fare un calcolo significativo.
 	if len(historyReadings) < environment.FilteringMinSamples {
-		logger.Log.Debug("Not enough data to calculate outliers for sensor ", data.SensorID, ". Current count:", len(historyReadings))
+		logger.Log.Info("Not enough data to calculate outliers for sensor ", data.SensorID, ". Current count:", len(historyReadings))
 		return false
 	}
 
@@ -44,7 +44,7 @@ func IsOutlier(data structure.SensorData, historyReadings []structure.SensorData
 	lowerBound := mean - environment.FilteringStdDevFactor*stdDev
 	upperBound := mean + environment.FilteringStdDevFactor*stdDev
 
-	logger.Log.Info("Outlier check for sensor ", data.SensorID)
+	logger.Log.Debug("Outlier check for sensor ", data.SensorID)
 	logger.Log.Debug(" - Courrent value: ", data.Data)
 	logger.Log.Debug(" - Mean: ", mean)
 	logger.Log.Debug(" - StdDev: ", stdDev, " => ", environment.FilteringStdDevFactor, " * StdDev = ", environment.FilteringStdDevFactor*stdDev)
