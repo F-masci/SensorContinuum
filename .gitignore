@@ -6,3 +6,6 @@ csv
 tests/sensor-agent/csv
 
 internal/client/environment/.env
+
+input/test*
+.run

@@ -2,6 +2,7 @@ package main
 
 import (
 	"SensorContinuum/internal/api-backend/region"
+	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -16,9 +17,13 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	ctx := context.Background()
 	regionDetail, err := region.GetRegionByName(ctx, name)
 	if err != nil {
+		errBody, _ := json.Marshal(types.ErrorResponse{
+			Error:  "Errore nel recupero della regione",
+			Detail: err.Error(),
+		})
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       `{"error":"Errore nel recupero della regione"}`,
+			Body:       string(errBody),
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}, nil
 	}

@@ -4,7 +4,7 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/comunication"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"context"
 )
 
@@ -13,7 +13,7 @@ import (
 // presente in internal/proximity-fog-hub/communication/mqtt.go. Una volta ricevuti li salva nella cache
 //locale (TimescaleDB) e poi li invia a Kafka per l'elaborazione
 
-func ProcessEdgeHubData(dataChannel chan structure.SensorData) {
+func ProcessEdgeHubData(dataChannel chan types.SensorData) {
 	// si mette in attesa di ricevere i dati
 	for data := range dataChannel {
 		logger.Log.Info("Filtered data received, sensorId: ", data.SensorID, ", value:", data.Data)
@@ -37,5 +37,17 @@ func ProcessEdgeHubData(dataChannel chan structure.SensorData) {
 		} else {
 			logger.Log.Info("Message successfully sent to Kafka, sensorId: ", data.SensorID)
 		}
+	}
+}
+
+func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
+	for configMsg := range configChannel {
+		logger.Log.Info("Configuration message received: ", configMsg.MsgType)
+		// Invia il messaggio di configurazione al Region Hub
+		if err := comunication.SendConfigurationMessage(configMsg); err != nil {
+			logger.Log.Error("Failure to send configuration message to Region Hub, error: ", err)
+			continue
+		}
+		logger.Log.Info("Configuration message sent to Region Hub successfully.")
 	}
 }

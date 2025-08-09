@@ -3,12 +3,23 @@ package storage
 import (
 	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
+
+// Definiamo una struttura per i risultati delle aggregazioni
+
+type AggregatedStats struct {
+	Timestamp string  `json:"timestamp"`
+	Macrozone string  `json:"macrozone"`
+	Type      string  `json:"type"`
+	Min       float64 `json:"min"`
+	Max       float64 `json:"max"`
+	Avg       float64 `json:"avg"`
+}
 
 var DBPool *pgxpool.Pool
 
@@ -36,12 +47,12 @@ func InitDatabaseConnection() error {
 }
 
 // InsertSensorData inserisce un nuovo dato nella tabella della cache
-func InsertSensorData(ctx context.Context, d structure.SensorData) error {
+func InsertSensorData(ctx context.Context, d types.SensorData) error {
 	query := `
         INSERT INTO proximity_hub_measurements (time, building_id, floor_id, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
-	_, err := DBPool.Exec(ctx, query, d.Timestamp, d.BuildingID, d.FloorID, d.SensorID, d.Type, d.Data)
+	_, err := DBPool.Exec(ctx, query, d.Timestamp, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
 	return err
 }
 
@@ -62,9 +73,9 @@ func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]stru
 	}
 	defer rows.Close()
 
-	var stats []structure.AggregatedStats
+	var stats []types.AggregatedStats
 	for rows.Next() {
-		var s structure.AggregatedStats
+		var s types.AggregatedStats
 		if err := rows.Scan(&s.Type, &s.Min, &s.Max, &s.Avg); err != nil {
 			logger.Log.Error("Error scanning statistics row, error:", err)
 			continue

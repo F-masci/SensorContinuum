@@ -5,7 +5,7 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"os"
 )
@@ -13,9 +13,9 @@ import (
 // getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
 func getContext() logger.Context {
 	return logger.Context{
-		"service":  "intermediate-fog-hub",
-		"building": environment.BuildingID,
-		"hub":      environment.HubID,
+		"service":   "intermediate-fog-hub",
+		"macrozone": environment.EdgeMacrozone,
+		"hub":       environment.HubID,
 	}
 }
 
@@ -38,16 +38,26 @@ func main() {
 	// Inizializza il logger con il contesto
 	logger.CreateLogger(getContext())
 	logger.Log.Info("Starting Intermediate Fog Hub...")
-	logger.Log.Info("Building ID: ", environment.BuildingID)
-	logger.Log.Info("Hub ID: ", environment.HubID)
+	intermediate_fog_hub.Register()
 
-	realTimeDataChannel := make(chan structure.SensorData)
+	realTimeDataChannel := make(chan types.SensorData)
 	go func() {
 		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 		// Questo farà terminare l'applicazione.
 		err := comunication.PullRealTimeData(realTimeDataChannel)
 		if err != nil {
-			logger.Log.Error("Kafka consumer for the real time data has stopped", "error", err.Error())
+			logger.Log.Error("Kafka consumer for the real time data has stopped: ", err.Error())
+			os.Exit(1)
+		}
+	}()
+
+	msgChannel := make(chan types.ConfigurationMsg)
+	go func() {
+		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+		// Questo farà terminare l'applicazione.
+		err := comunication.PullConfigurationMessage(msgChannel)
+		if err != nil {
+			logger.Log.Error("Kafka consumer has stopped", "error", err.Error())
 			os.Exit(1)
 		}
 	}()
@@ -65,6 +75,9 @@ func main() {
 		}
 	}()
 	go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
+
+	// Avvia il processo di gestione dei messaggi di configurazione
+	go intermediate_fog_hub.ProcessProximityFogHubConfiguration(msgChannel)
 
 	logger.Log.Info("Intermediate Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()

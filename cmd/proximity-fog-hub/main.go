@@ -7,19 +7,11 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
-	"SensorContinuum/pkg/structure"
+	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"os"
 	"time"
 )
-
-func getContext() logger.Context {
-	return logger.Context{
-		"service":  "proximity-fog-hub",
-		"building": environment.BuildingID,
-		"hub":      environment.HubID,
-	}
-}
 
 /*	---------------------------- DESCRIZIONE  PROXIMITY FOG HUB ---------------------------------------------------------
 
@@ -42,12 +34,20 @@ di più alto livello dello stato dell'edificio
 
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
-		println("Failed to setup environment: ", err.Error())
+		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
 
-	logger.CreateLogger(getContext())
+	logger.CreateLogger(logger.GetProximityHubContext(environment.EdgeMacrozone, environment.HubID))
+	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Proximity Fog Hub...")
+
+	// Invia il messaggio di configurazione al Region Hub
+	if err := comunication.SendRegistrationMessage(); err != nil {
+		logger.Log.Error("Failed to send configuration message to Region Hub, error: ", err)
+		os.Exit(1)
+	}
+	logger.Log.Info("Configuration message sent to Intermediate Fog Hub successfully.")
 
 	// Connessione al DB per la cache
 	if err := storage.InitDatabaseConnection(); err != nil {
@@ -59,8 +59,9 @@ func main() {
 
 	// creazione del canale dove ricevere i dati inviati dall'edge-hub tramite broker MQTT
 	filteredDataChannel := make(chan structure.SensorData, 100)
+	configurationMessageChannel := make(chan types.ConfigurationMsg, 100)
 	//connessione e sottoscrizione al topic desiderato del broker MQTT
-	comunication.SetupMQTTConnection(filteredDataChannel)
+	comunication.SetupMQTTConnection(filteredDataChannel, configurationMessageChannel)
 
 	// --fine primo punto --
 
@@ -69,6 +70,8 @@ func main() {
 	// avvio goroutine ProcessEdgeHubData che salva i dati, ricevuti dall'edge-hub (tramite broker MQTT),
 	// nella sua cache locale e li invia tramite kafka all' intermediate-fog-hub
 	go proximity_fog_hub.ProcessEdgeHubData(filteredDataChannel)
+
+	go proximity_fog_hub.ProcessEdgeHubConfiguration(configurationMessageChannel)
 
 	// -- fine secondo e terzo punto della descrizione --
 
