@@ -13,7 +13,7 @@ func AverageInMinute(readings []types.SensorData, minute time.Time) float64 {
 	var sum float64
 	var count int
 	for _, d := range readings {
-		t, _ := time.Parse(time.RFC3339, d.Timestamp)
+		t := time.Unix(d.Timestamp, 0).UTC()
 		if t.Year() == minute.Year() && t.Month() == minute.Month() && t.Day() == minute.Day() &&
 			t.Hour() == minute.Hour() && t.Minute() == minute.Minute() {
 			sum += d.Data

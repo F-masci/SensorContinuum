@@ -43,11 +43,14 @@ func main() {
 	logger.Log.Info("Starting Proximity Fog Hub...")
 
 	// Invia il messaggio di configurazione al Region Hub
-	if err := comunication.SendRegistrationMessage(); err != nil {
+	if err := proximity_fog_hub.SendOwnRegistrationMessage(); err != nil {
 		logger.Log.Error("Failed to send configuration message to Region Hub, error: ", err)
 		os.Exit(1)
 	}
 	logger.Log.Info("Configuration message sent to Intermediate Fog Hub successfully.")
+
+	// Invia i propri messaggi di heartbeat per segnalare che il Proximity Fog Hub è attivo
+	go proximity_fog_hub.SendOwnHeartbeatMessage()
 
 	// Connessione al DB per la cache
 	if err := storage.InitDatabaseConnection(); err != nil {
@@ -60,8 +63,9 @@ func main() {
 	// creazione del canale dove ricevere i dati inviati dall'edge-hub tramite broker MQTT
 	filteredDataChannel := make(chan types.SensorData, 100)
 	configurationMessageChannel := make(chan types.ConfigurationMsg, 100)
+	heartbeatMessageChannel := make(chan types.HeartbeatMsg, 100)
 	//connessione e sottoscrizione al topic desiderato del broker MQTT
-	comunication.SetupMQTTConnection(filteredDataChannel, configurationMessageChannel)
+	comunication.SetupMQTTConnection(filteredDataChannel, configurationMessageChannel, heartbeatMessageChannel)
 
 	// --fine primo punto --
 
@@ -95,6 +99,9 @@ func main() {
 	}()
 
 	// -- fine ultimo punto della descrizione--
+
+	// Processo i messaggi di heartbeat ricevuti dall'edge-hub
+	go proximity_fog_hub.ProcessEdgeHubHeartbeat(heartbeatMessageChannel)
 
 	logger.Log.Info("Proximity Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()

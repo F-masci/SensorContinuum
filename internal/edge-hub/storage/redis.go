@@ -94,10 +94,7 @@ func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.
 	for _, v := range vals {
 		var d types.SensorData
 		if err := json.Unmarshal([]byte(v), &d); err == nil {
-			t, err := time.Parse(time.RFC3339, d.Timestamp)
-			if err != nil {
-				continue
-			}
+			t := time.Unix(d.Timestamp, 0).UTC()
 			logger.Log.Debug("Checking reading timestamp: ", t, " against minute: ", minute)
 			if t.Year() == minute.Year() && t.Month() == minute.Month() && t.Day() == minute.Day() &&
 				t.Hour() == minute.Hour() && t.Minute() == minute.Minute() {

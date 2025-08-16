@@ -64,6 +64,9 @@ var HubConfigurationTopic string
 // SensorConfigurationTopic specifica il topic MQTT per i messaggi di configurazione dei sensori.
 var SensorConfigurationTopic string
 
+// HeartbeatTopic specifica il topic MQTT per i messaggi di heartbeat del hub.
+var HeartbeatTopic string
+
 var RedisAddress string
 var RedisPort string
 
@@ -190,6 +193,7 @@ func SetupEnvironment() error {
 	FilteredDataTopic = "filtered-data/" + EdgeMacrozone + "/" + EdgeZone
 	HubConfigurationTopic = "configuration/hub/" + EdgeMacrozone + "/" + EdgeZone
 	SensorConfigurationTopic = "configuration/sensor/" + EdgeMacrozone + "/" + EdgeZone
+	HeartbeatTopic = "heartbeat/" + EdgeMacrozone + "/" + EdgeZone
 
 	/* ----- REDIS CACHE SETTINGS ----- */
 

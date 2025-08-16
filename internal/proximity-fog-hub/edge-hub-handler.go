@@ -2,10 +2,12 @@ package proximity_fog_hub
 
 import (
 	"SensorContinuum/internal/proximity-fog-hub/comunication"
+	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
+	"time"
 )
 
 // ProcessEdgeHubData riceve i dati che arrivano dal Edge Hub tramite MQTT nel canale
@@ -49,5 +51,58 @@ func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
 			continue
 		}
 		logger.Log.Info("Configuration message sent to Region Hub successfully.")
+	}
+}
+
+func ProcessEdgeHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
+	for heartbeatMsg := range heartbeatChannel {
+		logger.Log.Info("Heartbeat message received: ", heartbeatMsg.HubID)
+		// Invia il messaggio di heartbeat al Region Hub
+		if err := comunication.SendHeartbeatMessage(heartbeatMsg); err != nil {
+			logger.Log.Error("Failure to send heartbeat message to Region Hub, error: ", err)
+			continue
+		}
+		logger.Log.Info("Heartbeat message sent to Region Hub successfully.")
+	}
+}
+
+func SendOwnRegistrationMessage() error {
+	logger.Log.Info("Sending own registration message to Region Hub...")
+
+	msg := types.ConfigurationMsg{
+		MsgType:       types.NewProximityMsgType,
+		EdgeMacrozone: environment.EdgeMacrozone,
+		Timestamp:     time.Now().UTC().Unix(),
+		HubID:         environment.HubID,
+		Service:       types.ProximityHubService,
+	}
+
+	if err := comunication.SendConfigurationMessage(msg); err != nil {
+		logger.Log.Error("Failed to send own registration message, error: ", err)
+		return err
+	}
+
+	logger.Log.Info("Own registration message sent successfully.")
+	return nil
+}
+
+func SendOwnHeartbeatMessage() {
+	for {
+		logger.Log.Info("Sending own heartbeat message to Region Hub...")
+
+		heartbeatMsg := types.HeartbeatMsg{
+			EdgeMacrozone: environment.EdgeMacrozone,
+			HubID:         environment.HubID,
+			Timestamp:     time.Now().UTC().Unix(),
+		}
+
+		if err := comunication.SendHeartbeatMessage(heartbeatMsg); err != nil {
+			logger.Log.Error("Failed to send own heartbeat message, error: ", err)
+		}
+
+		logger.Log.Info("Own heartbeat message sent successfully.")
+
+		time.Sleep(5 * time.Minute)
+
 	}
 }

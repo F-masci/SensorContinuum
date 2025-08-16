@@ -59,7 +59,7 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 
 	var results []types.SensorData
 	now := time.Now().UTC()
-	minuteStart := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()-1, 0, 0, time.UTC)
+	minuteStart := now.Add(-3 * time.Minute).Truncate(time.Minute)
 
 	logger.Log.Info("Starting aggregation for all sensors at ", minuteStart.Format(time.RFC3339))
 
@@ -85,7 +85,7 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 			EdgeZone:      edgeZone,
 			SensorID:      sensorID,
 			Data:          avg,
-			Timestamp:     minuteStart.Format(time.RFC3339),
+			Timestamp:     minuteStart.Unix(),
 			Type:          sensorType,
 		}
 		logger.Log.Info("Average for minute ", minuteStart.Format(time.RFC3339), " sensor "+sensorID+": ", avg)
@@ -126,10 +126,7 @@ func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string
 		// Trova il timestamp più recente tra le letture
 		latestTime := time.Time{}
 		for _, reading := range readings {
-			t, err := time.Parse(time.RFC3339, reading.Timestamp)
-			if err != nil {
-				continue
-			}
+			t := time.Unix(reading.Timestamp, 0).UTC()
 			if t.After(latestTime) {
 				latestTime = t
 			}

@@ -10,20 +10,9 @@ import (
 	"time"
 )
 
-// Definiamo una struttura per i risultati delle aggregazioni
-
-type AggregatedStats struct {
-	Timestamp string  `json:"timestamp"`
-	Macrozone string  `json:"macrozone"`
-	Type      string  `json:"type"`
-	Min       float64 `json:"min"`
-	Max       float64 `json:"max"`
-	Avg       float64 `json:"avg"`
-}
-
 var DBPool *pgxpool.Pool
 
-// InitDBConnection inizializza il pool di connessioni al database
+// InitDatabaseConnection inizializza il pool di connessioni al database
 func InitDatabaseConnection() error {
 	dbURL := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -52,7 +41,8 @@ func InsertSensorData(ctx context.Context, d types.SensorData) error {
         INSERT INTO proximity_hub_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
-	_, err := DBPool.Exec(ctx, query, d.Timestamp, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
+	t := time.Unix(d.Timestamp, 0).UTC()
+	_, err := DBPool.Exec(ctx, query, t, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
 	return err
 }
 

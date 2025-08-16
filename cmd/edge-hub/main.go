@@ -36,6 +36,9 @@ func main() {
 	comunication.SendRegistrationMessage()
 	logger.Log.Info("Registration message sent successfully")
 
+	// Avvia il thread per l'invio dei messaggi di heartbeat
+	go comunication.SendHeartbeatMessage()
+
 	/* ----- CONFIGURATION SERVICE ------ */
 
 	if environment.ServiceMode == types.EdgeHubConfigurationService || environment.ServiceMode == types.EdgeHubService {

@@ -11,6 +11,7 @@ import (
 var kafkaRealTimeDataReader *kafka.Reader = nil
 var kafkaConfigurationReader *kafka.Reader = nil
 var kafkaStatisticsDataReader *kafka.Reader = nil
+var kafkaHeartbeatReader *kafka.Reader = nil
 
 func connectRealTimeData() {
 	if kafkaRealTimeDataReader != nil {
@@ -42,6 +43,22 @@ func connectProximityConfiguration() {
 		GroupID: "intermediate-fog-hub", // Il fog gestisce una singola regione
 	})
 	logger.Log.Info("Connected to Kafka topic: ", environment.ProximityConfigurationTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+}
+
+func connectProximityHeartbeat() {
+	if kafkaHeartbeatReader != nil {
+		return
+	}
+
+	logger.Log.Debug("Connecting to Kafka topic: ", environment.ProximityHeartbeatTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
+
+	// Configure the Kafka reader
+	kafkaHeartbeatReader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{environment.KafkaBroker + ":" + environment.KafkaPort},
+		Topic:   environment.ProximityHeartbeatTopic,
+		GroupID: "intermediate-fog-hub", // Il fog gestisce una singola regione
+	})
+	logger.Log.Info("Connected to Kafka topic: ", environment.ProximityHeartbeatTopic, " at ", environment.KafkaBroker+":"+environment.KafkaPort)
 }
 
 func connectStatisticsData() {
@@ -129,4 +146,26 @@ func PullConfigurationMessage(msgChannel chan types.ConfigurationMsg) error {
 		msgChannel <- msg
 	}
 
+}
+
+func PullHeartbeatMessage(heartbeatChannel chan types.HeartbeatMsg) error {
+
+	connectProximityHeartbeat()
+
+	ctx := context.Background()
+	for {
+		m, err := kafkaHeartbeatReader.ReadMessage(ctx)
+		if err != nil {
+			logger.Log.Error("Error reading message: ", err.Error())
+			return err
+		}
+		logger.Log.Debug("Received message from Kafka topic: ", m.Topic, " Partition: ", m.Partition, " Offset: ", m.Offset, " Key: ", string(m.Key), " Value: ", string(m.Value))
+		var heartbeatMsg types.HeartbeatMsg
+		heartbeatMsg, err = types.CreateHeartbeatMsgFromKafka(m)
+		if err != nil {
+			logger.Log.Error("Error unmarshalling Heartbeat Message: ", err.Error())
+			continue
+		}
+		heartbeatChannel <- heartbeatMsg
+	}
 }

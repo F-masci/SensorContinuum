@@ -18,13 +18,15 @@ var MosquittoBroker string
 var MosquittoPort string
 var FilteredDataTopic string
 var HubConfigurationTopic string
+var HeartbeatTopic string
 
 var KafkaBroker string
 var KafkaPort string
-var ProximityDataTopic string
+var ProximityRealtimeDataTopic string
 var ProximityConfigurationTopic string
-var ProximityDataTopicPartition string
-var KafkaAggregatedStatsTopic string
+var ProximityRealtimeDataTopicPartition string
+var ProximityAggregatedStatsTopic string
+var ProximityHeartbeatTopic string
 
 // VARIABILI PER POSTGRES
 var PostgresUser string
@@ -69,6 +71,7 @@ func SetupEnvironment() error {
 
 	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + EdgeMacrozone
 	HubConfigurationTopic = "$share/proximity-fog-hub/configuration/hub/" + EdgeMacrozone
+	HeartbeatTopic = "$share/proximity-fog-hub/heartbeat/" + EdgeMacrozone
 
 	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {
@@ -80,9 +83,14 @@ func SetupEnvironment() error {
 		KafkaPort = kafka.PORT
 	}
 
-	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
+	ProximityRealtimeDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_REALTIME_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC
+		ProximityRealtimeDataTopic = kafka.PROXIMITY_FOG_HUB_REALTIME_DATA_TOPIC
+	}
+
+	ProximityRealtimeDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
+	if !exists {
+		ProximityRealtimeDataTopicPartition = EdgeMacrozone
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
@@ -90,14 +98,14 @@ func SetupEnvironment() error {
 		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC
 	}
 
-	ProximityDataTopicPartition, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_TOPIC_PARTITION")
+	ProximityAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_AGGREGATED_STATS_TOPIC")
 	if !exists {
-		ProximityDataTopicPartition = EdgeMacrozone
+		ProximityAggregatedStatsTopic = kafka.PROXIMITY_FOG_HUB_AGGREGATED_STATS_TOPIC
 	}
 
-	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
+	ProximityHeartbeatTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC")
 	if !exists {
-		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
+		ProximityHeartbeatTopic = kafka.PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC
 	}
 
 	PostgresUser, exists = os.LookupEnv("POSTGRES_USER")

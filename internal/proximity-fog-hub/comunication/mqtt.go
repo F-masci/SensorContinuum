@@ -65,11 +65,34 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 	}
 }
 
-func makeConnectionHandler(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg) MQTT.OnConnectHandler {
+// heartbeatMessageHandler è la funzione di callback che processa i messaggi di heartbeat in arrivo.
+func makeHeartbeatMessageHandler(heartbeatMessageChannel chan types.HeartbeatMsg) MQTT.MessageHandler {
+	return func(client MQTT.Client, msg MQTT.Message) {
+		logger.Log.Debug("Received message on topic: ", msg.Topic())
+
+		heartbeatMsg, err := types.CreateHeartbeatMsgFromMqtt(msg)
+		if err != nil {
+			logger.Log.Error("Error parsing sensor data from MQTT message: ", err.Error())
+			return
+		}
+
+		// select non bloccante, il ricevitore MQTT non viene mai bloccato dal processore
+		// Se il canale è pieno, scarta il messaggio per non rallentare la ricezione.
+		select {
+		case heartbeatMessageChannel <- heartbeatMsg:
+			// Messaggio inviato correttamente
+			logger.Log.Debug("Sent heartbeat message to channel")
+			break
+		default:
+			logger.Log.Warn("Heartbeat message channel is full. Discarding message: ", heartbeatMsg)
+		}
+	}
+}
+
+func makeConnectionHandler(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg, heartbeatMessageChannel chan types.HeartbeatMsg) MQTT.OnConnectHandler {
 	return func(client MQTT.Client) {
 
 		topic := environment.FilteredDataTopic + "/#"
-		logger.Log.Info("Successfully connected to MQTT broker. Subscribing to topic: ", topic)
 
 		// QoS 0, sottoscrivi al topic per ricevere i dati dai sensori
 		token := client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)) // Il message handler è globale
@@ -80,19 +103,31 @@ func makeConnectionHandler(filteredDataChannel chan types.SensorData, configurat
 		}
 
 		topic = environment.HubConfigurationTopic + "/#"
-		logger.Log.Info("Successfully connected to MQTT broker. Subscribing to topic: ", topic)
 
-		// QoS 0, sottoscrivi al topic per ricevere i dati dai sensori
-		token = client.Subscribe(topic, 0, makeConfigurationMessageHandler(configurationMessageChannel)) // Il message handler è globale
+		// QoS 2, sottoscrivi al topic per ricevere i dati dai sensori
+		token = client.Subscribe(topic, 2, makeConfigurationMessageHandler(configurationMessageChannel)) // Il message handler è globale
 		logger.Log.Info("Subscribed to topic: ", topic)
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
 			logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
 			os.Exit(1) // Esci se non riesci a sottoscrivere
 		}
+
+		topic = environment.HeartbeatTopic + "/#"
+
+		// QoS 1, sottoscrivi al topic per ricevere i dati dai sensori
+		token = client.Subscribe(topic, 1, makeHeartbeatMessageHandler(heartbeatMessageChannel)) // Il message handler è globale
+		logger.Log.Info("Subscribed to topic: ", topic)
+		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
+			logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
+			os.Exit(1) // Esci se non riesci a sottoscrivere
+		}
+
+		logger.Log.Info("Successfully subscribed and connected to MQTT broker")
+
 	}
 }
 
-func connectAndManage(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg) {
+func connectAndManage(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg, heartbeatMessageChannel chan types.HeartbeatMsg) {
 	if client != nil && client.IsConnected() {
 		return
 	}
@@ -119,7 +154,7 @@ func connectAndManage(filteredDataChannel chan types.SensorData, configurationMe
 	// Questo handler viene chiamato quando la connessione è stabilita con successo
 	// e permette di sottoscrivere ai topic desiderati.
 	// In questo caso, sottoscrive al topic dei dati e di configurazione del sensore.
-	opts.SetOnConnectHandler(makeConnectionHandler(filteredDataChannel, configurationMessageChannel))
+	opts.SetOnConnectHandler(makeConnectionHandler(filteredDataChannel, configurationMessageChannel, heartbeatMessageChannel))
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
 		logger.Log.Warn("Connection lost to MQTT broker: ", err.Error())
 	})
@@ -132,11 +167,9 @@ func connectAndManage(filteredDataChannel chan types.SensorData, configurationMe
 		//AutoReconnect continuerà a tentare in background
 		logger.Log.Error("Hub failed to connect initially:", token.Error())
 	}
-
-	logger.Log.Info("Successfully subscribed to MQTT broker")
 }
 
-func SetupMQTTConnection(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg) {
+func SetupMQTTConnection(filteredDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg, heartbeatMessageChannel chan types.HeartbeatMsg) {
 
 	// Assicura che la connessione non sia già stata inizializzata.
 	if client != nil && client.IsConnected() {
@@ -145,5 +178,5 @@ func SetupMQTTConnection(filteredDataChannel chan types.SensorData, configuratio
 	}
 
 	// Inizializza la connessione MQTT
-	connectAndManage(filteredDataChannel, configurationMessageChannel)
+	connectAndManage(filteredDataChannel, configurationMessageChannel, heartbeatMessageChannel)
 }
