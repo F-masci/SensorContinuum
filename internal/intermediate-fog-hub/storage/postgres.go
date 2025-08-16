@@ -114,11 +114,7 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 
 	rows := make([][]interface{}, 0, batch.Count())
 	for _, d := range batch.SensorData {
-		timestamp, err := time.Parse(time.RFC3339, d.Timestamp)
-		if err != nil {
-			logger.Log.Error("Failed to parse timestamp: ", err)
-			return err
-		}
+		timestamp := time.Unix(d.Timestamp, 0).UTC()
 		rows = append(rows, []interface{}{
 			timestamp,
 			d.EdgeMacrozone,
@@ -158,12 +154,7 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 
 	// Calcola il timestamp massimo per ogni sensore
 	for _, d := range batch.SensorData {
-		timestamp, err := time.Parse(time.RFC3339, d.Timestamp)
-		if err != nil {
-			logger.Log.Error("Failed to parse timestamp: ", err)
-			return err
-		}
-
+		timestamp := time.Unix(d.Timestamp, 0).UTC()
 		sensorKey := d.EdgeMacrozone + keySeparator + d.EdgeZone + keySeparator + d.SensorID
 		if ts, ok := lastSeenSensors[sensorKey]; !ok || timestamp.After(ts) {
 			lastSeenSensors[sensorKey] = timestamp
@@ -238,16 +229,44 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 	}
 
 	// Aggiorno il last_seen del hub regionale
-	_, err = tx.Exec(ctx, `
-		UPDATE region_hubs rh
-		SET last_seen = NOW()
-		WHERE rh.id = $1
-	`, environment.HubID)
+	err = UpdateLastSeenRegionHub()
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func UpdateLastSeenRegionHub() error {
+	query := `
+		UPDATE region_hubs
+		SET last_seen = NOW()
+		WHERE id = $1
+	`
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID)
+	return err
+}
+
+func UpdateLastSeenMacrozoneHub(heartbeatMsg types.HeartbeatMsg) error {
+	query := `
+		UPDATE macrozone_hubs
+		SET last_seen = $1
+		WHERE id = $2 AND macrozone_name = $3
+	`
+	t := time.Unix(heartbeatMsg.Timestamp, 0).UTC()
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, t, heartbeatMsg.HubID, heartbeatMsg.EdgeMacrozone)
+	return err
+}
+
+func UpdateLastSeenZoneHub(heartbeatMsg types.HeartbeatMsg) error {
+	query := `
+		UPDATE zone_hubs
+		SET last_seen = $1
+		WHERE id = $2 AND macrozone_name = $3 AND zone_name = $4
+	`
+	t := time.Unix(heartbeatMsg.Timestamp, 0).UTC()
+	_, err := regionDB.Db.Exec(regionDB.Ctx, query, t, heartbeatMsg.HubID, heartbeatMsg.EdgeMacrozone, heartbeatMsg.EdgeZone)
+	return err
 }
 
 // InsertStatisticsData inserisce i dati aggregati delle statistiche nel database
@@ -256,7 +275,8 @@ func InsertStatisticsData(s types.AggregatedStats) error {
         INSERT INTO aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
-	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, s.Timestamp, s.Macrozone, s.Type, s.Min, s.Max, s.Avg)
+	t := time.Unix(s.Timestamp, 0).UTC()
+	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Type, s.Min, s.Max, s.Avg)
 	return err
 }
 

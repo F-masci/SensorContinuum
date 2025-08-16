@@ -12,7 +12,7 @@ func IsOutlier(data types.SensorData, historyReadings []types.SensorData) bool {
 
 	// Se i valori superano dei trashold, li consideriamo outlier.
 	if data.Data >= environment.FilteringMaxThreshold || data.Data <= environment.FilteringMinThreshold {
-		logger.Log.Info("Data for sensor ", data.SensorID, "is out of bounds. Value: ", data.Data)
+		logger.Log.Info("Data for sensor ", data.SensorID, " is out of bounds. Value: ", data.Data)
 		return true
 	}
 

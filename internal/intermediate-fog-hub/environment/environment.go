@@ -15,6 +15,7 @@ var KafkaPort string
 var KafkaAggregatedStatsTopic string
 var ProximityDataTopic string
 var ProximityConfigurationTopic string
+var ProximityHeartbeatTopic string
 var IntermediateDataTopic string
 
 // Variabili per il DB Region
@@ -65,9 +66,9 @@ func SetupEnvironment() error {
 		KafkaPort = kafka.PORT
 	}
 
-	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_DATA_TOPIC")
+	ProximityDataTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_REALTIME_DATA_TOPIC")
 	if !exists {
-		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_DATA_TOPIC
+		ProximityDataTopic = kafka.PROXIMITY_FOG_HUB_REALTIME_DATA_TOPIC
 	}
 
 	ProximityConfigurationTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC")
@@ -75,14 +76,19 @@ func SetupEnvironment() error {
 		ProximityConfigurationTopic = kafka.PROXIMITY_FOG_HUB_CONFIGURATION_TOPIC
 	}
 
+	ProximityHeartbeatTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC")
+	if !exists {
+		ProximityHeartbeatTopic = kafka.PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC
+	}
+
 	IntermediateDataTopic, exists = os.LookupEnv("KAFKA_INTERMEDIATE_FOG_HUB_TOPIC")
 	if !exists {
 		IntermediateDataTopic = kafka.INTERMEDIATE_FOG_HUB_TOPIC
 	}
 
-	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_AGGREGATED_STATS_TOPIC")
+	KafkaAggregatedStatsTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_AGGREGATED_STATS_TOPIC")
 	if !exists {
-		KafkaAggregatedStatsTopic = kafka.AGGREGATED_STATS_TOPIC
+		KafkaAggregatedStatsTopic = kafka.PROXIMITY_FOG_HUB_AGGREGATED_STATS_TOPIC
 	}
 
 	// Inizializzazione variabili DB Region

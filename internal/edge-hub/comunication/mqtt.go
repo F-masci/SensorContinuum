@@ -397,3 +397,52 @@ func SendRegistrationMessage() {
 
 	}
 }
+
+func SendHeartbeatMessage() {
+
+	// L'heartbeat viene inviato periodicamente per mantenere viva la connessione
+	for {
+
+		if !hubClient.IsConnected() {
+			logger.Log.Warn("MQTT client not connected. Skipping heartbeat message publishing.")
+			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
+			return
+		}
+
+		payload, err := json.Marshal(types.HeartbeatMsg{
+			Timestamp:     time.Now().UTC().Unix(),
+			EdgeMacrozone: environment.EdgeMacrozone,
+			EdgeZone:      environment.EdgeZone,
+			HubID:         environment.HubID,
+		})
+		if err != nil {
+			logger.Log.Error("Error during JSON serialization: ", err.Error())
+			os.Exit(1)
+		}
+
+		// QoS (Quality of Service) in MQTT:
+		// 0: At most once - Nessuna conferma, il messaggio può andare perso.
+		// 1: At least once - Il messaggio viene consegnato almeno una volta, può essere duplicato.
+		// 2: Exactly once - Il messaggio viene consegnato una sola volta, senza duplicati.
+		//
+		// Retained:
+		// true		- Il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti.
+		// false	- Il messaggio non viene conservato dal broker.
+		topic := environment.HeartbeatTopic + "/" + environment.HubID
+		token := hubClient.Publish(topic, 1, true, payload)
+
+		// Usiamo WaitTimeout per non attendere all'infinito
+		if !token.WaitTimeout(2 * time.Second) {
+			logger.Log.Warn("Timeout publishing heartbeat message.")
+			continue
+		} else if err := token.Error(); err != nil {
+			logger.Log.Error("Error publishing heartbeat message: ", err.Error())
+			os.Exit(1)
+		} else {
+			logger.Log.Debug("Heartbeat message published successfully on topic: ", topic)
+			time.Sleep(3 * time.Minute)
+		}
+
+	}
+
+}

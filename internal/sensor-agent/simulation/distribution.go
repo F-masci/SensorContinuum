@@ -48,7 +48,7 @@ func generateSensorData() types.SensorData {
 		EdgeMacrozone: environment.EdgeMacrozone,
 		EdgeZone:      environment.EdgeZone,
 		SensorID:      environment.SensorId,
-		Timestamp:     reading.Timestamp.Format(time.RFC3339),
+		Timestamp:     reading.Timestamp.UTC().Unix(),
 		Type:          string(environment.SensorType),
 		Data:          reading.Value,
 	}

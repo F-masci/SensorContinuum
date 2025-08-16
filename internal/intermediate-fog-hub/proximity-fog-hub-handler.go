@@ -127,3 +127,26 @@ func ProcessProximityFogHubConfiguration(msgChannel chan types.ConfigurationMsg)
 
 	}
 }
+
+// ProcessProximityFogHubHeartbeat gestisce i messaggi di heartbeat per il Proximity Fog Hub.
+func ProcessProximityFogHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
+
+	setupRegionDbConnection()
+
+	for heartbeatMsg := range heartbeatChannel {
+		logger.Log.Info("Received heartbeat message: ", heartbeatMsg.HubID)
+
+		updateFunc := storage.UpdateLastSeenMacrozoneHub
+		if heartbeatMsg.EdgeZone != "" {
+			updateFunc = storage.UpdateLastSeenZoneHub
+		}
+
+		// Invia il messaggio di heartbeat al Region Hub
+		if err := updateFunc(heartbeatMsg); err != nil {
+			logger.Log.Error("Failed to update last seen: ", err)
+			continue
+		}
+
+		logger.Log.Info("Heartbeat message processed successfully for hub: ", heartbeatMsg.HubID)
+	}
+}

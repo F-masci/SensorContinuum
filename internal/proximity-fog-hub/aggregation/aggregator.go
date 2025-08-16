@@ -18,8 +18,10 @@ func PerformAggregationAndSend() {
 	logger.Log.Info("execution of periodic aggregation started")
 	ctx := context.Background()
 
-	// calcola il perido di 2 minti appena trascorso
-	now := time.Now().UTC()
+	// calcola il periodo di 2 minuti rispetto
+	// a 5 minuti fa, in modo da avere anche i
+	// dati che hanno subito un ritardo
+	now := time.Now().UTC().Add(-5 * time.Minute)
 	//allineo il tempo attuale al limite di 2 minuti
 	//quindi se ora sono le 15:48:30, alignedEndTime sarà 15:47:00
 	intervalDuration := 2 * time.Minute
@@ -43,12 +45,12 @@ func PerformAggregationAndSend() {
 	// 3. Invia ogni statistica a Kafka
 	for _, stat := range stats {
 		// Arricchiamo la statistica con dati contestuali
-		stat.Timestamp = alignedEndTime.Format(time.RFC3339)
+		stat.Timestamp = alignedEndTime.UTC().Unix()
 		stat.Macrozone = environment.EdgeMacrozone
 
 		logger.Log.Info("Statistics calculated for the type: ", stat.Type, ", min: ", stat.Min, ", max: ", stat.Max, ", avg: ", stat.Avg)
 
-		if err := comunication.SendData(stat); err != nil {
+		if err := comunication.SendAggregatedData(stat); err != nil {
 			logger.Log.Error("Failure to send statistics to Kafka, type: ", stat.Type, ", error: ", err)
 			// Non ci fermiamo, proviamo a inviare le altre
 			continue

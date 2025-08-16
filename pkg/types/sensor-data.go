@@ -10,7 +10,7 @@ type SensorData struct {
 	EdgeMacrozone string  `json:"macrozone"`
 	EdgeZone      string  `json:"zone"`
 	SensorID      string  `json:"sensor_id"`
-	Timestamp     string  `json:"timestamp"`
+	Timestamp     int64   `json:"timestamp"`
 	Type          string  `json:"type"`
 	Data          float64 `json:"data"`
 }
@@ -60,7 +60,7 @@ func (sdb *SensorDataBatch) Clear() {
 // AggregatedStats contiene i dati statistici calcolati ogni tot minuti dal Proximity-Fog-Hub
 // e inviati tramite kafka all' intermediate-fog-hub
 type AggregatedStats struct {
-	Timestamp string  `json:"timestamp"`
+	Timestamp int64   `json:"timestamp"`
 	Macrozone string  `json:"macrozone"`
 	Type      string  `json:"type"`
 	Min       float64 `json:"min"`
