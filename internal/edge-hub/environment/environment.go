@@ -70,7 +70,7 @@ var HeartbeatTopic string
 var RedisAddress string
 var RedisPort string
 
-var HistoryWindowSize int = 25
+var HistoryWindowSize int = 100
 var FilteringMinSamples int = 5
 var FilteringStdDevFactor float64 = 5
 var FilteringMinThreshold float64 = 0.0
