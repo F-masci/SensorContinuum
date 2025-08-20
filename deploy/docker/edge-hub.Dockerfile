@@ -13,7 +13,7 @@ RUN go mod download
 COPY .. .
 
 # Compila il binario per linux
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub/edge-hub.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub/main.go
 
 # Fase 2: runtime (immagine minimale)
 FROM gcr.io/distroless/static:nonroot
