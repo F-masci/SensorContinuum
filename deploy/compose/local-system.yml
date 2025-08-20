@@ -66,8 +66,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-    networks:
-      - iot-net
 
   zookeeper:
     image: bitnami/zookeeper:latest
@@ -81,8 +79,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-    networks:
-      - iot-net
 
   kafka:
     image: bitnami/kafka:latest
@@ -107,8 +103,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5 # Aumentiamo un po' i tentativi per dare tempo a Kafka di avviarsi
-    networks:
-      - iot-net
+
   mosquitto:
     build:
       context: ../..
@@ -117,9 +112,6 @@ services:
     hostname: mosquitto-broker
     ports:
       - "1883:1883"
-    networks:
-      - iot-net
-
     healthcheck:
       test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 2 || exit 1"]
       interval: 10s
@@ -134,21 +126,27 @@ services:
     environment:
       - REGION_ID=1
       - REGION_NAME=region-001
-      - BUILDING_ID=macrozone-0001
-      - HUB_ID=intermediate-hub-001
+      - EDGE_MACROZONE=build-0001
+      - HUB_ID=region-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
-      # - EDGE_HUB_TOPIC=raw-data-edge-hub_build-0001
-      # - EDGE_HUB_TOPIC_PARTITION=1
-      - POSTGRES_CLOUD_HOST=metadatadb-cloud-compose
-      - POSTGRES_REGION_HOST=metadatadb-region-compose
-      - POSTGRES_SENSOR_HOST=timescaledb-compose
-    hostname: intermediate-fog-hub
+      - POSTGRES_CLOUD_HOST=metadatadb-cloud-host
+      - POSTGRES_CLOUD_PORT=5432
+      - POSTGRES_REGION_HOST=metadatadb-region-host
+      - POSTGRES_REGION_PORT=5432
+      - POSTGRES_SENSOR_HOST=timescaledb-host
+      - POSTGRES_SENSOR_PORT=5432
+      - LOG_LEVEL=debug
     depends_on:
       kafka:
         condition: service_healthy
-    networks:
-      - iot-net
+      timescaledb:
+        condition: service_healthy
+      cloud_metadatadb:
+         condition: service_healthy
+      region_metadatadb:
+          condition: service_healthy
+    restart: unless-stopped
 
   proximity-fog-hub:
     build:
@@ -156,12 +154,15 @@ services:
       dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
     container_name: proximity-fog-hub-compose
     environment:
-      - BUILDING_ID=macrozone-0001
+      - REGION=region-001
+      - EDGE_MACROZONE=build-0001
       - HUB_ID=proximity-hub-001
       - KAFKA_BROKER_ADDRESS=kafka-broker
       - KAFKA_BROKER_PORT=9094
       - MQTT_BROKER_ADDRESS=mosquitto-broker
-    hostname: proximity-fog-hub
+      - POSTGRES_HOST=timescaledb-host
+      - POSTGRES_PORT=5432
+      - LOG_LEVEL=debug
     depends_on:
       mosquitto:
         condition: service_healthy
@@ -169,8 +170,7 @@ services:
         condition: service_healthy
       timescaledb:
         condition: service_healthy
-    networks:
-      - iot-net
+    restart: unless-stopped
 
   edge-hub:
     build:
@@ -178,23 +178,18 @@ services:
       dockerfile: deploy/docker/edge-hub.Dockerfile
     container_name: edge-hub-compose
     environment:
-      - BUILDING_ID=macrozone-0001
-      - FLOOR_ID=floor-001
-      - HUB_ID=hub-001
+      - EDGE_MACROZONE=build-0001
+      - EDGE_ZONE=floor-001
+      - HUB_ID=zone-hub-001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
-      - KAFKA_BROKER_ADDRESS=kafka-broker
-      - KAFKA_BROKER_PORT=9094
       - REDIS_ADDRESS=redis-storage
-    hostname: edge-hub
+      - LOG_LEVEL=debug
     depends_on:
       mosquitto:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - iot-net
+    restart: unless-stopped
 
   sensor-agent-1:
     build:
@@ -202,14 +197,14 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-1-compose
     environment:
-      - BUILDING_ID=macrozone-0001
-      - FLOOR_ID=floor-001
-      - SENSOR_ID=sensor-0001
+      - EDGE_MACROZONE=build-0001
+      - EDGE_ZONE=floor-001
+      - SENSOR_ID=sensor-001
       - MQTT_BROKER_ADDRESS=mosquitto-broker
     depends_on:
-      - edge-hub
-    networks:
-      - iot-net
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
 
   sensor-agent-2:
     build:
@@ -217,15 +212,16 @@ services:
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     container_name: sensor-agent-2-compose
     environment:
-      - BUILDING_ID=macrozone-0001
-      - FLOOR_ID=floor-001
-      - SENSOR_ID=sensor-0002
+      - EDGE_MACROZONE=build-0001
+      - EDGE_ZONE=floor-001
+      - SENSOR_ID=sensor-002
       - MQTT_BROKER_ADDRESS=mosquitto-broker
     depends_on:
-      - edge-hub
-    networks:
-      - iot-net
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
 
 networks:
-  iot-net:
+  default:
     driver: bridge
+    name: sensorcontinuum-local-network
