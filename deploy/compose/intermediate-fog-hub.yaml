@@ -1,7 +1,7 @@
 services:
 
   region-hub-01:
-    image: intermediate-fog-hub:latest
+    image: fmasci/intermediate-fog-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
@@ -11,11 +11,11 @@ services:
       - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
       - KAFKA_BROKER_PORT=${KAFKA_PORT}
       - POSTGRES_CLOUD_HOST=metadata-db.cloud.sensorcontinuum.node
-      - POSTGRES_CLOUD_PORT=${POSTGRES_CLOUD_PORT}
+      - POSTGRES_CLOUD_PORT=${POSTGRES_CLOUD_METADATA_PORT}
       - POSTGRES_REGION_HOST=metadata-db.${REGION}.sensorcontinuum.node
-      - POSTGRES_REGION_PORT=${POSTGRES_REGION_PORT}
+      - POSTGRES_REGION_PORT=${POSTGRES_REGION_METADATA_PORT}
       - POSTGRES_SENSOR_HOST=mesurament-db.${REGION}.sensorcontinuum.node
-      - POSTGRES_SENSOR_PORT=${POSTGRES_SENSOR_PORT}
+      - POSTGRES_SENSOR_PORT=${POSTGRES_REGION_SENSOR_PORT}
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     restart: unless-stopped

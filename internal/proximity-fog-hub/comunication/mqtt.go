@@ -180,3 +180,34 @@ func SetupMQTTConnection(filteredDataChannel chan types.SensorData, configuratio
 	// Inizializza la connessione MQTT
 	connectAndManage(filteredDataChannel, configurationMessageChannel, heartbeatMessageChannel)
 }
+
+// CleanRetentionConfigurationMessage Rimuove il messaggio di configurazione dal canale se è già stato elaborato.
+// Questo è utile per evitare di elaborare più volte lo stesso messaggio.
+func CleanRetentionConfigurationMessage(msg types.ConfigurationMsg) {
+
+	if msg.MsgType == types.NewSensorMsgType {
+		logger.Log.Debug("Cleaning retention for configuration message: ", msg)
+
+		// Non procedere se la connessione non è attiva.
+		if !client.IsConnected() {
+			logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
+			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
+			return
+		}
+
+		topic := environment.HubConfigurationTopic + "/#"
+		// invia i dati al broker MQTT
+		token := client.Publish(topic, 2, true, "")
+
+		if !token.Wait() {
+			logger.Log.Error("Timeout publishing message.")
+			return
+		}
+		err := token.Error()
+		if err != nil {
+			logger.Log.Error("Error publishing message: ", err.Error())
+			return
+		}
+		logger.Log.Debug("Message cleaned successfully.")
+	}
+}

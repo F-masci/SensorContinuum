@@ -9,9 +9,9 @@ services:
       POSTGRES_PASSWORD: adminpass
       POSTGRES_DB: sensorcontinuum
     ports:
-      - "${POSTGRES_SENSOR_PORT}:5432"
+      - "${POSTGRES_REGION_SENSOR_PORT}:5432"
     volumes:
-      - ../../configs/postgresql/init-sensors-db.sql:/docker-entrypoint-initdb.d/init-sensors-db.sql:ro
+      - ../../configs/postgresql/init-region-sensors-db.sql:/docker-entrypoint-initdb.d/init-region-sensors-db.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
@@ -20,16 +20,16 @@ services:
 
   region-metadata-db:
     image: postgis/postgis:latest
-    container_name: metadatadb-region-compose
-    hostname: metadatadb-region-host
+    container_name: region-${REGION}-metadata-db
+    hostname: region-${REGION}-metadata-db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
       POSTGRES_DB: sensorcontinuum
     ports:
-      - "5434:5432"
+      - "${POSTGRES_REGION_METADATA_PORT}:5432"
     volumes:
-      - ../../configs/postgresql/init-region-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+      - ../../configs/postgresql/init-region-metadata-db.sql:/docker-entrypoint-initdb.d/init-region-metadata-db.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
