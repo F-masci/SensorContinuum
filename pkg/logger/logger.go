@@ -183,3 +183,7 @@ func GetEdgeHubContext(service types.Service, macrozone, zone, hub string) Conte
 func GetProximityHubContext(macrozone, hub string) Context {
 	return GetContext("proximity-fog-hub", macrozone, "", hub, "")
 }
+
+func GetIntermediateHubContext(hub string) Context {
+	return GetContext("intermediate-fog-hub", "", "", hub, "")
+}

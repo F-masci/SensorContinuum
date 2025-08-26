@@ -4,6 +4,7 @@ import (
 	"SensorContinuum/internal/edge-hub"
 	"SensorContinuum/internal/edge-hub/comunication"
 	"SensorContinuum/internal/edge-hub/environment"
+	"SensorContinuum/internal/edge-hub/health"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
@@ -126,6 +127,18 @@ func main() {
 		edge_hub.NotifyRemovedSensors(removedSensors)
 		logger.Log.Info("Cleaning completed. The service will now terminate.")
 		os.Exit(0)
+	}
+
+	/* -------- HEALTH CHECK SERVER -------- */
+
+	if environment.HealthzServer {
+		logger.Log.Info("Enabling health check channel on port " + environment.HealthzServerPort)
+		go func() {
+			if err := health.StartHealthCheckServer(":" + environment.HealthzServerPort); err != nil {
+				logger.Log.Error("Failed to enable health check channel: ", err.Error())
+				os.Exit(1)
+			}
+		}()
 	}
 
 	utils.WaitForTerminationSignal()

@@ -2,12 +2,11 @@ package environment
 
 import (
 	"SensorContinuum/configs/kafka"
-	"errors"
+	"SensorContinuum/pkg/logger"
 	"github.com/google/uuid"
 	"os"
 )
 
-var EdgeMacrozone string
 var HubID string
 
 var KafkaBroker string
@@ -45,11 +44,6 @@ var SensorDataBatchTimeout int = 10 // Timeout in secondi per il batch dei dati 
 func SetupEnvironment() error {
 
 	var exists bool
-
-	EdgeMacrozone, exists = os.LookupEnv("EDGE_MACROZONE")
-	if !exists {
-		return errors.New("environment variable EDGE_MACROZONE not set")
-	}
 
 	HubID, exists = os.LookupEnv("HUB_ID")
 	if !exists {
@@ -155,6 +149,12 @@ func SetupEnvironment() error {
 	PostgresSensorDatabase, exists = os.LookupEnv("POSTGRES_SENSOR_DATABASE")
 	if !exists {
 		PostgresSensorDatabase = "sensorcontinuum"
+	}
+
+	/* ----- LOGGER SETTINGS ----- */
+
+	if err := logger.LoadLoggerFromEnv(); err != nil {
+		return err
 	}
 
 	return nil

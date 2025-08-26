@@ -362,7 +362,7 @@ func SendRegistrationMessage() {
 		payload, err := json.Marshal(types.ConfigurationMsg{
 			EdgeMacrozone: environment.EdgeMacrozone,
 			MsgType:       types.NewEdgeMsgType,
-			Timestamp:     time.Now().Unix(),
+			Timestamp:     time.Now().UTC().Unix(),
 			Service:       environment.ServiceMode,
 			EdgeZone:      environment.EdgeZone,
 			HubID:         environment.HubID,

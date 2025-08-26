@@ -7,13 +7,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 const sensorMetadataKey = "sensor:%s:metadata"
 const sensorHistoryKey = "sensor:%s:history"
+
+const leaderKey = "edge-hub-leader"
+const leaderTTL = 70 * time.Second // Attende che il leader rinnovi il suo status
 
 var RedisClient *redis.Client
 
@@ -27,6 +32,31 @@ func InitRedisConnection() {
 		logger.Log.Error("Failed to connect to Redis: ", err)
 		panic(fmt.Sprintf("Failed to connect to Redis at %s:%s", environment.RedisAddress, environment.RedisPort))
 	}
+}
+
+// TryOrRenewLeader prova ad acquisire il lock di leader election
+func TryOrRenewLeader(ctx context.Context, instanceID string) (bool, error) {
+	// Prova ad acquisire il lock
+	ok, err := RedisClient.SetNX(ctx, leaderKey, instanceID, leaderTTL).Result()
+	if err != nil {
+		return false, err
+	}
+	if ok {
+		// Sei diventato leader ora
+		return true, nil
+	}
+	// Controlla chi è il leader attuale
+	val, err := RedisClient.Get(ctx, leaderKey).Result()
+	if err != nil {
+		return false, err
+	}
+	if val == instanceID {
+		// Sei già leader, rinnova il TTL
+		_, err = RedisClient.Expire(ctx, leaderKey, leaderTTL).Result()
+		return true, err
+	}
+	// Non sei il leader
+	return false, nil
 }
 
 // AddSensor Aggiunge un nuovo sensore alla cache Redis.
@@ -109,10 +139,19 @@ func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.
 }
 
 func GetAllSensorIDs(ctx context.Context) ([]string, error) {
-	keys, err := RedisClient.Keys(ctx, "sensor:*:metadata").Result()
+	set := mapset.NewSet[string]()
+	keysMeta, err := RedisClient.Keys(ctx, "sensor:*:metadata").Result()
 	if err != nil {
 		return nil, err
 	}
+	set.Append(keysMeta...)
+	keysHist, err := RedisClient.Keys(ctx, "sensor:*:history").Result()
+	if err != nil {
+		return nil, err
+	}
+	set.Append(keysHist...)
+
+	keys := set.ToSlice()
 	sensorIDs := make([]string, 0, len(keys))
 	for _, key := range keys {
 		sensorID := strings.TrimPrefix(key, "sensor:")

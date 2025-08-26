@@ -7,6 +7,7 @@ import (
 	"SensorContinuum/pkg/types"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -88,6 +89,16 @@ func computeStatsByHour() {
 func generateRandomReading(datetime time.Time) sensorReading {
 	stats := statsByHour[datetime.Hour()]
 	logger.Log.Debug("Generating random reading for hour: ", datetime.Hour(), " with mean: ", stats.Mean, " and std: ", stats.Std)
+
+	if stats.Mean == 0 {
+		// Nessun dato per questa ora, ritorna un valore nullo
+		logger.Log.Warn("No data available for hour: ", datetime.Hour(), " - removing CSV and restarting simulation")
+		err := removeCSV()
+		if err != nil {
+			logger.Log.Error("Error removing CSV: ", err)
+		}
+		os.Exit(1)
+	}
 
 	if rand.Float64() < simulation.MISSING_PROBABILITY {
 		logger.Log.Info("Generating missing value")

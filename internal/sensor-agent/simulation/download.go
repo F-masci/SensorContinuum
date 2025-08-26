@@ -115,3 +115,21 @@ func downloadRandomCSV() (string, error) {
 	logger.Log.Info("Download completed: ", filePath)
 	return filePath, nil
 }
+
+func removeCSV() error {
+	files, err := os.ReadDir(simulation.CSV_DIR)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if filepath.Ext(f.Name()) == ".csv" {
+			err := os.Remove(filepath.Join(simulation.CSV_DIR, f.Name()))
+			if err != nil {
+				logger.Log.Error("Error removing CSV: ", err)
+				return err
+			}
+			logger.Log.Info("Removed CSV: ", f.Name())
+		}
+	}
+	return nil
+}

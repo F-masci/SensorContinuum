@@ -51,7 +51,7 @@ func getMacrozoneByName(regionName string) {
 	fmt.Printf("  🌍  Regione:      %s\n", regionName)
 	fmt.Printf("  📍  Latitudine:   %.6f\n", macrozone.Lat)
 	fmt.Printf("  📍  Longitudine:  %.6f\n", macrozone.Lon)
-	fmt.Printf("  📅  Registrata il:%s\n", macrozone.CreationTime.Format("2006-01-02 15:04:05"))
+	fmt.Printf("  📅  Registrata il:%s\n", macrozone.CreationTime.Local().Format("2006-01-02 15:04:05"))
 	fmt.Printf("  🏢  Numero zone:  %d\n", macrozone.ZoneCount)
 	fmt.Printf("%s\n", line)
 
@@ -61,7 +61,7 @@ func getMacrozoneByName(regionName string) {
 		fmt.Printf("%-20s │ %-19s\n", "Nome", "Registrata il")
 		fmt.Println(strings.Repeat(sepLight, 42))
 		for _, z := range macrozone.Zones {
-			fmt.Printf("%-20s │ %-19s\n", z.Name, z.CreationTime.Format("2006-01-02 15:04:05"))
+			fmt.Printf("%-20s │ %-19s\n", z.Name, z.CreationTime.Local().Format("2006-01-02 15:04:05"))
 		}
 	} else {
 		fmt.Println("  🚫 Nessuna zona associata.")
@@ -83,8 +83,8 @@ func getMacrozoneByName(regionName string) {
 			fmt.Printf("%s%-36s │ %-18s │ %-19s │ %-19s%s\n",
 				color,
 				h.Id, h.Service,
-				h.RegistrationTime.Format("2006-01-02 15:04:05"),
-				h.LastSeen.Format("2006-01-02 15:04:05"),
+				h.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				h.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}
@@ -108,8 +108,8 @@ func getMacrozoneByName(regionName string) {
 			fmt.Printf("%s%-38.38s │ %-22.22s │ %-22.22s │ %-20.20s │ %-19s │ %-19s%s\n",
 				color,
 				zh.Id, zh.MacrozoneName, zh.ZoneName, zh.Service,
-				zh.RegistrationTime.Format("2006-01-02 15:04:05"),
-				zh.LastSeen.Format("2006-01-02 15:04:05"),
+				zh.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				zh.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}
@@ -133,8 +133,8 @@ func getMacrozoneByName(regionName string) {
 			fmt.Printf("%s%-36s │ %-20s │ %-20s │ %-12s │ %-18s │ %-19s │ %-19s%s\n",
 				color,
 				s.Id, s.MacrozoneName, s.ZoneName, s.Type, s.Reference,
-				s.RegistrationTime.Format("2006-01-02 15:04:05"),
-				s.LastSeen.Format("2006-01-02 15:04:05"),
+				s.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				s.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}

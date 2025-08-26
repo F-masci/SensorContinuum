@@ -2,6 +2,7 @@ package main
 
 import (
 	"SensorContinuum/internal/intermediate-fog-hub"
+	"SensorContinuum/internal/intermediate-fog-hub/aggregation"
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/internal/intermediate-fog-hub/storage"
@@ -9,16 +10,8 @@ import (
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"os"
+	"time"
 )
-
-// getContext ritorna il contesto del logger con le informazioni specifiche dell'agente del sensore
-func getContext() logger.Context {
-	return logger.Context{
-		"service":   "intermediate-fog-hub",
-		"macrozone": environment.EdgeMacrozone,
-		"hub":       environment.HubID,
-	}
-}
 
 /*
 	Per ora l' intermediate fog hub:
@@ -37,8 +30,10 @@ func main() {
 	}
 
 	// Inizializza il logger con il contesto
-	logger.CreateLogger(getContext())
+	logger.CreateLogger(logger.GetIntermediateHubContext(environment.HubID))
+	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Intermediate Fog Hub...")
+
 	storage.Register()
 
 	// Avvia il processo di gestione dei dati intermedi
@@ -50,8 +45,8 @@ func main() {
 	go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
 
 	// Avvia il processo di gestione dei messaggi di configurazione
-	configurationMesageChannel := make(chan types.ConfigurationMsg)
-	go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMesageChannel)
+	configurationMessageChannel := make(chan types.ConfigurationMsg)
+	go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMessageChannel)
 
 	// Avvia il processo di gestione dei messaggi di heartbeat
 	heartbeatChannel := make(chan types.HeartbeatMsg)
@@ -80,7 +75,7 @@ func main() {
 	go func() {
 		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 		// Questo farà terminare l'applicazione.
-		err := comunication.PullConfigurationMessage(configurationMesageChannel)
+		err := comunication.PullConfigurationMessage(configurationMessageChannel)
 		if err != nil {
 			logger.Log.Error("Kafka consumer for configuration message has stopped: ", err.Error())
 			os.Exit(1)
@@ -94,6 +89,21 @@ func main() {
 		if err != nil {
 			logger.Log.Error("Kafka consumer for heartbeat has stopped: ", err.Error())
 			os.Exit(1)
+		}
+	}()
+
+	// Avvio del ticker per l'aggregazione periodica, per ora metto ogni 2 minuti ma poi passa a ogni 5
+	statsTicker := time.NewTicker(2 * time.Minute)
+	logger.Log.Info("Ticker started, aggregating data every 2 minutes from now.")
+	defer statsTicker.Stop()
+
+	go func() {
+
+		for {
+			select {
+			case <-statsTicker.C:
+				aggregation.PerformAggregationAndSave()
+			}
 		}
 	}()
 

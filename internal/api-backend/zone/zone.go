@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 // GetZonesList Restituisce la lista delle zone per una macrozona
@@ -98,4 +99,68 @@ func GetZoneByName(ctx context.Context, regionName, macrozoneName, name string) 
 	}
 
 	return &z, nil
+}
+
+// GetRawSensorData Restituisce i dati grezzi di un sensore in una zona
+func GetRawSensorData(ctx context.Context, regionName, macrozoneName, zoneName, sensorId string, limit int) (*[]types.SensorData, error) {
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, regionName)
+	if err != nil {
+		return nil, err
+	}
+	var s []types.SensorData
+	sensorDataRows, err := sensorDb.Conn().Query(ctx, `
+		SELECT s.time, s.macrozone_name, s.zone_name, s.sensor_id, s.type, s.value
+		FROM sensor_measurements s
+		WHERE s.macrozone_name = $1 AND s.zone_name = $2 AND s.sensor_id = $3
+		ORDER BY s.time DESC
+		LIMIT $4
+	`, macrozoneName, zoneName, sensorId, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer sensorDataRows.Close()
+	s = make([]types.SensorData, 0)
+	for sensorDataRows.Next() {
+		var ts time.Time
+		var sd types.SensorData
+		if err := sensorDataRows.Scan(&ts, &sd.EdgeMacrozone, &sd.EdgeZone, &sd.SensorID, &sd.Type, &sd.Data); err != nil {
+			return nil, err
+		}
+		sd.Timestamp = ts.Unix()
+		s = append(s, sd)
+	}
+
+	return &s, nil
+}
+
+// GetAggregatedSensorData Restituisce i dati aggregati di una zona
+func GetAggregatedSensorData(ctx context.Context, regionName, macrozoneName, zoneName string, limit int) (*[]types.AggregatedStats, error) {
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, regionName)
+	if err != nil {
+		return nil, err
+	}
+	var a []types.AggregatedStats
+	aggregatedDataRows, err := sensorDb.Conn().Query(ctx, `
+		SELECT z.time, z.macrozone_name, z.zone_name, z.type, z.min_value, z.max_value, z.avg_value
+		FROM zone_aggregated_statistics z
+		WHERE z.macrozone_name = $1 AND z.zone_name = $2
+		ORDER BY z.time DESC
+		LIMIT $3
+	`, macrozoneName, zoneName, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer aggregatedDataRows.Close()
+	a = make([]types.AggregatedStats, 0)
+	for aggregatedDataRows.Next() {
+		var ts time.Time
+		var as types.AggregatedStats
+		if err := aggregatedDataRows.Scan(&ts, &as.Macrozone, &as.Zone, &as.Type, &as.Min, &as.Max, &as.Avg); err != nil {
+			return nil, err
+		}
+		as.Timestamp = ts.Unix()
+		a = append(a, as)
+	}
+
+	return &a, nil
 }

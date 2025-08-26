@@ -63,8 +63,8 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 				color,
 				hub.Id,
 				hub.Service,
-				hub.RegistrationTime.Format("2006-01-02 15:04:05"),
-				hub.LastSeen.Format("2006-01-02 15:04:05"),
+				hub.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				hub.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}
@@ -93,13 +93,40 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 				sensor.MacrozoneName,
 				sensor.ZoneName,
 				sensor.Type,
-				sensor.RegistrationTime.Format("2006-01-02 15:04:05"),
-				sensor.LastSeen.Format("2006-01-02 15:04:05"),
+				sensor.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				sensor.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}
 	} else {
 		fmt.Println("  🛰 Nessun sensore associato.")
+	}
+	fmt.Printf("%s\n", line)
+}
+
+func getRawSensorData(regionName, macrozoneName, zoneName, sensorID string) {
+	data, err := api.GetRawSensorData(regionName, macrozoneName, zoneName, sensorID)
+	if err != nil {
+		logger.Log.Error("Errore nel recupero dei dati del sensore: ", err)
+		return
+	}
+	line := strings.Repeat(sepHeavy, 70)
+	fmt.Printf("%s\n%s🔬 Dati Grezzi Sensore%s\n%s\n", line, cyanBold, reset, line)
+	fmt.Printf("  🆔️  Sensore:     %s\n", sensorID)
+	fmt.Printf("  📍  Zona:        %s\n", zoneName)
+	fmt.Printf("  🏢  Macrozona:   %s\n", macrozoneName)
+	fmt.Printf("  🌍  Regione:     %s\n", regionName)
+	fmt.Printf("%s\n", line)
+
+	if len(data) == 0 {
+		fmt.Println("  🚫 Nessun dato trovato per il sensore specificato.")
+	} else {
+		fmt.Printf("%-22s │ %-14s │ %-10s\n", "Timestamp", "Tipo", "Valore")
+		fmt.Println(strings.Repeat("─", 52))
+		for _, d := range data {
+			t := time.Unix(d.Timestamp, 0).Format("2006-01-02 15:04:05")
+			fmt.Printf("%s%-22s │ %-14s │ %-10.2f%s\n", green, t, d.Type, d.Data, reset)
+		}
 	}
 	fmt.Printf("%s\n", line)
 }

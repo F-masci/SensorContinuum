@@ -10,12 +10,6 @@ import (
 // IsOutlier controlla se un dato è un outlier basandosi sulla storia recente.
 func IsOutlier(data types.SensorData, historyReadings []types.SensorData) bool {
 
-	// Se i valori superano dei trashold, li consideriamo outlier.
-	if data.Data >= environment.FilteringMaxThreshold || data.Data <= environment.FilteringMinThreshold {
-		logger.Log.Info("Data for sensor ", data.SensorID, " is out of bounds. Value: ", data.Data)
-		return true
-	}
-
 	// Se non abbiamo abbastanza dati, non possiamo fare un calcolo significativo.
 	if len(historyReadings) < environment.FilteringMinSamples {
 		logger.Log.Info("Not enough data to calculate outliers for sensor ", data.SensorID, ". Current count:", len(historyReadings))

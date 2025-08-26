@@ -86,12 +86,23 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 	setupSensorDbConnection()
 
 	for stats := range statsChannel {
-		logger.Log.Info("Aggregated statistics received: ", stats.Type, " - avg ", stats.Avg)
-		if err := storage.InsertStatisticsData(stats); err != nil {
-			logger.Log.Error("Failed to insert statistics: ", err)
-			// Non usiamo Fatalf per non far crashare l'intero servizio
+
+		if stats.Zone == "" {
+			logger.Log.Info("Aggregated statistics for macrozone (", stats.Macrozone, ") received: ", stats.Type, " - avg ", stats.Avg)
+			if err := storage.InsertMacrozoneStatisticsData(stats); err != nil {
+				logger.Log.Error("Failed to insert statistics: ", err)
+				os.Exit(-1)
+			} else {
+				logger.Log.Info("Statistics successfully inserted into the database")
+			}
 		} else {
-			logger.Log.Info("Statistics successfully inserted into the database")
+			logger.Log.Info("Aggregated statistics for zone (", stats.Macrozone, " - ", stats.Zone, ") received: ", stats.Type, " - avg ", stats.Avg)
+			if err := storage.InsertZoneStatisticsData(stats); err != nil {
+				logger.Log.Error("Failed to insert statistics: ", err)
+				os.Exit(-1)
+			} else {
+				logger.Log.Info("Statistics successfully inserted into the database")
+			}
 		}
 	}
 }

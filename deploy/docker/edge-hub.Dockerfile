@@ -13,12 +13,15 @@ RUN go mod download
 COPY .. .
 
 # Compila il binario per linux
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
 
 # Fase 2: runtime (immagine minimale)
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:latest
 
 WORKDIR /app
+
+# Installa curl per le richieste HTTP
+RUN apk add --no-cache curl
 
 # Copia il binario compilato dalla fase builder
 COPY --from=builder /app/edge-hub .

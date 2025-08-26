@@ -6,8 +6,9 @@ import (
 	"SensorContinuum/pkg/types"
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var DBPool *pgxpool.Pool
@@ -46,16 +47,19 @@ func InsertSensorData(ctx context.Context, d types.SensorData) error {
 	return err
 }
 
-func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]types.AggregatedStats, error) {
+func GetZoneAggregatedData(ctx context.Context, start time.Time, end time.Time) ([]types.AggregatedStats, error) {
 	query := `
         SELECT 
             type,
+            zone_name,
             MIN(value) as min_val,
             MAX(value) as max_val,
-            AVG(value) as avg_val
+            AVG(value) as avg_val,
+            SUM(value) as avg_sum_val,
+        	COUNT(value) as avg_count_val
         FROM proximity_hub_measurements
         WHERE time >= $1 AND time < $2 -- Usa i parametri di inizio e fine
-        GROUP BY type
+        GROUP BY type, zone_name
     `
 	rows, err := DBPool.Query(ctx, query, start, end)
 	if err != nil {
@@ -66,10 +70,11 @@ func GetValueToSend(ctx context.Context, start time.Time, end time.Time) ([]type
 	var stats []types.AggregatedStats
 	for rows.Next() {
 		var s types.AggregatedStats
-		if err := rows.Scan(&s.Type, &s.Min, &s.Max, &s.Avg); err != nil {
+		if err := rows.Scan(&s.Type, &s.Zone, &s.Min, &s.Max, &s.Avg, &s.Sum, &s.Count); err != nil {
 			logger.Log.Error("Error scanning statistics row, error:", err)
 			continue
 		}
+		s.Macrozone = environment.EdgeMacrozone
 		stats = append(stats, s)
 	}
 

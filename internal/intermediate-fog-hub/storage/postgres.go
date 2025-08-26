@@ -209,6 +209,10 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 	}
 
 	rows := buildRows(lastSeenSensors, 3)
+	logger.Log.Debug("Updating last seen for sensors: ", len(rows), " entries")
+	for r := range rows {
+		logger.Log.Debug(" - ", rows[r])
+	}
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{"tmp_sensors_last_seen"}, []string{"last_seen", "macrozone_name", "zone_name", "id"}, pgx.CopyFromRows(rows))
 	if err != nil {
 		return err
@@ -217,13 +221,17 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 	// Aggiorna la colonna last_seen nella tabella sensors
 	_, err = tx.Exec(ctx, `
 		UPDATE sensors s
-		SET last_seen = tmp.last_seen
-		FROM tmp_sensors_last_seen tmp
+		SET last_seen = tmp.max_last_seen
+		FROM (
+			SELECT macrozone_name, zone_name, id, MAX(last_seen) AS max_last_seen
+			FROM tmp_sensors_last_seen
+			GROUP BY macrozone_name, zone_name, id
+		) tmp
 		WHERE s.macrozone_name = tmp.macrozone_name
 		  AND s.zone_name = tmp.zone_name
 		  AND s.id = tmp.id
-		  AND (s.last_seen IS NULL OR s.last_seen < tmp.last_seen)
-	`)
+		  AND (s.last_seen IS NULL OR s.last_seen < tmp.max_last_seen)
+		`)
 	if err != nil {
 		return err
 	}
@@ -269,20 +277,68 @@ func UpdateLastSeenZoneHub(heartbeatMsg types.HeartbeatMsg) error {
 	return err
 }
 
-// InsertStatisticsData inserisce i dati aggregati delle statistiche nel database
-func InsertStatisticsData(s types.AggregatedStats) error {
+func InsertRegionStatisticsData(s types.AggregatedStats) error {
 	query := `
-        INSERT INTO aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value)
-        VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO region_aggregated_statistics (time, type, min_value, max_value, avg_value, avg_sum, avg_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	t := time.Unix(s.Timestamp, 0).UTC()
+	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Type, s.Min, s.Max, s.Avg, s.Sum, s.Count)
+	return err
+}
+
+// GetMacrozoneStatisticsData esegue la query per ottenere le statistiche aggregate delle macrozone
+func GetMacrozoneStatisticsData(ctx context.Context, startTime, endTime time.Time) ([]types.AggregatedStats, error) {
+	query := `
+		SELECT time, macrozone_name, type, min_value, max_value, avg_value, avg_sum, avg_count
+		FROM macrozone_aggregated_statistics
+		WHERE time >= $1 AND time < $2
+	`
+	rows, err := sensorDB.Db.Query(ctx, query, startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []types.AggregatedStats
+	for rows.Next() {
+		var s types.AggregatedStats
+		var t time.Time
+		err := rows.Scan(&t, &s.Macrozone, &s.Type, &s.Min, &s.Max, &s.Avg, &s.Sum, &s.Count)
+		if err != nil {
+			return nil, err
+		}
+		s.Timestamp = t.Unix()
+		stats = append(stats, s)
+	}
+	return stats, nil
+}
+
+// InsertMacrozoneStatisticsData inserisce i dati aggregati delle statistiche nel database
+func InsertMacrozoneStatisticsData(s types.AggregatedStats) error {
+	query := `
+        INSERT INTO macrozone_aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `
 	t := time.Unix(s.Timestamp, 0).UTC()
-	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Type, s.Min, s.Max, s.Avg)
+	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Type, s.Min, s.Max, s.Avg, s.Sum, s.Count)
+	return err
+}
+
+// InsertZoneStatisticsData inserisce i dati aggregati delle statistiche nel database
+func InsertZoneStatisticsData(s types.AggregatedStats) error {
+	query := `
+        INSERT INTO zone_aggregated_statistics (time, macrozone_name, zone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `
+	t := time.Unix(s.Timestamp, 0).UTC()
+	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Zone, s.Type, s.Min, s.Max, s.Avg, s.Sum, s.Count)
 	return err
 }
 
 // RegisterMacrozoneHub Registra o aggiorna un hub di macrozona (proximity fog hub)
 func RegisterMacrozoneHub(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
+	timestamp := time.Unix(msg.Timestamp, 0).UTC()
 	query := `
 		INSERT INTO macrozone_hubs (id, macrozone_name, service, registration_time, last_seen)
 		VALUES ($1, $2, $3, $4, $4)
@@ -294,7 +350,7 @@ func RegisterMacrozoneHub(msg types.ConfigurationMsg) error {
 
 // RegisterZoneHub Registra o aggiorna un hub di zona (edge hub)
 func RegisterZoneHub(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
+	timestamp := time.Unix(msg.Timestamp, 0).UTC()
 	query := `
 		INSERT INTO zone_hubs (id, macrozone_name, zone_name, service, registration_time, last_seen)
 		VALUES ($1, $2, $3, $4, $5, $5)
@@ -306,7 +362,7 @@ func RegisterZoneHub(msg types.ConfigurationMsg) error {
 
 // RegisterSensor Registra o aggiorna un sensore associato a un edge hub
 func RegisterSensor(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0)
+	timestamp := time.Unix(msg.Timestamp, 0).UTC()
 	query := `
         INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
         VALUES ($1, $2, $3, $4, $5, $6, $6)
@@ -326,7 +382,7 @@ func Register() error {
 
 	query := `
 	INSERT INTO region_hubs (id, service, registration_time, last_seen)
-	VALUES ($1, $2, NOW(), NOW())
+	VALUES ($1, $2, CURRENT_TIMESTAMP AT TIME ZONE 'UTC', CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 	ON CONFLICT (id) DO UPDATE SET last_seen = EXCLUDED.last_seen
 `
 	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, types.IntrermediateHubService)
