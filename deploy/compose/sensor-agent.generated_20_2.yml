@@ -2,14 +2,14 @@ services:
 
 
   sensor-agent-01:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-01
+      - SENSOR_ID=sensor-agent-01
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -27,14 +27,14 @@ services:
 
 
   sensor-agent-02:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-02
+      - SENSOR_ID=sensor-agent-02
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
@@ -52,14 +52,14 @@ services:
 
 
   sensor-agent-03:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-03
+      - SENSOR_ID=sensor-agent-03
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=dht22
@@ -77,14 +77,14 @@ services:
 
 
   sensor-agent-04:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-04
+      - SENSOR_ID=sensor-agent-04
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -102,14 +102,14 @@ services:
 
 
   sensor-agent-05:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-05
+      - SENSOR_ID=sensor-agent-05
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -127,14 +127,14 @@ services:
 
 
   sensor-agent-06:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-06
+      - SENSOR_ID=sensor-agent-06
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -152,14 +152,14 @@ services:
 
 
   sensor-agent-07:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-07
+      - SENSOR_ID=sensor-agent-07
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -177,14 +177,14 @@ services:
 
 
   sensor-agent-08:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-08
+      - SENSOR_ID=sensor-agent-08
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -202,14 +202,14 @@ services:
 
 
   sensor-agent-09:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-09
+      - SENSOR_ID=sensor-agent-09
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -227,14 +227,14 @@ services:
 
 
   sensor-agent-10:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-10
+      - SENSOR_ID=sensor-agent-10
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -252,14 +252,14 @@ services:
 
 
   sensor-agent-11:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-11
+      - SENSOR_ID=sensor-agent-11
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
@@ -277,14 +277,14 @@ services:
 
 
   sensor-agent-12:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-12
+      - SENSOR_ID=sensor-agent-12
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -302,14 +302,14 @@ services:
 
 
   sensor-agent-13:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-13
+      - SENSOR_ID=sensor-agent-13
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -327,14 +327,14 @@ services:
 
 
   sensor-agent-14:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-14
+      - SENSOR_ID=sensor-agent-14
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
@@ -352,14 +352,14 @@ services:
 
 
   sensor-agent-15:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-15
+      - SENSOR_ID=sensor-agent-15
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
@@ -377,14 +377,14 @@ services:
 
 
   sensor-agent-16:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-16
+      - SENSOR_ID=sensor-agent-16
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -402,14 +402,14 @@ services:
 
 
   sensor-agent-17:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-17
+      - SENSOR_ID=sensor-agent-17
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=dht22
@@ -427,14 +427,14 @@ services:
 
 
   sensor-agent-18:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-18
+      - SENSOR_ID=sensor-agent-18
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -452,14 +452,14 @@ services:
 
 
   sensor-agent-19:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-19
+      - SENSOR_ID=sensor-agent-19
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
@@ -477,14 +477,14 @@ services:
 
 
   sensor-agent-20:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
     environment:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
-      - SENSOR_ID=${SENSOR_ID}-20
+      - SENSOR_ID=sensor-agent-20
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22

@@ -5,6 +5,7 @@ import (
 	"SensorContinuum/internal/intermediate-fog-hub/aggregation"
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
+	"SensorContinuum/internal/intermediate-fog-hub/health"
 	"SensorContinuum/internal/intermediate-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
@@ -106,6 +107,18 @@ func main() {
 			}
 		}
 	}()
+
+	/* -------- HEALTH CHECK SERVER -------- */
+
+	if environment.HealthzServer {
+		logger.Log.Info("Enabling health check channel on port " + environment.HealthzServerPort)
+		go func() {
+			if err := health.StartHealthCheckServer(":" + environment.HealthzServerPort); err != nil {
+				logger.Log.Error("Failed to enable health check channel: ", err.Error())
+				os.Exit(1)
+			}
+		}()
+	}
 
 	logger.Log.Info("Intermediate Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()

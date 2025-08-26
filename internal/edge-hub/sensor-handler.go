@@ -207,7 +207,6 @@ func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubCo
 			} else if !exists {
 				logger.Log.Info("Sensor configuration added for sensor: ", configMsg.SensorID)
 				hubConfigurationMessageChannel <- configMsg
-				comunication.CleanRetationConfigurationMessage(configMsg)
 			} else {
 				logger.Log.Info("Sensor configuration already exists for sensor: ", configMsg.SensorID)
 				comunication.CleanRetationConfigurationMessage(configMsg)

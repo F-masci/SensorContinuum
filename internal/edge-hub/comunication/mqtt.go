@@ -342,6 +342,7 @@ func PublishConfigurationMessage(configurationMessageChannel chan types.Configur
 			logger.Log.Error("Error publishing message: ", err.Error())
 		} else {
 			logger.Log.Debug("Message published successfully.")
+			CleanRetationConfigurationMessage(msg)
 		}
 	}
 }

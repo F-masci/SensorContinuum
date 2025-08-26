@@ -39,7 +39,7 @@ func InitDatabaseConnection() error {
 // InsertSensorData inserisce un nuovo dato nella tabella della cache
 func InsertSensorData(ctx context.Context, d types.SensorData) error {
 	query := `
-        INSERT INTO proximity_hub_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
+        INSERT INTO sensor_measurements_cache (time, macrozone_name, zone_name, sensor_id, type, value)
         VALUES ($1, $2, $3, $4, $5, $6)
     `
 	t := time.Unix(d.Timestamp, 0).UTC()
@@ -57,7 +57,7 @@ func GetZoneAggregatedData(ctx context.Context, start time.Time, end time.Time) 
             AVG(value) as avg_val,
             SUM(value) as avg_sum_val,
         	COUNT(value) as avg_count_val
-        FROM proximity_hub_measurements
+        FROM sensor_measurements_cache
         WHERE time >= $1 AND time < $2 -- Usa i parametri di inizio e fine
         GROUP BY type, zone_name
     `
