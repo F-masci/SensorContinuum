@@ -1,0 +1,19 @@
+services:
+
+  cloud-metadata-db:
+    image: postgis/postgis:latest
+    container_name: region-${REGION}-metadata-db
+    hostname: cloud-metadata-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: sensorcontinuum
+    ports:
+      - "${POSTGRES_CLOUD_METADATA_PORT}:5432"
+    volumes:
+      - ../../configs/postgresql/init-cloud-metadata-db.sql:/docker-entrypoint-initdb.d/init-cloud-metadata-db.sql:ro
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3

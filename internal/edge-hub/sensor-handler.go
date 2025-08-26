@@ -209,7 +209,7 @@ func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubCo
 				hubConfigurationMessageChannel <- configMsg
 			} else {
 				logger.Log.Info("Sensor configuration already exists for sensor: ", configMsg.SensorID)
-				comunication.CleanRetationConfigurationMessage(configMsg)
+				comunication.CleanRetentionConfigurationMessage(configMsg)
 			}
 		default:
 			logger.Log.Warn("Unknown configuration types for sensor: ", configMsg.SensorID)

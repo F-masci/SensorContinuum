@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ../../configs/postgresql/init-sensors-db.sql:/docker-entrypoint-initdb.d/init-sensors-db.sql:ro
+      - ../../configs/postgresql/init-region-sensors-db.sql:/docker-entrypoint-initdb.d/init-region-sensors-db.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
@@ -29,7 +29,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ../../configs/postgresql/init-cloud-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+      - ../../configs/postgresql/init-cloud-metadata-db.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
@@ -47,7 +47,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ../../configs/postgresql/init-region-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
+      - ../../configs/postgresql/init-region-metadata-db.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s

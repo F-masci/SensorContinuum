@@ -71,9 +71,9 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 	}
 }
 
-// CleanRetationConfigurationMessage Rimuove il messaggio di configurazione dal canale se è già stato elaborato.
+// CleanRetentionConfigurationMessage Rimuove il messaggio di configurazione dal canale se è già stato elaborato.
 // Questo è utile per evitare di elaborare più volte lo stesso messaggio.
-func CleanRetationConfigurationMessage(msg types.ConfigurationMsg) {
+func CleanRetentionConfigurationMessage(msg types.ConfigurationMsg) {
 
 	if msg.MsgType == types.NewSensorMsgType {
 		logger.Log.Debug("Cleaning retention for configuration message: ", msg)
@@ -342,7 +342,7 @@ func PublishConfigurationMessage(configurationMessageChannel chan types.Configur
 			logger.Log.Error("Error publishing message: ", err.Error())
 		} else {
 			logger.Log.Debug("Message published successfully.")
-			CleanRetationConfigurationMessage(msg)
+			CleanRetentionConfigurationMessage(msg)
 		}
 	}
 }
