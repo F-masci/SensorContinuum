@@ -1,15 +1,15 @@
 services:
 
-  timescaledb:
-    image: timescale/timescaledb:latest-pg15
-    container_name: timescaledb-compose
-    hostname: timescaledb-host
+  region-sensors-db:
+    image: timescale/timescaledb:latest-pg17
+    container_name: region-${REGION}-sensors-db
+    hostname: region-${REGION}-sensors-db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
       POSTGRES_DB: sensorcontinuum
     ports:
-      - "5432:5432"
+      - "${POSTGRES_SENSOR_PORT}:5432"
     volumes:
       - ../../configs/postgresql/init-sensors-db.sql:/docker-entrypoint-initdb.d/init-sensors-db.sql:ro
     healthcheck:
@@ -18,25 +18,7 @@ services:
       timeout: 5s
       retries: 3
 
-  cloud_metadatadb:
-    image: postgis/postgis:latest
-    container_name: metadatadb-cloud-compose
-    hostname: metadatadb-cloud-host
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpass
-      POSTGRES_DB: sensorcontinuum
-    ports:
-      - "5433:5432"
-    volumes:
-      - ../../configs/postgresql/init-cloud-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql:ro
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  region_metadatadb:
+  region-metadata-db:
     image: postgis/postgis:latest
     container_name: metadatadb-region-compose
     hostname: metadatadb-region-host

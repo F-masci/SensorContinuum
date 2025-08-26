@@ -5,6 +5,7 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/aggregation"
 	"SensorContinuum/internal/proximity-fog-hub/comunication"
 	"SensorContinuum/internal/proximity-fog-hub/environment"
+	"SensorContinuum/internal/proximity-fog-hub/health"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
@@ -102,6 +103,18 @@ func main() {
 
 	// Processo i messaggi di heartbeat ricevuti dall'edge-hub
 	go proximity_fog_hub.ProcessEdgeHubHeartbeat(heartbeatMessageChannel)
+
+	/* -------- HEALTH CHECK SERVER -------- */
+
+	if environment.HealthzServer {
+		logger.Log.Info("Enabling health check channel on port " + environment.HealthzServerPort)
+		go func() {
+			if err := health.StartHealthCheckServer(":" + environment.HealthzServerPort); err != nil {
+				logger.Log.Error("Failed to enable health check channel: ", err.Error())
+				os.Exit(1)
+			}
+		}()
+	}
 
 	logger.Log.Info("Proximity Fog Hub is running. Waiting for termination signal (Ctrl+C)...")
 	utils.WaitForTerminationSignal()

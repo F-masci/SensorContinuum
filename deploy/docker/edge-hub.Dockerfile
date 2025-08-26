@@ -15,7 +15,7 @@ COPY .. .
 # Compila il binario per linux
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
 
-# Fase 2: runtime (immagine minimale)
+# Fase 2: runtime minimale con curl
 FROM alpine:latest
 
 WORKDIR /app

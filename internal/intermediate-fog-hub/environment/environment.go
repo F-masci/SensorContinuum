@@ -3,8 +3,10 @@ package environment
 import (
 	"SensorContinuum/configs/kafka"
 	"SensorContinuum/pkg/logger"
-	"github.com/google/uuid"
+	"errors"
 	"os"
+
+	"github.com/google/uuid"
 )
 
 var HubID string
@@ -40,6 +42,9 @@ var PostgresSensorDatabase string
 
 var SensorDataBatchSize int = 10    // Dimensione del batch per i dati dei sensori
 var SensorDataBatchTimeout int = 10 // Timeout in secondi per il batch dei dati dei sensori
+
+var HealthzServer bool = false
+var HealthzServerPort string = ":"
 
 func SetupEnvironment() error {
 
@@ -149,6 +154,27 @@ func SetupEnvironment() error {
 	PostgresSensorDatabase, exists = os.LookupEnv("POSTGRES_SENSOR_DATABASE")
 	if !exists {
 		PostgresSensorDatabase = "sensorcontinuum"
+	}
+
+	/* ----- HEALTH CHECK SERVER SETTINGS ----- */
+
+	HealthzServerStr, exists := os.LookupEnv("HEALTHZ_SERVER")
+	if !exists {
+		HealthzServer = false
+	} else {
+		switch HealthzServerStr {
+		case "true":
+			HealthzServer = true
+		case "false":
+			HealthzServer = false
+		default:
+			return errors.New("invalid value for HEALTHZ_SERVER: " + HealthzServerStr + ". Must be 'true' or 'false'")
+		}
+	}
+
+	HealthzServerPort, exists = os.LookupEnv("HEALTHZ_SERVER_PORT")
+	if !exists {
+		HealthzServerPort = "8080"
 	}
 
 	/* ----- LOGGER SETTINGS ----- */

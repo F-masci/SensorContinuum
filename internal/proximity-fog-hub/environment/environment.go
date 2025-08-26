@@ -5,11 +5,11 @@ import (
 	"SensorContinuum/configs/mosquitto"
 	"SensorContinuum/pkg/logger"
 	"errors"
-	"github.com/google/uuid"
 	"os"
+
+	"github.com/google/uuid"
 )
 
-var Region string
 var EdgeMacrozone string
 var HubID string
 
@@ -35,14 +35,12 @@ var PostgresHost string
 var PostgresPort string
 var PostgresDatabase string
 
+var HealthzServer bool = false
+var HealthzServerPort string = ":"
+
 func SetupEnvironment() error {
 
 	var exists bool
-
-	Region, exists = os.LookupEnv("REGION")
-	if !exists {
-		return errors.New("environment variable REGION not set")
-	}
 
 	EdgeMacrozone, exists = os.LookupEnv("EDGE_MACROZONE")
 	if !exists {
@@ -131,6 +129,27 @@ func SetupEnvironment() error {
 	PostgresDatabase, exists = os.LookupEnv("POSTGRES_DATABASE")
 	if !exists {
 		PostgresDatabase = "sensorcontinuum"
+	}
+
+	/* ----- HEALTH CHECK SERVER SETTINGS ----- */
+
+	HealthzServerStr, exists := os.LookupEnv("HEALTHZ_SERVER")
+	if !exists {
+		HealthzServer = false
+	} else {
+		switch HealthzServerStr {
+		case "true":
+			HealthzServer = true
+		case "false":
+			HealthzServer = false
+		default:
+			return errors.New("invalid value for HEALTHZ_SERVER: " + HealthzServerStr + ". Must be 'true' or 'false'")
+		}
+	}
+
+	HealthzServerPort, exists = os.LookupEnv("HEALTHZ_SERVER_PORT")
+	if !exists {
+		HealthzServerPort = "8080"
 	}
 
 	/* ----- LOGGER SETTINGS ----- */

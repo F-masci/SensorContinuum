@@ -1,7 +1,7 @@
 services:
 
   sensor-agent-$#:
-    image: sensor-agent:latest
+    image: fmasci/sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile

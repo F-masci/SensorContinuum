@@ -1,0 +1,20 @@
+services:
+
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-broker-${EDGE_MACROZONE}-01
+    hostname: mqtt-broker-${EDGE_MACROZONE}-01
+    ports:
+      - "1883:1883"
+    volumes:
+      - ../../configs/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 2 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  mqtt-broker-bridge:
+    name: mqtt-broker-${EDGE_MACROZONE}-bridge
+    driver: bridge

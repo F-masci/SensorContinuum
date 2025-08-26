@@ -241,8 +241,6 @@ func SetupEnvironment() error {
 
 	/* ----- LOGGER SETTINGS ----- */
 
-	/* ----- LOGGER SETTINGS ----- */
-
 	if err := logger.LoadLoggerFromEnv(); err != nil {
 		return err
 	}
