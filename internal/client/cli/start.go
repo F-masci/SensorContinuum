@@ -24,7 +24,7 @@ func MainMenu() {
 		fmt.Printf("\n%s\n%s🏠 Menù Principale%s\n%s\n", line, cyanBold, reset, line)
 		fmt.Printf("%s1%s) 🌍 Lista regioni disponibili\n", green, reset)
 		fmt.Printf("%s2%s) 🔎 Ricerca regione per nome\n", green, reset)
-		fmt.Printf("%s3%s) 🏢 Gestione macrozone\n", green, reset)
+		fmt.Printf("%s3%s) 🏢 Gestione regione\n", green, reset)
 		fmt.Printf("%s0%s) 🚪 Esci\n", yellow, reset)
 		fmt.Println(strings.Repeat(sepLight, 40))
 		fmt.Print(yellow + "Seleziona un'opzione: " + reset)

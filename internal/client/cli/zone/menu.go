@@ -20,11 +20,12 @@ const (
 func ZoneMenu(regionName, macrozoneName string) {
 	for {
 		line := strings.Repeat(sepHeavy, 60)
-		fmt.Printf("\n%s\n%s🟦 Gestione Zone%s\n%s\n", line, cyanBold, reset, line)
+		fmt.Printf("\n%s\n%s🟦 Gestione Macrozona%s\n%s\n", line, cyanBold, reset, line)
 		fmt.Printf("Regione: %s%s%s | Macrozona: %s%s%s\n", green, regionName, reset, green, macrozoneName, reset)
 		fmt.Println(strings.Repeat(sepLight, 40))
 		fmt.Printf("%s1%s) 📋 Lista zone\n", green, reset)
 		fmt.Printf("%s2%s) 🔎 Cerca zona per nome\n", green, reset)
+		fmt.Printf("%s3%s) 🔬 Mostra rilevamenti sensore\n", green, reset)
 		fmt.Printf("%s0%s) ⬅️  Torna al menu macrozona\n", yellow, reset)
 		fmt.Println(strings.Repeat(sepLight, 40))
 		fmt.Print(yellow + "Seleziona un'opzione: " + reset)
@@ -36,6 +37,12 @@ func ZoneMenu(regionName, macrozoneName string) {
 			fmt.Print(yellow + "Nome della zona: " + reset)
 			zoneName := utils.ReadInput()
 			getZoneByName(regionName, macrozoneName, zoneName)
+		case "3":
+			fmt.Print(yellow + "Nome della zona: " + reset)
+			zoneName := utils.ReadInput()
+			fmt.Print(yellow + "ID del sensore: " + reset)
+			sensorID := utils.ReadInput()
+			getRawSensorData(regionName, macrozoneName, zoneName, sensorID)
 		case "0":
 			return
 		default:

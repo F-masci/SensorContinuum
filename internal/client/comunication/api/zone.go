@@ -45,3 +45,23 @@ func GetZoneByName(regionName, macrozoneName, zoneName string) (*types.Zone, err
 	}
 	return &zone, nil
 }
+
+// Restituisce i dati grezzi di un sensore in una zona
+func GetRawSensorData(regionName, macrozoneName, zoneName, sensorID string) ([]types.SensorData, error) {
+	url := strings.Replace(environment.ZoneRawSensorDataUrl, regionNamePlaceholder, regionName, 1)
+	url = strings.Replace(url, macrozoneNamePlaceholder, macrozoneName, 1)
+	url = strings.Replace(url, "{zone}", zoneName, 1)
+	url = strings.Replace(url, "{sensor}", sensorID, 1)
+	body, err := comunication.GetApiData(url)
+	if err != nil {
+		if errors.Is(err, comunication.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var data []types.SensorData
+	if err := json.Unmarshal([]byte(body), &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}

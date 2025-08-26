@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 // GetMacrozonesList Restituisce la lista delle macrozone per una regione, con il conteggio delle zone associate
@@ -133,4 +134,36 @@ func GetMacrozoneByName(ctx context.Context, regionName string, name string) (*t
 	}
 
 	return &m, nil
+}
+
+// GetAggregatedSensorData Restituisce i dati aggregati di una macrozona
+func GetAggregatedSensorData(ctx context.Context, regionName, macrozoneName string, limit int) (*[]types.AggregatedStats, error) {
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, regionName)
+	if err != nil {
+		return nil, err
+	}
+	var a []types.AggregatedStats
+	aggregatedDataRows, err := sensorDb.Conn().Query(ctx, `
+		SELECT m.time, m.macrozone_name, m.type, m.min_value, m.max_value, m.avg_value
+		FROM macrozone_aggregated_statistics m
+		WHERE m.macrozone_name = $1
+		ORDER BY m.time DESC
+		LIMIT $2
+	`, macrozoneName, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer aggregatedDataRows.Close()
+	a = make([]types.AggregatedStats, 0)
+	for aggregatedDataRows.Next() {
+		var ts time.Time
+		var as types.AggregatedStats
+		if err := aggregatedDataRows.Scan(&ts, &as.Macrozone, &as.Type, &as.Min, &as.Max, &as.Avg); err != nil {
+			return nil, err
+		}
+		as.Timestamp = ts.Unix()
+		a = append(a, as)
+	}
+
+	return &a, nil
 }

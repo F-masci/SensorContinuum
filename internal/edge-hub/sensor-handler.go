@@ -10,7 +10,11 @@ import (
 	"SensorContinuum/pkg/types"
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+var randomInstanceID = uuid.New().String()
 
 // FilterSensorData orchestra il filtraggio dei dati dei sensori.
 func FilterSensorData(sensorDataChannel chan types.SensorData) {
@@ -51,6 +55,18 @@ func FilterSensorData(sensorDataChannel chan types.SensorData) {
 func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
+
+	// Prova a ottenere il lock di leader, solo il leader esegue l'aggregazione
+	var instanceID = environment.HubID + "-" + randomInstanceID
+	isLeader, err := storage.TryOrRenewLeader(ctx, instanceID)
+	if err != nil {
+		logger.Log.Error("Error acquiring leader lock: ", err)
+		return
+	}
+	if !isLeader {
+		logger.Log.Info("Not the leader, skipping aggregation")
+		return
+	}
 
 	sensorIDs, err := storage.GetAllSensorIDs(ctx)
 	if err != nil {

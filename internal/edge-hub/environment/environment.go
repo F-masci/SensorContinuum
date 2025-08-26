@@ -5,10 +5,11 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"errors"
-	"github.com/google/uuid"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // OperationMode: I valori validi sono:
@@ -73,11 +74,12 @@ var RedisPort string
 var HistoryWindowSize int = 100
 var FilteringMinSamples int = 5
 var FilteringStdDevFactor float64 = 5
-var FilteringMinThreshold float64 = 0.0
-var FilteringMaxThreshold float64 = 60.0
 
 var UnhealthySensorTimeout time.Duration = 5 * time.Minute
 var RegistrationSensorTimeout time.Duration = 6 * time.Hour
+
+var HealthzServer bool = false
+var HealthzServerPort string = ":"
 
 func SetupEnvironment() error {
 
@@ -216,23 +218,28 @@ func SetupEnvironment() error {
 		}
 	}
 
-	FilteringMinThresholdStr, exists := os.LookupEnv("FILTERING_MIN_TRESHOLD")
-	if exists {
-		var err error
-		FilteringMinThreshold, err = strconv.ParseFloat(FilteringMinThresholdStr, 64)
-		if err != nil {
-			return errors.New("invalid value for FILTERING_MIN_TRESHOLD: " + FilteringMinThresholdStr)
+	/* ----- HEALTH CHECK SERVER SETTINGS ----- */
+
+	HealthzServerStr, exists := os.LookupEnv("HEALTHZ_SERVER")
+	if !exists {
+		HealthzServer = false
+	} else {
+		switch HealthzServerStr {
+		case "true":
+			HealthzServer = true
+		case "false":
+			HealthzServer = false
+		default:
+			return errors.New("invalid value for HEALTHZ_SERVER: " + HealthzServerStr + ". Must be 'true' or 'false'")
 		}
 	}
 
-	FilteringMaxThresholdStr, exists := os.LookupEnv("FILTERING_MAX_TRESHOLD")
-	if exists {
-		var err error
-		FilteringMaxThreshold, err = strconv.ParseFloat(FilteringMaxThresholdStr, 64)
-		if err != nil {
-			return errors.New("invalid value for FILTERING_MAX_TRESHOLD: " + FilteringMaxThresholdStr)
-		}
+	HealthzServerPort, exists = os.LookupEnv("HEALTHZ_SERVER_PORT")
+	if !exists {
+		HealthzServerPort = "8080"
 	}
+
+	/* ----- LOGGER SETTINGS ----- */
 
 	/* ----- LOGGER SETTINGS ----- */
 

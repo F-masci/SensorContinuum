@@ -17,7 +17,8 @@ import (
 
 const localstackEndpoint = "http://localhost:4566"
 
-var envFilePath = filepath.Join("internal", "client", "environment", ".env")
+var envFilePath1 = filepath.Join("internal", "client", "environment", ".env")
+var envFilePath2 = filepath.Join("site", ".env.development")
 
 type LambdaFunc struct {
 	Name      string
@@ -51,12 +52,16 @@ func main() {
 		// region endpoints
 		{"regionList", "region"},
 		{"regionSearchName", "region"},
+		{"regionDataAggregated", "region"},
 		// macrozone endpoints
 		{"macrozoneList", "macrozone"},
 		{"macrozoneSearchName", "macrozone"},
+		{"macrozoneDataAggregated", "macrozone"},
 		// zone endpoints
 		{"zoneList", "zone"},
 		{"zoneSearchName", "zone"},
+		{"sensorDataRaw", "zone"},
+		{"zoneDataAggregated", "zone"},
 	}
 
 	apiIDs := make(map[string]string)
@@ -118,18 +123,30 @@ func main() {
 		case "regionSearchName":
 			segments = []string{"search", "name", "{name}"}
 			envKey = "REGION_SEARCH_NAME_URL"
+		case "regionDataAggregated":
+			segments = []string{"data", "aggregated", "{region}"}
+			envKey = "REGION_DATA_AGGREGATED_URL"
 		case "macrozoneList":
 			segments = []string{"list", "{region}"}
 			envKey = "MACROZONE_LIST_URL"
 		case "macrozoneSearchName":
 			segments = []string{"search", "name", "{region}", "{name}"}
 			envKey = "MACROZONE_SEARCH_NAME_URL"
+		case "macrozoneDataAggregated":
+			segments = []string{"data", "aggregated", "{region}", "{macrozone}"}
+			envKey = "MACROZONE_DATA_AGGREGATED_URL"
 		case "zoneList":
 			segments = []string{"list", "{region}", "{macrozone}"}
 			envKey = "ZONE_LIST_URL"
 		case "zoneSearchName":
 			segments = []string{"search", "name", "{region}", "{macrozone}", "{name}"}
 			envKey = "ZONE_SEARCH_NAME_URL"
+		case "sensorDataRaw":
+			segments = []string{"sensor", "data", "raw", "{region}", "{macrozone}", "{zone}", "{sensor}"}
+			envKey = "ZONE_SENSOR_DATA_RAW_URL"
+		case "zoneDataAggregated":
+			segments = []string{"data", "aggregated", "{region}", "{macrozone}", "{zone}"}
+			envKey = "ZONE_DATA_AGGREGATED_URL"
 		default:
 			segments = []string{lambda.Name}
 			envKey = strings.ToUpper(lambda.Name) + "_URL"
@@ -196,8 +213,8 @@ func main() {
 		logger.Log.Info("Endpoint creato: ", lambda.Name, " ", url)
 	}
 
-	// Scrivi tutte le variabili nel file .env
-	f, err := os.Create(envFilePath)
+	// Scrivi tutte le variabili nel file .env.development
+	f, err := os.Create(envFilePath1)
 	if err != nil {
 		logger.Log.Error("Impossibile creare il file .env: ", err)
 		os.Exit(1)
@@ -205,5 +222,16 @@ func main() {
 	defer f.Close()
 	for k, v := range envVars {
 		fmt.Fprintf(f, "%s=%s\n", k, v)
+	}
+
+	// Scrivi tutte le variabili nel file .env.development
+	f, err = os.Create(envFilePath2)
+	if err != nil {
+		logger.Log.Error("Impossibile creare il file .env.development: ", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	for k, v := range envVars {
+		fmt.Fprintf(f, "REACT_APP_%s=%s\n", k, strings.Replace(v, "http://localhost:4566", "", 1))
 	}
 }

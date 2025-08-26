@@ -91,8 +91,8 @@ func GetRegionDetailsByName() {
 			fmt.Printf("%s%-36s │ %-18s │ %-19s │ %-19s%s\n",
 				color,
 				h.Id, h.Service,
-				h.RegistrationTime.Format("2006-01-02 15:04:05"),
-				h.LastSeen.Format("2006-01-02 15:04:05"),
+				h.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
+				h.LastSeen.Local().Format("2006-01-02 15:04:05"),
 				reset,
 			)
 		}

@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/segmentio/kafka-go"
 )
@@ -61,11 +62,15 @@ func (sdb *SensorDataBatch) Clear() {
 // e inviati tramite kafka all' intermediate-fog-hub
 type AggregatedStats struct {
 	Timestamp int64   `json:"timestamp"`
-	Macrozone string  `json:"macrozone"`
+	Region    string  `json:"region,omitempty"`
+	Macrozone string  `json:"macrozone,omitempty"`
+	Zone      string  `json:"zone,omitempty"`
 	Type      string  `json:"type"`
 	Min       float64 `json:"min"`
 	Max       float64 `json:"max"`
 	Avg       float64 `json:"avg"`
+	Sum       float64 `json:"sum,omitempty"`
+	Count     int     `json:"count,omitempty"`
 }
 
 // CreateAggregatedStatsFromKafka deserializza un messaggio Kafka in AggregatedStats

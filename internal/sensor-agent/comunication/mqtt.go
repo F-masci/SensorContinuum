@@ -145,7 +145,7 @@ func SendRegistrationMessage() {
 		payload, err := json.Marshal(types.ConfigurationMsg{
 			EdgeMacrozone:   environment.EdgeMacrozone,
 			MsgType:         types.NewSensorMsgType,
-			Timestamp:       time.Now().Unix(),
+			Timestamp:       time.Now().UTC().Unix(),
 			Service:         types.SensorAgentService,
 			EdgeZone:        environment.EdgeZone,
 			SensorID:        environment.SensorId,
