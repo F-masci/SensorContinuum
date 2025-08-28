@@ -3,8 +3,9 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"sync"
+
+	"github.com/jackc/pgx/v5"
 
 	"SensorContinuum/pkg/logger"
 )
@@ -27,7 +28,7 @@ var (
 	sensorInitErr   = make(map[string]error)
 )
 
-// Funzione per DB Cloud
+// GetCloudPostgresDB Funzione per DB Cloud
 func GetCloudPostgresDB(ctx context.Context) (*PostgresDB, error) {
 	cloudOnce.Do(func() {
 		dbURL := "postgres://admin:adminpass@metadata-db.cloud.sensorcontinuum.node:5433/sensorcontinuum"
@@ -43,7 +44,7 @@ func GetCloudPostgresDB(ctx context.Context) (*PostgresDB, error) {
 	return cloudInstance, cloudInitErr
 }
 
-// Funzione per DB Metadati Regione
+// GetRegionPostgresDB Funzione per DB Metadati Regione
 func GetRegionPostgresDB(ctx context.Context, region string) (*PostgresDB, error) {
 	if regionOnce[region] == nil {
 		regionOnce[region] = &sync.Once{}

@@ -68,8 +68,8 @@ func SetupEnvironment() error {
 	}
 
 	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + EdgeMacrozone
-	HubConfigurationTopic = "$share/proximity-fog-hub/configuration/hub/" + EdgeMacrozone
-	HeartbeatTopic = "$share/proximity-fog-hub/heartbeat/" + EdgeMacrozone
+	HubConfigurationTopic = "configuration/hub/" + EdgeMacrozone
+	HeartbeatTopic = "heartbeat/" + EdgeMacrozone
 
 	KafkaBroker, exists = os.LookupEnv("KAFKA_BROKER_ADDRESS")
 	if !exists {

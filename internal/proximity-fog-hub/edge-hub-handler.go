@@ -44,18 +44,28 @@ func ProcessEdgeHubData(dataChannel chan types.SensorData) {
 
 func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
 	for configMsg := range configChannel {
+		if configMsg == (types.ConfigurationMsg{}) {
+			logger.Log.Warn("Received empty configuration message, skipping...")
+			continue
+		}
 		logger.Log.Info("Configuration message received: ", configMsg.MsgType)
 		// Invia il messaggio di configurazione al Region Hub
 		if err := comunication.SendConfigurationMessage(configMsg); err != nil {
 			logger.Log.Error("Failure to send configuration message to Region Hub, error: ", err)
 			continue
 		}
-		logger.Log.Info("Configuration message sent to Region Hub successfully.")
+		logger.Log.Info("Configuration message sent to Region Hub successfully")
+		comunication.CleanRetentionConfigurationMessage(configMsg)
+		logger.Log.Info("Configuration message cleaned successfully")
 	}
 }
 
 func ProcessEdgeHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
 	for heartbeatMsg := range heartbeatChannel {
+		if heartbeatMsg == (types.HeartbeatMsg{}) {
+			logger.Log.Warn("Received empty heartbeat message, skipping...")
+			continue
+		}
 		logger.Log.Info("Heartbeat message received: ", heartbeatMsg.HubID)
 		// Invia il messaggio di heartbeat al Region Hub
 		if err := comunication.SendHeartbeatMessage(heartbeatMsg); err != nil {
@@ -63,6 +73,8 @@ func ProcessEdgeHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
 			continue
 		}
 		logger.Log.Info("Heartbeat message sent to Region Hub successfully.")
+		comunication.CleanRetentionHeartbeatMessage(heartbeatMsg)
+		logger.Log.Info("Heartbeat message cleaned successfully.")
 	}
 }
 

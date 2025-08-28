@@ -2,7 +2,7 @@ services:
 
   cloud-metadata-db:
     image: postgis/postgis:latest
-    container_name: region-${REGION}-metadata-db
+    container_name: cloud-metadata-db
     hostname: cloud-metadata-db
     environment:
       POSTGRES_USER: admin
@@ -12,6 +12,7 @@ services:
       - "${POSTGRES_CLOUD_METADATA_PORT}:5432"
     volumes:
       - ../../configs/postgresql/init-cloud-metadata-db.sql:/docker-entrypoint-initdb.d/init-cloud-metadata-db.sql:ro
+      - ../../configs/postgresql/init-metadata.sql:/docker-entrypoint-initdb.d/init-metadata.sql:ro
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s

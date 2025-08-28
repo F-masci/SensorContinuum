@@ -2,6 +2,7 @@ package environment
 
 import (
 	"SensorContinuum/configs/mosquitto"
+	"SensorContinuum/configs/timeouts"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"errors"
@@ -12,7 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// OperationMode: I valori validi sono:
+// OperationModeType: I valori validi sono:
 // - "loop": per eseguire in un ciclo continuo di aggregazione|pulizia dei dati. (default)
 // - "once": per eseguire una singola iterazione di aggregazione|pulizia dei dati.
 type OperationModeType string
@@ -31,7 +32,7 @@ var EdgeMacrozone string
 var EdgeZone string
 var HubID string
 
-// Queste impostazioni sono utilizzate per la connessione tra SensorAgent e EdgeHub.
+// Queste impostazioni sono utilizzate per la connessione tra SensorAgent ed EdgeHub.
 
 // MqttSensorBrokerProtocol specifica il protocollo (es. "tcp", "ws") tra SensorAgent ed EdgeHub.
 var MqttSensorBrokerProtocol string
@@ -68,15 +69,52 @@ var SensorConfigurationTopic string
 // HeartbeatTopic specifica il topic MQTT per i messaggi di heartbeat del hub.
 var HeartbeatTopic string
 
+// Queste impostazioni controllano il comportamento della riconnessione al broker MQTT.
+
+// MaxReconnectionInterval specifica l'intervallo massimo tra i tentativi di riconnessione in secondi.
+var MaxReconnectionInterval int = 10
+
+// MaxReconnectionTimeout specifica il timeout massimo per ogni tentativo di riconnessione in secondi.
+var MaxReconnectionTimeout int = 10
+
+// MaxReconnectionAttempts specifica il numero massimo di tentativi di riconnessione.
+var MaxReconnectionAttempts int = 10
+
+// MaxSubscriptionTimeout specifica il timeout per la sottoscrizione ai topic in secondi.
+var MaxSubscriptionTimeout int = 5
+
+// MessagePublishTimeout specifica il timeout per la pubblicazione dei messaggi in secondi.
+var MessagePublishTimeout int = 5
+
+// MessagePublishAttempts specifica il numero di tentativi di pubblicazione dei messaggi.
+var MessagePublishAttempts int = 3
+
+// MessageCleaningTimeout specifica il timeout per la pulizia dei messaggi in secondi.
+var MessageCleaningTimeout int = MessagePublishTimeout
+
 var RedisAddress string
 var RedisPort string
 
-var HistoryWindowSize int = 100
-var FilteringMinSamples int = 5
-var FilteringStdDevFactor float64 = 5
+// AggregationInterval specifica l'intervallo di tempo per l'aggregazione dei dati.
+const AggregationInterval = time.Minute
 
-var UnhealthySensorTimeout time.Duration = 5 * time.Minute
-var RegistrationSensorTimeout time.Duration = 6 * time.Hour
+// AggregationFetchOffset è il tempo extra per recuperare i dati dai sensori,
+// in modo da includere eventuali ritardi nella ricezione dei messaggi.
+// Specifica l'offest negativo di tempo rispetto all'istante corrente
+// per recuperare i dati aggregati.
+const AggregationFetchOffset = -2 * time.Minute
+
+const LeaderKey = "edge-hub-leader"
+const LeaderTTL = 70 * time.Second
+
+const HistoryWindowSize int = 100
+const FilteringMinSamples int = 5
+const FilteringStdDevFactor float64 = 3
+
+const UnhealthySensorTimeout = timeouts.IsAliveSensorTimeout
+const RegistrationSensorTimeout = 6 * time.Hour
+
+const HeartbeatInterval = timeouts.HearteatInterval
 
 var HealthzServer bool = false
 var HealthzServerPort string = ":"
@@ -197,6 +235,76 @@ func SetupEnvironment() error {
 	SensorConfigurationTopic = "configuration/sensor/" + EdgeMacrozone + "/" + EdgeZone
 	HeartbeatTopic = "heartbeat/" + EdgeMacrozone + "/" + EdgeZone
 
+	var MaxReconnectionIntervalStr string
+	MaxReconnectionIntervalStr, exists = os.LookupEnv("MAX_RECONNECTION_INTERVAL")
+	if exists {
+		var err error
+		MaxReconnectionInterval, err = strconv.Atoi(MaxReconnectionIntervalStr)
+		if err != nil || MaxReconnectionInterval <= 0 {
+			return errors.New("invalid value for MAX_RECONNECTION_INTERVAL: " + MaxReconnectionIntervalStr + ". Must be a positive integer")
+		}
+	}
+
+	var MaxReconnectionTimeoutStr string
+	MaxReconnectionTimeoutStr, exists = os.LookupEnv("MAX_RECONNECTION_TIMEOUT")
+	if exists {
+		var err error
+		MaxReconnectionTimeout, err = strconv.Atoi(MaxReconnectionTimeoutStr)
+		if err != nil || MaxReconnectionTimeout <= 0 {
+			return errors.New("invalid value for MAX_RECONNECTION_TIMEOUT: " + MaxReconnectionTimeoutStr + ". Must be a positive integer")
+		}
+	}
+
+	var MaxReconnectionAttemptsStr string
+	MaxReconnectionAttemptsStr, exists = os.LookupEnv("MAX_RECONNECTION_ATTEMPTS")
+	if exists {
+		var err error
+		MaxReconnectionAttempts, err = strconv.Atoi(MaxReconnectionAttemptsStr)
+		if err != nil || MaxReconnectionAttempts <= 0 {
+			return errors.New("invalid value for MAX_RECONNECTION_ATTEMPTS: " + MaxReconnectionAttemptsStr + ". Must be a positive integer")
+		}
+	}
+
+	var MaxSubscriptionTimeoutStr string
+	MaxSubscriptionTimeoutStr, exists = os.LookupEnv("MAX_SUBSCRIPTION_TIMEOUT")
+	if exists {
+		var err error
+		MaxSubscriptionTimeout, err = strconv.Atoi(MaxSubscriptionTimeoutStr)
+		if err != nil || MaxSubscriptionTimeout <= 0 {
+			return errors.New("invalid value for MAX_SUBSCRIPTION_TIMEOUT: " + MaxSubscriptionTimeoutStr + ". Must be a positive integer")
+		}
+	}
+
+	var MessagePublishTimeoutStr string
+	MessagePublishTimeoutStr, exists = os.LookupEnv("MESSAGE_PUBLISH_TIMEOUT")
+	if exists {
+		var err error
+		MessagePublishTimeout, err = strconv.Atoi(MessagePublishTimeoutStr)
+		if err != nil || MessagePublishTimeout <= 0 {
+			return errors.New("invalid value for MESSAGE_PUBLISH_TIMEOUT: " + MessagePublishTimeoutStr + ". Must be a positive integer")
+		}
+	}
+
+	var MessagePublishAttemptsStr string
+	MessagePublishAttemptsStr, exists = os.LookupEnv("MESSAGE_PUBLISH_ATTEMPTS")
+	if exists {
+		var err error
+		MessagePublishAttempts, err = strconv.Atoi(MessagePublishAttemptsStr)
+		if err != nil || MessagePublishAttempts <= 0 {
+			return errors.New("invalid value for MESSAGE_PUBLISH_ATTEMPTS: " + MessagePublishAttemptsStr + ". Must be a positive integer")
+		}
+	}
+
+	var MessageCleaningTimeoutStr string
+	MessageCleaningTimeoutStr, exists = os.LookupEnv("MESSAGE_CLEANING_TIMEOUT")
+	if exists {
+		var err error
+		MessageCleaningTimeout, err = strconv.Atoi(MessageCleaningTimeoutStr)
+		if err != nil || MessageCleaningTimeout <= 0 {
+			return errors.New("invalid value for MESSAGE_CLEANING_TIMEOUT: " + MessageCleaningTimeoutStr + ". Must be a positive integer")
+		}
+	}
+
 	/* ----- REDIS CACHE SETTINGS ----- */
 
 	RedisAddress, exists = os.LookupEnv("REDIS_ADDRESS")
@@ -207,15 +315,6 @@ func SetupEnvironment() error {
 	RedisPort, exists = os.LookupEnv("REDIS_PORT")
 	if !exists {
 		RedisPort = "6379"
-	}
-
-	HistoryWindowSizeStr, exists := os.LookupEnv("HISTORY_WINDOW_SIZE")
-	if exists {
-		var err error
-		HistoryWindowSize, err = strconv.Atoi(HistoryWindowSizeStr)
-		if err != nil {
-			return errors.New("invalid value for HISTORY_WINDOW_SIZE: " + HistoryWindowSizeStr)
-		}
 	}
 
 	/* ----- HEALTH CHECK SERVER SETTINGS ----- */

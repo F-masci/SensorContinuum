@@ -17,9 +17,6 @@ import (
 const sensorMetadataKey = "sensor:%s:metadata"
 const sensorHistoryKey = "sensor:%s:history"
 
-const leaderKey = "edge-hub-leader"
-const leaderTTL = 70 * time.Second // Attende che il leader rinnovi il suo status
-
 var RedisClient *redis.Client
 
 func InitRedisConnection() {
@@ -37,7 +34,7 @@ func InitRedisConnection() {
 // TryOrRenewLeader prova ad acquisire il lock di leader election
 func TryOrRenewLeader(ctx context.Context, instanceID string) (bool, error) {
 	// Prova ad acquisire il lock
-	ok, err := RedisClient.SetNX(ctx, leaderKey, instanceID, leaderTTL).Result()
+	ok, err := RedisClient.SetNX(ctx, environment.LeaderKey, instanceID, environment.LeaderTTL).Result()
 	if err != nil {
 		return false, err
 	}
@@ -46,13 +43,13 @@ func TryOrRenewLeader(ctx context.Context, instanceID string) (bool, error) {
 		return true, nil
 	}
 	// Controlla chi è il leader attuale
-	val, err := RedisClient.Get(ctx, leaderKey).Result()
+	val, err := RedisClient.Get(ctx, environment.LeaderKey).Result()
 	if err != nil {
 		return false, err
 	}
 	if val == instanceID {
 		// Sei già leader, rinnova il TTL
-		_, err = RedisClient.Expire(ctx, leaderKey, leaderTTL).Result()
+		_, err = RedisClient.Expire(ctx, environment.LeaderKey, environment.LeaderTTL).Result()
 		return true, err
 	}
 	// Non sei il leader
@@ -111,6 +108,7 @@ func GetSensorHistory(ctx context.Context, sensorID string, n int) ([]types.Sens
 }
 
 // GetSensorHistoryByMinute recupera le letture per un dato sensore che corrispondono al minuto specificato.
+// Se ad esempio il minuto è 2024-10-05 14:23, recupera tutte le letture tra 2024-10-05 14:23:00 e 2024-10-05 14:23:59.
 func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.Time) ([]types.SensorData, error) {
 	key := fmt.Sprintf(sensorHistoryKey, sensorID)
 	vals, err := RedisClient.LRange(ctx, key, 0, int64(environment.HistoryWindowSize-1)).Result()

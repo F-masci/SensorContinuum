@@ -342,7 +342,9 @@ func RegisterMacrozoneHub(msg types.ConfigurationMsg) error {
 	query := `
 		INSERT INTO macrozone_hubs (id, macrozone_name, service, registration_time, last_seen)
 		VALUES ($1, $2, $3, $4, $4)
-		ON CONFLICT (id, macrozone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+		ON CONFLICT (id, macrozone_name) DO UPDATE
+		SET last_seen = EXCLUDED.last_seen
+		WHERE macrozone_hubs.last_seen IS NULL OR macrozone_hubs.last_seen < EXCLUDED.last_seen
 	`
 	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.Service, timestamp)
 	return err
@@ -354,7 +356,9 @@ func RegisterZoneHub(msg types.ConfigurationMsg) error {
 	query := `
 		INSERT INTO zone_hubs (id, macrozone_name, zone_name, service, registration_time, last_seen)
 		VALUES ($1, $2, $3, $4, $5, $5)
-		ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+		ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE
+		SET last_seen = EXCLUDED.last_seen
+		WHERE zone_hubs.last_seen IS NULL OR zone_hubs.last_seen < EXCLUDED.last_seen
 	`
 	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.EdgeZone, msg.Service, timestamp)
 	return err
@@ -366,7 +370,9 @@ func RegisterSensor(msg types.ConfigurationMsg) error {
 	query := `
         INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
         VALUES ($1, $2, $3, $4, $5, $6, $6)
-        ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE SET last_seen = EXCLUDED.last_seen
+        ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE
+        SET last_seen = EXCLUDED.last_seen
+		WHERE sensors.last_seen IS NULL OR sensors.last_seen < EXCLUDED.last_seen
     `
 	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.SensorID, msg.EdgeMacrozone, msg.EdgeZone, msg.SensorType, msg.SensorReference, timestamp)
 	return err
@@ -383,8 +389,10 @@ func Register() error {
 	query := `
 	INSERT INTO region_hubs (id, service, registration_time, last_seen)
 	VALUES ($1, $2, CURRENT_TIMESTAMP AT TIME ZONE 'UTC', CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
-	ON CONFLICT (id) DO UPDATE SET last_seen = EXCLUDED.last_seen
+	ON CONFLICT (id) DO UPDATE
+	SET last_seen = EXCLUDED.last_seen
+	WHERE region_hubs.last_seen IS NULL OR region_hubs.last_seen < EXCLUDED.last_seen
 `
-	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, types.IntrermediateHubService)
+	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, types.IntermediateHubService)
 	return err
 }

@@ -4,8 +4,10 @@ import (
 	"SensorContinuum/internal/edge-hub/environment"
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 
@@ -19,6 +21,9 @@ var sensorClient MQTT.Client
 // hubClient è il client MQTT utilizzato per pubblicare i dati filtrati e le configurazioni.
 // Questo client è utilizzato per comunicare con il Proximity Hub.
 var hubClient MQTT.Client
+
+// Contatori per i tentativi di connessione
+var connectAttempts = 0
 
 // sensorDataHandler è la funzione di callback che processa i messaggi con le rilevazioni in arrivo.
 func makeSensorDataHandler(sensorDataChannel chan types.SensorData) MQTT.MessageHandler {
@@ -71,37 +76,6 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 	}
 }
 
-// CleanRetentionConfigurationMessage Rimuove il messaggio di configurazione dal canale se è già stato elaborato.
-// Questo è utile per evitare di elaborare più volte lo stesso messaggio.
-func CleanRetentionConfigurationMessage(msg types.ConfigurationMsg) {
-
-	if msg.MsgType == types.NewSensorMsgType {
-		logger.Log.Debug("Cleaning retention for configuration message: ", msg)
-
-		// Non procedere se la connessione non è attiva.
-		if !sensorClient.IsConnected() {
-			logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
-			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
-			return
-		}
-
-		topic := environment.SensorConfigurationTopic + "/" + msg.SensorID
-		// invia i dati al broker MQTT
-		token := sensorClient.Publish(topic, 2, true, "")
-
-		if !token.Wait() {
-			logger.Log.Error("Timeout publishing message.")
-			return
-		}
-		err := token.Error()
-		if err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
-			return
-		}
-		logger.Log.Debug("Message cleaned successfully.")
-	}
-}
-
 // makeConnectionHandler viene chiamata quando la connessione MQTT è già riuscita e quello che facciamo ora è
 // fare la subscribe al topic dei dati del sensore. Cioè praticamente stiamo dicendo che l edge hub è sottoscritto
 // alla ricezione dei dati da parte dei sensori e quindi li riceve
@@ -115,10 +89,11 @@ func makeConnectionHandler(sensorDataChannel chan types.SensorData, configuratio
 			topic = environment.SensorDataTopic + "/#"
 			logger.Log.Debug("Subscribing to topic: ", topic)
 
-			// QoS 0, sottoscrivi al topic per ricevere i dati dai sensori
+			// Sottoscrivi al topic per ricevere i dati dai sensori
+			// QoS 0, cioè "at most once", il messaggio può andare perso
 			token = client.Subscribe(topic, 0, makeSensorDataHandler(sensorDataChannel)) // Il message handler è globale
 			logger.Log.Info("Subscribed to topic: ", topic)
-			if token.WaitTimeout(5*time.Second) && token.Error() != nil {
+			if token.WaitTimeout(time.Duration(environment.MaxSubscriptionTimeout)*time.Second) && token.Error() != nil {
 				logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
 				os.Exit(1) // Esci se non riesci a sottoscrivere
 			}
@@ -128,15 +103,19 @@ func makeConnectionHandler(sensorDataChannel chan types.SensorData, configuratio
 			topic = environment.SensorConfigurationTopic + "/#"
 			logger.Log.Debug("Subscribing to topic: ", topic)
 
-			// QoS 2, sottoscrivi al topic per ricevere le configurazioni dai sensori
+			// Sottoscrivi al topic per ricevere le configurazioni dai sensori
+			// QoS 2, cioè "exactly once", il messaggio viene consegnato una sola volta, senza duplicati
 			token = client.Subscribe(topic, 2, makeConfigurationMessageHandler(configurationMessageChannel)) // Il message handler è globale
 			logger.Log.Info("Subscribed to topic: ", topic)
-			if token.WaitTimeout(5*time.Second) && token.Error() != nil {
+			if token.WaitTimeout(time.Duration(environment.MaxSubscriptionTimeout)*time.Second) && token.Error() != nil {
 				logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())
 				os.Exit(1) // Esci se non riesci a sottoscrivere
 			}
 		}
 
+		// Se siamo qui, la connessione è riuscita e abbiamo sottoscritto ai topic
+		// Quindi resettiamo il contatore dei tentativi di connessione
+		connectAttempts = 0
 		logger.Log.Info("Successfully connected to MQTT broker.")
 	}
 }
@@ -168,8 +147,9 @@ func getCommonOptions(sensorDataChannel chan types.SensorData, configurationMess
 
 	// la libreria paho gestisce automaticamente la riconnessione in background,
 	opts.SetAutoReconnect(true)
-	//controlla la frequenza dei tentativi di riconnessione
-	opts.SetMaxReconnectInterval(10 * time.Second)
+	// controlla la frequenza di tentativi della riconnessione
+	logger.Log.Debug("Setting MQTT Max Reconnect Interval to ", environment.MaxReconnectionInterval, " seconds")
+	opts.SetMaxReconnectInterval(time.Duration(environment.MaxReconnectionInterval) * time.Second)
 	opts.SetConnectRetry(true)
 
 	// Imposta il callback per la connessione riuscita
@@ -178,7 +158,23 @@ func getCommonOptions(sensorDataChannel chan types.SensorData, configurationMess
 	// In questo caso, sottoscrive al topic dei dati e di configurazione del sensore.
 	opts.SetOnConnectHandler(makeConnectionHandler(sensorDataChannel, configurationMessageChannel))
 	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
-		logger.Log.Warn("Connection lost to MQTT broker: ", err.Error())
+		logger.Log.Warn("Hub lost connection to MQTT broker: ", err.Error())
+	})
+
+	// Limita il numero di tentativi di connessione
+	// Se il numero di tentativi supera maxConnectAttempts, il programma termina.
+	//
+	// Questo è utile per evitare loop infiniti in caso di problemi di connessione persistenti
+	// e per evitare che l'hub continui a tentare di connettersi
+	// in un ciclo infinito senza successo.
+	opts.SetConnectionAttemptHandler(func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
+		connectAttempts++
+		if connectAttempts > environment.MaxReconnectionAttempts {
+			logger.Log.Error("Max connection attempts reached. Exiting.")
+			os.Exit(1)
+		}
+		logger.Log.Warn("Hub attempting to connect to MQTT broker: ", connectAttempts, " attempt(s) on ", environment.MaxReconnectionAttempts, " max attempt(s)")
+		return tlsCfg
 	})
 
 	return opts
@@ -213,9 +209,9 @@ func connectAndManage(sensorDataChannel chan types.SensorData, configurationMess
 		sensorClient = MQTT.NewClient(opts)
 
 		logger.Log.Info("Hub attempting to connect to MQTT sensor broker at ", sensorBrokerURL)
-		if token := sensorClient.Connect(); token.WaitTimeout(10*time.Second) && token.Error() != nil {
-			//L'errore di connessione inziale viene solo loggato, il meccanismo di
-			//AutoReconnect continuerà a tentare in background
+		if token := sensorClient.Connect(); token.WaitTimeout(time.Duration(environment.MaxReconnectionTimeout)*time.Second) && token.Error() != nil {
+			// L'errore di connessione inziale viene solo loggato, il meccanismo di
+			// AutoReconnect continuerà a tentare in background
 			logger.Log.Error("Hub failed to connect initially:", token.Error())
 		}
 
@@ -241,9 +237,9 @@ func connectAndManage(sensorDataChannel chan types.SensorData, configurationMess
 		hubClient = MQTT.NewClient(opts)
 
 		logger.Log.Info("Hub attempting to connect to MQTT hub broker at ", hubBrokerURL)
-		if token := hubClient.Connect(); token.WaitTimeout(10*time.Second) && token.Error() != nil {
-			//L'errore di connessione inziale viene solo loggato, il meccanismo di
-			//AutoReconnect continuerà a tentare in background
+		if token := hubClient.Connect(); token.WaitTimeout(time.Duration(environment.MaxReconnectionTimeout)*time.Second) && token.Error() != nil {
+			// L'errore di connessione inziale viene solo loggato, il meccanismo di
+			// AutoReconnect continuerà a tentare in background
 			logger.Log.Error("Hub failed to connect initially:", token.Error())
 		}
 
@@ -273,13 +269,12 @@ func SetupMQTTConnection(sensorDataChannel chan types.SensorData, configurationM
 		os.Exit(1)
 	}
 
-	logger.Log.Info("MQTT connection established successfully.")
 }
 
 // PublishFilteredData pubblica i dati filtrati al broker MQTT
 // Praticamente sopra abbiamo fatto la subscribe nel ricevere i dati dai sensori, ora invece
-// facciamo diventare l edge hub un attore che pubblica i dati filtrati ( che saranno presi dal
-// proximity fog, il quale farà a sua volta la subscribe al broker mqtt  per rievere i dati
+// facciamo diventare l edge hub un attore che pubblica i dati filtrati (che saranno presi dal
+// proximity fog, il quale farà a sua volta la subscribe al broker mqtt per ricevere i dati)
 func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 
 	// Non procedere se la connessione non è attiva.
@@ -297,18 +292,25 @@ func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 		}
 
 		topic := environment.FilteredDataTopic + "/" + filteredData.SensorID
-		// invia i dati al broker MQTT
-		token := hubClient.Publish(topic, 0, false, payload)
 
-		// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
-		// cioè se la rete è lenta il sensore comunque non si blocca
-		//anche se il timeout scade il programma comunque prosegue
-		if !token.WaitTimeout(2 * time.Second) {
-			logger.Log.Warn("Timeout publishing message.")
-		} else if err := token.Error(); err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
-		} else {
-			logger.Log.Debug("Message published successfully.")
+		// Invia i dati al broker MQTT
+		// QoS 0, cioè "at most once", il messaggio può andare perso
+		// Retained false, il messaggio non viene conservato dal broker
+		//
+		// Usiamo WaitTimeout per non bloccare l'hub all'infinito,
+		// cioè se la rete è lenta l'hub comunque non si blocca
+		// anche se il timeout scade e si raggiunge il max dei
+		// retry il programma comunque prosegue
+		for i := 0; i < environment.MessagePublishAttempts; i++ {
+			token := hubClient.Publish(topic, 0, false, payload)
+			if !token.WaitTimeout(time.Duration(environment.MessagePublishTimeout) * time.Second) {
+				logger.Log.Warn("Timeout publishing message. Retry ", i+1)
+			} else if err := token.Error(); err != nil {
+				logger.Log.Error("Error publishing message: ", err.Error(), ". Retry ", i+1)
+			} else {
+				logger.Log.Debug("Message published successfully on topic: ", topic)
+				break
+			}
 		}
 	}
 }
@@ -329,21 +331,62 @@ func PublishConfigurationMessage(configurationMessageChannel chan types.Configur
 			return
 		}
 
-		topic := environment.HubConfigurationTopic + "/" + environment.HubID
-		// invia i dati al broker MQTT
-		token := hubClient.Publish(topic, 0, false, payload)
+		topic := environment.HubConfigurationTopic + "/" + msg.SensorID
 
-		// Usiamo WaitTimeout per non bloccare il sensore all'infinito,
-		// cioè se la rete è lenta il sensore comunque non si blocca
-		//anche se il timeout scade il programma comunque prosegue
-		if !token.WaitTimeout(2 * time.Second) {
-			logger.Log.Warn("Timeout publishing message.")
-		} else if err := token.Error(); err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
-		} else {
-			logger.Log.Debug("Message published successfully.")
-			CleanRetentionConfigurationMessage(msg)
+		// Invia i dati al broker MQTT
+		// QoS 2, cioè "exactly once", il messaggio viene consegnato una sola volta, senza duplicati
+		// Retained true, il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti
+		//
+		// Usiamo WaitTimeout per non bloccare l'hub all'infinito,
+		// cioè se la rete è lenta l'hub comunque non si blocca
+		// anche se il timeout scade e si raggiunge il max dei
+		// retry il programma comunque prosegue
+		for i := 0; i < environment.MessagePublishAttempts; i++ {
+			token := hubClient.Publish(topic, 2, true, payload)
+			if !token.WaitTimeout(time.Duration(environment.MessagePublishTimeout) * time.Second) {
+				logger.Log.Warn("Timeout publishing message. Retry ", i+1)
+			} else if err := token.Error(); err != nil {
+				logger.Log.Error("Error publishing message: ", err.Error(), ". Retry ", i+1)
+			} else {
+				logger.Log.Debug("Message published successfully on topic: ", topic)
+				break
+			}
 		}
+	}
+}
+
+// CleanRetentionConfigurationMessage Rimuove il messaggio di configurazione dal canale se è già stato elaborato.
+// Questo è utile per evitare di elaborare più volte lo stesso messaggio.
+func CleanRetentionConfigurationMessage(msg types.ConfigurationMsg) {
+
+	// Pulisce il messaggio di configurazione solo se è un messaggio di nuovo sensore
+	// e quindi non è più necessario mantenere il messaggio di configurazione.
+	if msg.MsgType == types.NewSensorMsgType {
+		logger.Log.Debug("Cleaning retention for configuration message: ", msg)
+
+		// Non procedere se la connessione non è attiva.
+		if !sensorClient.IsConnected() {
+			logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
+			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
+			return
+		}
+
+		// Per pulire un messaggio di configurazione, pubblichiamo un messaggio vuoto
+		// sullo stesso topic con retained=true. Questo indica al broker di rimuovere
+		// il messaggio precedente.
+		topic := environment.SensorConfigurationTopic + "/" + msg.SensorID
+		token := sensorClient.Publish(topic, 2, true, "")
+
+		if !token.WaitTimeout(time.Duration(environment.MessageCleaningTimeout) * time.Second) {
+			logger.Log.Error("Timeout cleaning message: ", topic)
+			return
+		}
+		err := token.Error()
+		if err != nil {
+			logger.Log.Error("Error cleaning message: ", err.Error())
+			return
+		}
+		logger.Log.Debug("Message cleaned successfully: ", topic)
 	}
 }
 
@@ -357,9 +400,12 @@ func SendRegistrationMessage() {
 		if !hubClient.IsConnected() {
 			logger.Log.Warn("MQTT client not connected. Skipping data publishing.")
 			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
-			return
+			// Aspetta prima di riprovare
+			time.Sleep(time.Duration(environment.MaxReconnectionInterval) * time.Second)
+			continue
 		}
 
+		// Crea il messaggio di configurazione
 		payload, err := json.Marshal(types.ConfigurationMsg{
 			EdgeMacrozone: environment.EdgeMacrozone,
 			MsgType:       types.NewEdgeMsgType,
@@ -373,75 +419,79 @@ func SendRegistrationMessage() {
 			os.Exit(1)
 		}
 
-		// QoS (Quality of Service) in MQTT:
-		// 0: At most once - Nessuna conferma, il messaggio può andare perso.
-		// 1: At least once - Il messaggio viene consegnato almeno una volta, può essere duplicato.
-		// 2: Exactly once - Il messaggio viene consegnato una sola volta, senza duplicati.
-		//
-		// Retained:
-		// true  - Il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti.
-		// false - Il messaggio non viene conservato dal broker.
+		// Invia i dati al broker MQTT
+		// QoS 2, cioè "exactly once", il messaggio viene consegnato una sola volta, senza duplicati
+		// Retained true, il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti
 		topic := environment.HubConfigurationTopic + "/" + environment.HubID
-		token := hubClient.Publish(topic, 2, false, payload)
+		token := hubClient.Publish(topic, 2, true, payload)
 
-		// Usiamo WaitTimeout per non ciclare all'infinito
-		if !token.WaitTimeout(2 * time.Second) {
-			logger.Log.Warn("Timeout publishing message.")
+		// Usiamo Wait per aspettare il completamento della pubblicazione
+		// Non usiamo WaitTimeout perché vogliamo essere sicuri che il messaggio
+		// venga inviato prima di procedere.
+		// Se il messaggio non viene inviato, riproviamo.
+		if !token.Wait() {
+			logger.Log.Warn("Timeout publishing configuration message.")
+			// Aspetta prima di riprovare
+			time.Sleep(time.Duration(environment.MaxReconnectionInterval) * time.Second)
 			continue
 		} else if err := token.Error(); err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
+			logger.Log.Error("Error publishing configuration message: ", err.Error())
 			os.Exit(1)
 		} else {
-			logger.Log.Debug("Message published successfully on topic: ", topic)
+			logger.Log.Debug("Configuration message published successfully on topic: ", topic)
 			return
 		}
 
 	}
 }
 
+// SendHeartbeatMessage invia un messaggio di heartbeat al broker MQTT
+// per mantenere viva la connessione e segnalare che l'hub è attivo
 func SendHeartbeatMessage() {
+
+	msg := types.HeartbeatMsg{
+		EdgeMacrozone: environment.EdgeMacrozone,
+		EdgeZone:      environment.EdgeZone,
+		HubID:         environment.HubID,
+	}
+
+	topic := environment.HeartbeatTopic + "/" + environment.HubID
 
 	// L'heartbeat viene inviato periodicamente per mantenere viva la connessione
 	for {
 
+		// Non procedere se la connessione non è attiva.
 		if !hubClient.IsConnected() {
 			logger.Log.Warn("MQTT client not connected. Skipping heartbeat message publishing.")
 			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
 			return
 		}
 
-		payload, err := json.Marshal(types.HeartbeatMsg{
-			Timestamp:     time.Now().UTC().Unix(),
-			EdgeMacrozone: environment.EdgeMacrozone,
-			EdgeZone:      environment.EdgeZone,
-			HubID:         environment.HubID,
-		})
+		// Crea il messaggio di heartbeat
+		msg.Timestamp = time.Now().UTC().Unix()
+		payload, err := json.Marshal(msg)
 		if err != nil {
 			logger.Log.Error("Error during JSON serialization: ", err.Error())
 			os.Exit(1)
 		}
 
-		// QoS (Quality of Service) in MQTT:
-		// 0: At most once - Nessuna conferma, il messaggio può andare perso.
-		// 1: At least once - Il messaggio viene consegnato almeno una volta, può essere duplicato.
-		// 2: Exactly once - Il messaggio viene consegnato una sola volta, senza duplicati.
-		//
-		// Retained:
-		// true		- Il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti.
-		// false	- Il messaggio non viene conservato dal broker.
-		topic := environment.HeartbeatTopic + "/" + environment.HubID
+		// Invia i dati al broker MQTT
+		// QoS 1, cioè "at least once", il messaggio viene consegnato almeno una volta, può essere duplicato
+		// Retained true, il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti
 		token := hubClient.Publish(topic, 1, true, payload)
 
 		// Usiamo WaitTimeout per non attendere all'infinito
-		if !token.WaitTimeout(2 * time.Second) {
+		if !token.Wait() {
 			logger.Log.Warn("Timeout publishing heartbeat message.")
+			// Aspetta prima di riprovare
+			time.Sleep(time.Duration(environment.MaxReconnectionInterval) * time.Second)
 			continue
 		} else if err := token.Error(); err != nil {
 			logger.Log.Error("Error publishing heartbeat message: ", err.Error())
 			os.Exit(1)
 		} else {
 			logger.Log.Debug("Heartbeat message published successfully on topic: ", topic)
-			time.Sleep(3 * time.Minute)
+			time.Sleep(environment.HeartbeatInterval)
 		}
 
 	}

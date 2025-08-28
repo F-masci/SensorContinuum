@@ -104,7 +104,7 @@ func makeConnectionHandler(filteredDataChannel chan types.SensorData, configurat
 
 		topic = environment.HubConfigurationTopic + "/#"
 
-		// QoS 2, sottoscrivi al topic per ricevere i dati dai sensori
+		// QoS 2, sottoscrivi al topic per ricevere le configurazioni da hub e sensori
 		token = client.Subscribe(topic, 2, makeConfigurationMessageHandler(configurationMessageChannel)) // Il message handler è globale
 		logger.Log.Info("Subscribed to topic: ", topic)
 		if token.WaitTimeout(5*time.Second) && token.Error() != nil {
@@ -185,29 +185,64 @@ func SetupMQTTConnection(filteredDataChannel chan types.SensorData, configuratio
 // Questo è utile per evitare di elaborare più volte lo stesso messaggio.
 func CleanRetentionConfigurationMessage(msg types.ConfigurationMsg) {
 
-	if msg.MsgType == types.NewSensorMsgType {
-		logger.Log.Debug("Cleaning retention for configuration message: ", msg)
+	logger.Log.Debug("Cleaning retention for configuration message: ", msg)
 
-		// Non procedere se la connessione non è attiva.
-		if !client.IsConnected() {
-			logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
-			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
-			return
-		}
-
-		topic := environment.HubConfigurationTopic + "/#"
-		// invia i dati al broker MQTT
-		token := client.Publish(topic, 2, true, "")
-
-		if !token.Wait() {
-			logger.Log.Error("Timeout publishing message.")
-			return
-		}
-		err := token.Error()
-		if err != nil {
-			logger.Log.Error("Error publishing message: ", err.Error())
-			return
-		}
-		logger.Log.Debug("Message cleaned successfully.")
+	// Non procedere se la connessione non è attiva.
+	if !client.IsConnected() {
+		logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
+		// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
+		return
 	}
+
+	var topic string
+	if msg.MsgType == types.NewSensorMsgType {
+		topic = environment.HubConfigurationTopic + "/" + msg.EdgeZone + "/" + msg.SensorID
+	} else if msg.MsgType == types.NewEdgeMsgType {
+		topic = environment.HubConfigurationTopic + "/" + msg.EdgeZone + "/" + msg.HubID
+	} else {
+		logger.Log.Error("Unknown configuration message type, cannot clean retention.")
+		return
+	}
+	// invia i dati al broker MQTT
+	token := client.Publish(topic, 2, true, "")
+
+	if !token.Wait() {
+		logger.Log.Error("Timeout publishing message.")
+		return
+	}
+	err := token.Error()
+	if err != nil {
+		logger.Log.Error("Error publishing message: ", err.Error())
+		return
+	}
+	logger.Log.Debug("Message cleaned successfully.")
+}
+
+// CleanRetentionHeartbeatMessage Rimuove il messaggio di heartbeat dal canale se è già stato elaborato.
+// Questo è utile per evitare di elaborare più volte lo stesso messaggio.
+func CleanRetentionHeartbeatMessage(msg types.HeartbeatMsg) {
+
+	logger.Log.Debug("Cleaning retention for heartbeat message: ", msg)
+
+	// Non procedere se la connessione non è attiva.
+	if !client.IsConnected() {
+		logger.Log.Warn("MQTT client not connected. Skipping data cleaning.")
+		// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
+		return
+	}
+
+	topic := environment.HeartbeatTopic + "/" + msg.EdgeZone + "/" + msg.HubID
+	// invia i dati al broker MQTT
+	token := client.Publish(topic, 2, true, "")
+
+	if !token.Wait() {
+		logger.Log.Error("Timeout publishing message.")
+		return
+	}
+	err := token.Error()
+	if err != nil {
+		logger.Log.Error("Error publishing message: ", err.Error())
+		return
+	}
+	logger.Log.Debug("Message cleaned successfully.")
 }

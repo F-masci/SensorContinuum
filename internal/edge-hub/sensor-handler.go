@@ -68,34 +68,44 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 		return
 	}
 
+	// Recupera tutti gli ID dei sensori
 	sensorIDs, err := storage.GetAllSensorIDs(ctx)
 	if err != nil {
 		logger.Log.Error("Error getting sensor IDs from Redis: ", err)
 	}
 
 	var results []types.SensorData
+
+	// Calcola l'inizio del minuto corrente considerando l'offset
+	// Ad esempio, se ora è 12:34:45 e l'offset è -2min,
+	// minuteStart sarà 12:32:00 e aggrego i dati tra 12:32:00 e 12:32:59
 	now := time.Now().UTC()
-	minuteStart := now.Add(-3 * time.Minute).Truncate(time.Minute)
+	minuteStart := now.Add(environment.AggregationFetchOffset).Truncate(time.Minute)
 
 	logger.Log.Info("Starting aggregation for all sensors at ", minuteStart.Format(time.RFC3339))
 
 	for _, sensorID := range sensorIDs {
+
+		// Recupera le letture del sensore per il minuto specificato
 		readings, err := storage.GetSensorHistoryByMinute(ctx, sensorID, minuteStart)
 		if err != nil {
 			logger.Log.Error("Error getting sensor history from Redis for sensor ", sensorID, ": ", err)
 			continue
 		}
 
+		// Se non ci sono letture valide, salta questo sensore
 		if len(readings) == 0 {
 			logger.Log.Warn("No valid readings found for sensor " + sensorID + " in the current minute")
 			continue
 		}
 
+		// Calcola la media delle letture per il minuto specificato
 		avg := aggregation.AverageInMinute(readings, minuteStart)
 		edgeMacrozone := readings[0].EdgeMacrozone
 		edgeZone := readings[0].EdgeZone
 		sensorType := readings[0].Type
 
+		// Crea il risultato dell'aggregazione
 		result := types.SensorData{
 			EdgeMacrozone: edgeMacrozone,
 			EdgeZone:      edgeZone,
@@ -122,16 +132,19 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 
 }
 
+// CleanUnhealthySensors rimuove i sensori che non comunicano da troppo tempo.
 func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
 
+	// Recupera tutti gli ID dei sensori
 	sensorIDs, err := storage.GetAllSensorIDs(ctx)
 	if err != nil {
 		logger.Log.Error("Error getting sensor IDs from Redis: ", err)
 		return
 	}
 
+	// Controlla lo stato di ogni sensore
 	for _, sensorID := range sensorIDs {
 		readings, err := storage.GetSensorHistory(ctx, sensorID, environment.HistoryWindowSize)
 		if err != nil {
@@ -185,6 +198,7 @@ func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string
 	return unhealthySensors, removedSensors
 }
 
+// ProcessSensorConfigurationMessages gestisce i messaggi di configurazione dei sensori.
 func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubConfigurationMessageChannel chan types.ConfigurationMsg) {
 	storage.InitRedisConnection()
 	ctx := context.Background()
@@ -195,6 +209,8 @@ func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubCo
 		// Esegui le operazioni necessarie in base al tipo di configurazione
 		switch configMsg.MsgType {
 		case types.NewSensorMsgType:
+
+			// Aggiungi il sensore al database se non esiste già
 			sensor := types.Sensor{
 				Id:            configMsg.SensorID,
 				ZoneName:      configMsg.EdgeZone,
@@ -202,6 +218,13 @@ func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubCo
 				Type:          configMsg.SensorType,
 				Reference:     configMsg.SensorReference,
 			}
+
+			// Aggiungo il sensore solo se non esiste già
+			// Se il sensore è nuovo, inoltro il messaggio di configurazione all'hub
+			// Altrimenti, scarto il messaggio di configurazione
+			// In entrambi i casi, pulisco il messaggio di configurazione
+			// per evitare di ritrasmetterlo in futuro
+			// (ad esempio, se il sensore si riavvia e invia di nuovo il messaggio di configurazione)
 			if exists, err := storage.AddSensor(ctx, sensor); err != nil {
 				logger.Log.Error("Error adding sensor configuration: ", err)
 			} else if !exists {
@@ -217,6 +240,7 @@ func ProcessSensorConfigurationMessages(sensorConfigurationMessageChannel, hubCo
 	}
 }
 
+// NotifyUnhealthySensors invia notifiche per i sensori non sani.
 func NotifyUnhealthySensors(unhealthySensors []string) {
 	if len(unhealthySensors) == 0 {
 		logger.Log.Info("No unhealthy sensors to notify.")
@@ -229,6 +253,7 @@ func NotifyUnhealthySensors(unhealthySensors []string) {
 	}
 }
 
+// NotifyRemovedSensors invia notifiche per i sensori rimossi.
 func NotifyRemovedSensors(removedSensors []string) {
 	if len(removedSensors) == 0 {
 		logger.Log.Info("No removed sensors to notify.")

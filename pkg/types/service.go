@@ -10,5 +10,5 @@ const (
 	EdgeHubAggregatorService    Service = "edge_hub_aggregator"
 	EdgeHubCleanerService       Service = "edge_hub_cleaner"
 	ProximityHubService         Service = "proximity_hub"
-	IntrermediateHubService     Service = "intermediate_hub"
+	IntermediateHubService      Service = "intermediate_hub"
 )

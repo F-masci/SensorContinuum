@@ -16,6 +16,9 @@ import (
 
 var client MQTT.Client
 
+// Contatori per i tentativi di connessione
+var connectAttempts = 0
+
 // connectAndManage gestisce la connessione una sola volta.
 func connectAndManage() {
 	// Se il client è già definito e connesso, non fare nulla.
@@ -36,12 +39,10 @@ func connectAndManage() {
 
 	// la libreria paho gestisce automaticamente la riconnessione in background,
 	opts.SetAutoReconnect(true)
-	// controlla la frequenza di tenta della riconnessione
+	// controlla la frequenza di tentativi della riconnessione
 	logger.Log.Debug("Setting MQTT Max Reconnect Interval to ", environment.MaxReconnectionInterval, " seconds")
 	opts.SetMaxReconnectInterval(time.Duration(environment.MaxReconnectionInterval) * time.Second)
 	opts.SetConnectRetry(true)
-
-	var connectAttempts int
 
 	opts.SetOnConnectHandler(func(c MQTT.Client) {
 		logger.Log.Info("Sensor connected to MQTT broker.")
@@ -67,7 +68,7 @@ func connectAndManage() {
 			logger.Log.Error("Max connection attempts reached. Exiting.")
 			os.Exit(1)
 		}
-		logger.Log.Debug("Sensor attempting to connect to MQTT broker: ", connectAttempts, " attempt(s) on ", environment.MaxReconnectionAttempts, " max attempt(s)")
+		logger.Log.Warn("Sensor attempting to connect to MQTT broker: ", connectAttempts, " attempt(s) on ", environment.MaxReconnectionAttempts, " max attempt(s)")
 		return tlsCfg
 	})
 
@@ -107,6 +108,13 @@ func PublishData(sensorChannel chan types.SensorData) {
 			continue
 		}
 
+		// QoS (Quality of Service) in MQTT:
+		// 0: At most once - Nessuna conferma, il messaggio può andare perso.
+		// 1: At least once - Il messaggio viene consegnato almeno una volta, può essere duplicato.
+		// 2: Exactly once - Il messaggio viene consegnato una sola volta, senza duplicati.
+		//
+		// Noi usiamo QoS 0 per minimizzare il traffico di rete e la latenza,
+		// accettando la possibilità di perdere qualche messaggio in caso di problemi di rete.
 		topic := environment.DataTopic + "/" + environment.SensorId
 		token := client.Publish(topic, 0, false, payload)
 
