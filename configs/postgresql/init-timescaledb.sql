@@ -23,8 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_sensor_id ON sensor_measurements (macrozone_name,
 -- 4. Aggiungi indice composito utile per filtro e aggregazione per tipo
 CREATE INDEX IF NOT EXISTS idx_sensor_type_time ON sensor_measurements (type, time DESC);
 
--- 5. (Opzionale) Partizionamento secondario per scaling orizzontale futuro
--- SELECT create_hypertable('sensor_measurements', 'time', chunk_time_interval => interval '1 day');
 
 -- ==========================================================================
 -- ======== TABELLA PER STATISTICHE AGGREGATE A LIVELLO DI MACROZONA ========

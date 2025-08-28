@@ -13,6 +13,7 @@ import (
 // Context rappresenta i dati di contesto da includere in ogni log
 type Context map[string]string
 
+// Logger è la struttura principale del pacchetto logger
 type Logger struct {
 	infoLogger    *defaultLogger.Logger
 	warningLogger *defaultLogger.Logger

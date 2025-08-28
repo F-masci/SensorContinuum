@@ -48,6 +48,7 @@ func (sdb *SensorDataBatch) AddSensorData(data SensorData) {
 }
 
 // Count restituisce il numero di dati sensori nel batch
+
 func (sdb SensorDataBatch) Count() int {
 	return sdb.counter
 }
@@ -59,8 +60,9 @@ func (sdb *SensorDataBatch) Clear() {
 }
 
 // AggregatedStats contiene i dati statistici calcolati ogni tot minuti dal Proximity-Fog-Hub
-// e inviati tramite kafka all' intermediate-fog-hub
+// e inviati tramite kafka all' intermediate-fog-hub per essere memorizzati nel database centrale
 type AggregatedStats struct {
+	ID        string  `json:"id,omitempty"`
 	Timestamp int64   `json:"timestamp"`
 	Region    string  `json:"region,omitempty"`
 	Macrozone string  `json:"macrozone,omitempty"`

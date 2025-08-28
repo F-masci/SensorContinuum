@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// PerformAggregationAndSave esegue l'aggregazione periodica dei dati
 func PerformAggregationAndSave() {
 	logger.Log.Info("Execution of periodic aggregation started")
 	ctx := context.Background()

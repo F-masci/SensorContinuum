@@ -2,6 +2,7 @@ package types
 
 type Service string
 
+// Definizione dei servizi
 const (
 	SensorAgentService          Service = "sensor_agent"
 	EdgeHubService              Service = "edge_hub"

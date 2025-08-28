@@ -7,6 +7,7 @@ import (
 )
 
 // ReadInput Funzione di utilità per leggere input da stdin
+
 func ReadInput() string {
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')

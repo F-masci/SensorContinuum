@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS zone_hubs (
     PRIMARY KEY (id, macrozone_name, zone_name)
 );
 
--- Tabella dei sensori associati agli edge hub
+-- Tabella dei sensori associati agli edge hub (anche se non sono direttamente collegati a un hub specifico)
 CREATE TABLE IF NOT EXISTS sensors (
     id                  TEXT NOT NULL,
     macrozone_name      TEXT NOT NULL,

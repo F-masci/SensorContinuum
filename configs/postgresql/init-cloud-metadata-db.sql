@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS macrozones (
     creation_time       TIMESTAMP,
     PRIMARY KEY (region_name, name)
 );
-
+ -- Indice spaziale per la colonna location
 CREATE INDEX IF NOT EXISTS idx_macrozones_location ON macrozones USING GIST (location);
 
 -- 3. Tabella zone con chiave primaria composta

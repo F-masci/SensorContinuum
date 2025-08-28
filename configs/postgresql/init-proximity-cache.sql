@@ -14,7 +14,7 @@ CREATE TABLE sensor_measurements_cache (
     value           DOUBLE PRECISION  NOT NULL
 );
 
--- 2. La trasformiamo in un'hypertable, partizionata per tempo
+-- 2. La trasformiamo in un'hypertable, partizionata per tempo sulla colonna 'time'
 SELECT create_hypertable('sensor_measurements_cache', 'time');
 
 -- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 1 giorno
