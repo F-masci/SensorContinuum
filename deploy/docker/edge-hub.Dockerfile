@@ -10,7 +10,7 @@ RUN go mod tidy
 RUN go mod download
 
 # Copia il codice sorgente nel container
-COPY .. .
+COPY . .
 
 # Compila il binario per linux
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub

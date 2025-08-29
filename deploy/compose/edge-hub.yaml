@@ -183,6 +183,34 @@ services:
     networks:
       - zone-hub-bridge
 
+  zone-hub-configurator-02:
+    image: fmasci/sc-edge-hub:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/edge-hub.Dockerfile
+    container_name: zone-hub-configurator-${EDGE_ZONE}-02
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - HUB_ID=zone-hub-configurator-02
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
+      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
+      - OPERATION_MODE=loop
+      - SERVICE_MODE=edge_hub_configuration
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    depends_on:
+      zone-hub-redis-cache:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - zone-hub-bridge
+
 networks:
   zone-hub-bridge:
     name: zone-hub-${EDGE_ZONE}-bridge

@@ -38,8 +38,8 @@ type Zone struct {
 type RegionHub struct {
 	Id               string    `json:"id"`
 	Service          string    `json:"service"`
-	RegistrationTime time.Time `json:"registration_time"`
-	LastSeen         time.Time `json:"last_seen"`
+	RegistrationTime time.Time `json:"registration_time,omitempty"`
+	LastSeen         time.Time `json:"last_seen,omitempty"`
 }
 
 // MacrozoneHub Proximity Fog Hub
@@ -47,8 +47,8 @@ type MacrozoneHub struct {
 	Id               string    `json:"id"`
 	MacrozoneName    string    `json:"macrozone_name"`
 	Service          string    `json:"service"`
-	RegistrationTime time.Time `json:"registration_time"`
-	LastSeen         time.Time `json:"last_seen"`
+	RegistrationTime time.Time `json:"registration_time,omitempty"`
+	LastSeen         time.Time `json:"last_seen,omitempty"`
 }
 
 // ZoneHub Edge Hub
@@ -57,8 +57,8 @@ type ZoneHub struct {
 	MacrozoneName    string    `json:"macrozone_name"`
 	ZoneName         string    `json:"zone_name"`
 	Service          string    `json:"service"`
-	RegistrationTime time.Time `json:"registration_time"`
-	LastSeen         time.Time `json:"last_seen"`
+	RegistrationTime time.Time `json:"registration_time,omitempty"`
+	LastSeen         time.Time `json:"last_seen,omitempty"`
 }
 
 // Sensor associato a Edge Hub
@@ -68,6 +68,6 @@ type Sensor struct {
 	ZoneName         string    `json:"zone_name"`
 	Type             string    `json:"type"`
 	Reference        string    `json:"reference"`
-	RegistrationTime time.Time `json:"registration_time"`
-	LastSeen         time.Time `json:"last_seen"`
+	RegistrationTime time.Time `json:"registration_time,omitempty"`
+	LastSeen         time.Time `json:"last_seen,omitempty"`
 }

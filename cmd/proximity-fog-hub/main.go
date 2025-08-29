@@ -39,7 +39,7 @@ il proximity fog hub svolge i seguenti compiti:
 quindi alla fine saremo sicuri che l 'intermediate-fog-hub possieda una visione riassuntiva e
 di più alto livello dello stato dell'edificio
 
--------------------------------------- FINE DESCRIZIONE ------------------------------------------------------------------------------*/
+------------------------------------------------------------------------------------------------------------------------- */
 
 func main() {
 	if err := environment.SetupEnvironment(); err != nil {
