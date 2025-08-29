@@ -4,6 +4,7 @@ import (
 	"SensorContinuum/internal/api-backend/storage"
 	"SensorContinuum/internal/api-backend/zone"
 	"SensorContinuum/pkg/types"
+	"SensorContinuum/pkg/utils"
 	"context"
 	"database/sql"
 	"errors"
@@ -171,18 +172,18 @@ func GetAggregatedSensorData(ctx context.Context, regionName, macrozoneName stri
 	return &a, nil
 }
 
-// GetAggregatedSensorDataByLocation Restituisce i dati aggregati delle macrozone vicine a una posizione
+// GetAggregatedDataByLocation Restituisce i dati aggregati delle macrozone vicine a una posizione
 // utilizzando l'ultimo valore aggregato per ogni tipo di sensore
-func GetAggregatedSensorDataByLocation(ctx context.Context, lat, lon, radius float64) (*[]types.AggregatedStats, error) {
+func GetAggregatedDataByLocation(ctx context.Context, lat, lon, radius float64) ([]types.AggregatedStats, error) {
 	// 1. Leggere tutte le macrozone vicine
-	macrozones, err := GetMacrozoneByLocation(ctx, lat, lon, radius)
+	nearestMacrozones, err := GetMacrozoneByLocation(ctx, lat, lon, radius)
 	if err != nil {
 		return nil, err
 	}
 
 	// 2. Raggruppa le macrozone per regione
 	regionsMap := make(map[string][]string)
-	for _, m := range macrozones {
+	for _, m := range nearestMacrozones {
 		// Aggiungi la macrozona alla lista della regione
 		regionsMap[m.RegionName] = append(regionsMap[m.RegionName], m.Name)
 	}
@@ -204,6 +205,7 @@ func GetAggregatedSensorDataByLocation(ctx context.Context, lat, lon, radius flo
 			SELECT DISTINCT ON (macrozone_name, type)
 				macrozone_name,
 				type,
+				avg_value,
 				avg_sum,
 				avg_count,
 				min_value,
@@ -225,12 +227,12 @@ func GetAggregatedSensorDataByLocation(ctx context.Context, lat, lon, radius flo
 
 		for aggRows.Next() {
 			var macrozoneName, t string
-			var sum float64
+			var avg, sum float64
 			var count int
 			var minVal, maxVal float64
 			var ts time.Time
 
-			if err := aggRows.Scan(&macrozoneName, &t, &sum, &count, &minVal, &maxVal, &ts); err != nil {
+			if err := aggRows.Scan(&macrozoneName, &t, &avg, &sum, &count, &minVal, &maxVal, &ts); err != nil {
 				return nil, err
 			}
 
@@ -242,16 +244,37 @@ func GetAggregatedSensorDataByLocation(ctx context.Context, lat, lon, radius flo
 			// Se tipo non presente, inizializza
 			if _, ok := aggregatedMap[t]; !ok {
 				aggregatedMap[t] = &types.AggregatedStats{
-					Min:   minVal,
-					Max:   maxVal,
-					Sum:   0,
-					Count: 0,
+					Type:          t,
+					Min:           minVal,
+					Max:           maxVal,
+					Sum:           0,
+					Count:         0,
+					WeightedSum:   0,
+					WeightedCount: 0,
+					Timestamp:     time.Now().UTC().Unix(),
 				}
 			}
 
 			agg := aggregatedMap[t]
 
-			// Aggiorna somma e count per calcolare la media
+			// Trova la macrozona corrispondente per lat/lon
+			var mz types.Macrozone
+			for _, m := range nearestMacrozones {
+				if m.Name == macrozoneName {
+					mz = m
+					break
+				}
+			}
+
+			dist := utils.Haversine(lat, lon, mz.Lat, mz.Lon)
+			if dist == 0 {
+				dist = 0.001 // evita divisione per zero
+			}
+
+			// Aggiorna somma, count e weight per calcolare la media
+			weight := 1 / dist
+			agg.WeightedSum += avg * weight
+			agg.WeightedCount += weight
 			agg.Sum += sum
 			agg.Count += count
 
@@ -262,27 +285,23 @@ func GetAggregatedSensorDataByLocation(ctx context.Context, lat, lon, radius flo
 			if maxVal > agg.Max {
 				agg.Max = maxVal
 			}
+
 		}
 	}
 
 	// Trasforma la mappa in slice finale
 	results := make([]types.AggregatedStats, 0, len(aggregatedMap))
-	for t, agg := range aggregatedMap {
-		if agg.Count == 0 {
+	for _, agg := range aggregatedMap {
+		if agg.Count == 0 || agg.WeightedCount == 0 {
 			continue
 		}
-		results = append(results, types.AggregatedStats{
-			Type:      t,
-			Count:     agg.Count,
-			Sum:       agg.Sum,
-			Avg:       agg.Sum / float64(agg.Count), // media calcolata con sum/count
-			Min:       agg.Min,
-			Max:       agg.Max,
-			Timestamp: time.Now().UTC().Unix(),
-		})
+		// Calcola la media ponderata
+		agg.Avg = agg.Sum / float64(agg.Count)
+		agg.WeightedAvg = agg.WeightedSum / float64(agg.WeightedCount)
+		results = append(results, *agg)
 	}
 
-	return &results, nil
+	return results, nil
 
 }
 
@@ -495,4 +514,188 @@ func CalculateAnomaliesPerMacrozones(ctx context.Context, macrozones []types.Mac
 	}
 
 	return anomalies, nil
+}
+
+// GetTrendSimilarityPerMacrozones calcola la similarità dei trend
+// di ciascuna macrozona rispetto alla sua regione, considerando tutti i tipi di rilevazione.
+// Restituisce una mappa annidata: macrozona -> tipo di rilevazione -> TrendSimilarityResult
+func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Macrozone, days int) (map[string]map[string]types.TrendSimilarityResult, error) {
+	results := make(map[string]map[string]types.TrendSimilarityResult) // mappa finale dei risultati
+
+	// 1. Raggruppa le macrozone per regione per ridurre query al DB
+	regionsMap := make(map[string][]types.Macrozone)
+	for _, m := range macrozones {
+		regionsMap[m.RegionName] = append(regionsMap[m.RegionName], m)
+	}
+
+	// 2. Itera sulle regioni
+	for regionName, mzList := range regionsMap {
+		sensorDb, err := storage.GetSensorPostgresDB(ctx, regionName)
+		if err != nil {
+			return nil, err
+		}
+
+		// --- Recupera tutti i dati della regione per tutti i tipi ---
+		queryRegion := `
+            SELECT type, day, avg_value, min_value, max_value, total_sum, total_count
+            FROM region_daily_agg
+            ORDER BY type, day DESC
+            LIMIT $1
+        `
+		rows, err := sensorDb.Conn().Query(ctx, queryRegion, days)
+		if err != nil {
+			return nil, err
+		}
+
+		// regionData[type][day] = AggregatedStats
+		regionData := make(map[string]map[time.Time]*types.AggregatedStats)
+		for rows.Next() {
+			var t string
+			var day time.Time
+			var avg, min, max, sum float64
+			var count int
+			if err := rows.Scan(&t, &day, &avg, &min, &max, &sum, &count); err != nil {
+				return nil, err
+			}
+			if _, ok := regionData[t]; !ok {
+				regionData[t] = make(map[time.Time]*types.AggregatedStats)
+			}
+			regionData[t][day] = &types.AggregatedStats{
+				Timestamp: day.Unix(),
+				Region:    regionName,
+				Type:      t,
+				Avg:       avg,
+				Min:       min,
+				Max:       max,
+				Sum:       sum,
+				Count:     count,
+			}
+		}
+		rows.Close()
+
+		// --- Recupera tutti i dati delle macrozone della regione ---
+		mzNames := make([]string, 0, len(mzList))
+		for _, mz := range mzList {
+			mzNames = append(mzNames, mz.Name)
+		}
+
+		queryMacro := `
+            SELECT macrozone_name, type, day, avg_value, min_value, max_value, total_sum, total_count
+            FROM macrozone_daily_agg
+            WHERE macrozone_name = ANY($1)
+            ORDER BY macrozone_name, type, day DESC
+        `
+		rows, err = sensorDb.Conn().Query(ctx, queryMacro, mzNames)
+		if err != nil {
+			return nil, err
+		}
+
+		// macroData[macrozona][type][day] = AggregatedStats
+		macroData := make(map[string]map[string]map[time.Time]*types.AggregatedStats)
+		for rows.Next() {
+			var mzName, t string
+			var day time.Time
+			var avg, min, max, sum float64
+			var count int
+			if err := rows.Scan(&mzName, &t, &day, &avg, &min, &max, &sum, &count); err != nil {
+				return nil, err
+			}
+			if _, ok := macroData[mzName]; !ok {
+				macroData[mzName] = make(map[string]map[time.Time]*types.AggregatedStats)
+			}
+			if _, ok := macroData[mzName][t]; !ok {
+				macroData[mzName][t] = make(map[time.Time]*types.AggregatedStats)
+			}
+			macroData[mzName][t][day] = &types.AggregatedStats{
+				Timestamp: day.Unix(),
+				Macrozone: mzName,
+				Region:    regionName,
+				Type:      t,
+				Avg:       avg,
+				Min:       min,
+				Max:       max,
+				Sum:       sum,
+				Count:     count,
+			}
+		}
+		rows.Close()
+
+		// --- Calcola trend similarity per ciascuna macrozona e tipo ---
+		for _, mz := range mzList {
+			for t, regSeries := range regionData {
+				mzSeriesMap, ok := macroData[mz.Name][t]
+				if !ok {
+					continue // se la macrozona non ha dati per questo tipo, salta
+				}
+
+				// Allineamento temporale usando AggregatedStats
+				alignedMacro := make([]types.AggregatedStats, 0, days)
+				alignedRegion := make([]types.AggregatedStats, 0, days)
+				for day, regAgg := range regSeries {
+					if mzAgg, ok := mzSeriesMap[day]; ok {
+						// Aggiungi solo se entrambi hanno dati per quel giorno
+						alignedMacro = append(alignedMacro, *mzAgg)
+						alignedRegion = append(alignedRegion, *regAgg)
+					}
+				}
+
+				// Se la serie è troppo corta, non calcoliamo il trend
+				// if len(alignedMacro) < 5 {
+				// 	 continue
+				// }
+
+				// --- Estrai le medie per calcolo trend ---
+				macroSeries := make([]float64, len(alignedMacro))
+				regionSeries := make([]float64, len(alignedRegion))
+				for i := range alignedMacro {
+					macroSeries[i] = alignedMacro[i].Avg
+					regionSeries[i] = alignedRegion[i].Avg
+				}
+
+				// --- Analisi statistica ---
+				trendMz := utils.MovingAverage(macroSeries, 3)      // lisciamento
+				trendReg := utils.MovingAverage(regionSeries, 3)    // lisciamento
+				corr := utils.PearsonCorrelation(trendMz, trendReg) // correlazione Pearson
+				slopeMz := utils.LinearRegressionSlope(trendMz)     // pendenza macrozona
+				slopeReg := utils.LinearRegressionSlope(trendReg)   // pendenza regione
+				div := utils.MeanRelativeDifference(trendMz, trendReg)
+
+				if math.IsNaN(corr) {
+					corr = 0
+				}
+
+				if math.IsNaN(slopeMz) {
+					slopeMz = 0
+				}
+
+				if math.IsNaN(slopeReg) {
+					slopeReg = 0
+				}
+
+				if math.IsNaN(div) {
+					div = 0
+				}
+
+				// Inizializza la mappa interna se necessario
+				if _, ok := results[mz.Name]; !ok {
+					results[mz.Name] = make(map[string]types.TrendSimilarityResult)
+				}
+
+				// Salva il risultato
+				results[mz.Name][t] = types.TrendSimilarityResult{
+					MacrozoneName:   mz.Name,
+					RegionName:      regionName,
+					Type:            t,
+					Correlation:     corr,
+					SlopeMacro:      slopeMz,
+					SlopeRegion:     slopeReg,
+					Divergence:      div,
+					MacrozoneSeries: alignedMacro,
+					RegionSeries:    alignedRegion,
+				}
+			}
+		}
+	}
+
+	return results, nil
 }

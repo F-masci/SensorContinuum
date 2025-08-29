@@ -62,17 +62,20 @@ func (sdb *SensorDataBatch) Clear() {
 // AggregatedStats contiene i dati statistici calcolati ogni tot minuti dal Proximity-Fog-Hub
 // e inviati tramite kafka all' intermediate-fog-hub per essere memorizzati nel database centrale
 type AggregatedStats struct {
-	ID        string  `json:"id,omitempty"`
-	Timestamp int64   `json:"timestamp"`
-	Region    string  `json:"region,omitempty"`
-	Macrozone string  `json:"macrozone,omitempty"`
-	Zone      string  `json:"zone,omitempty"`
-	Type      string  `json:"type"`
-	Min       float64 `json:"min"`
-	Max       float64 `json:"max"`
-	Avg       float64 `json:"avg"`
-	Sum       float64 `json:"sum,omitempty"`
-	Count     int     `json:"count,omitempty"`
+	ID            string  `json:"id,omitempty"`
+	Timestamp     int64   `json:"timestamp"`
+	Region        string  `json:"region,omitempty"`
+	Macrozone     string  `json:"macrozone,omitempty"`
+	Zone          string  `json:"zone,omitempty"`
+	Type          string  `json:"type"`
+	Min           float64 `json:"min"`
+	Max           float64 `json:"max"`
+	Avg           float64 `json:"avg"`
+	Sum           float64 `json:"sum,omitempty"`
+	Count         int     `json:"count,omitempty"`
+	WeightedAvg   float64 `json:"weighted_avg,omitempty"`
+	WeightedSum   float64 `json:"weighted_sum,omitempty"`
+	WeightedCount float64 `json:"weighted_count,omitempty"`
 }
 
 // CreateAggregatedStatsFromKafka deserializza un messaggio Kafka in AggregatedStats

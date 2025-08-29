@@ -53,10 +53,18 @@ func main() {
 		{"regionList", "region"},
 		{"regionSearchName", "region"},
 		{"regionDataAggregated", "region"},
+
 		// macrozone endpoints
 		{"macrozoneList", "macrozone"},
 		{"macrozoneSearchName", "macrozone"},
-		{"macrozoneDataAggregated", "macrozone"},
+
+		{"macrozoneDataAggregatedName", "macrozone"},
+		{"macrozoneDataAggregatedLocation", "macrozone"},
+
+		{"macrozoneDataTrend", "macrozone"},
+		{"macrozoneDataVariation", "macrozone"},
+		{"macrozoneDataVariationCorrelation", "macrozone"},
+
 		// zone endpoints
 		{"zoneList", "zone"},
 		{"zoneSearchName", "zone"},
@@ -126,15 +134,30 @@ func main() {
 		case "regionDataAggregated":
 			segments = []string{"data", "aggregated", "{region}"}
 			envKey = "REGION_DATA_AGGREGATED_URL"
+
 		case "macrozoneList":
 			segments = []string{"list", "{region}"}
 			envKey = "MACROZONE_LIST_URL"
 		case "macrozoneSearchName":
 			segments = []string{"search", "name", "{region}", "{name}"}
 			envKey = "MACROZONE_SEARCH_NAME_URL"
-		case "macrozoneDataAggregated":
-			segments = []string{"data", "aggregated", "{region}", "{macrozone}"}
-			envKey = "MACROZONE_DATA_AGGREGATED_URL"
+
+		case "macrozoneDataAggregatedName":
+			segments = []string{"data", "aggregated", "name", "{region}", "{macrozone}"}
+			envKey = "MACROZONE_DATA_AGGREGATED_NAME_URL"
+		case "macrozoneDataAggregatedLocation":
+			segments = []string{"data", "aggregated", "location"}
+			envKey = "MACROZONE_DATA_AGGREGATED_LOCATION_URL"
+		case "macrozoneDataVariation":
+			segments = []string{"data", "variation", "{region}"}
+			envKey = "MACROZONE_DATA_VARIATION_URL"
+		case "macrozoneDataVariationCorrelation":
+			segments = []string{"data", "variation", "correlation", "{region}"}
+			envKey = "MACROZONE_DATA_VARIATION_CORRELATION_URL"
+		case "macrozoneDataTrend":
+			segments = []string{"data", "trend", "{region}"}
+			envKey = "MACROZONE_DATA_TREND_URL"
+
 		case "zoneList":
 			segments = []string{"list", "{region}", "{macrozone}"}
 			envKey = "ZONE_LIST_URL"
