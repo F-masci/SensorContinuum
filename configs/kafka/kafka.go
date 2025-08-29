@@ -3,7 +3,7 @@ package kafka
 const BROKER = "localhost"
 const PORT = "9094"
 
-// Topics
+// Topics Kafka
 // I topic permettono le comunicazioni tra i vari hub.
 // In particolare:
 // - il topic edge-hub permette la comunicazione tra l'edge hub e il proximity fog hub.

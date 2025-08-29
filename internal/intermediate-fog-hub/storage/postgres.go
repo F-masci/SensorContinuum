@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// postgresDb incapsula la connessione al database PostgreSQL
 type postgresDb struct {
 	Db  *pgxpool.Pool
 	Ctx context.Context

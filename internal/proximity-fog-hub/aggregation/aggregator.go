@@ -14,6 +14,7 @@ import (
 // l'idea non è quella di ricevere i dati degli ultimi tot minuti in maniera casuale ma di restituire i dati
 // compresi in un intervallo temporale che parte da uno start e termina in un end (ovviamente questo
 // intervallo durerà quei tot minuti che ci siamo stabiliti)
+// salva nella tabella 'outbox' le statistiche e un processo 'dispatcher' separato si occuperà poi dell invio
 
 func PerformAggregationAndSend() {
 	logger.Log.Info("Execution of periodic aggregation started")
@@ -47,20 +48,20 @@ func PerformAggregationAndSend() {
 	macrozoneStats := computeMacrozoneAggregate(stats, alignedEndTime)
 	stats = append(stats, macrozoneStats...)
 
-	// 3. Invia ogni statistica a Kafka
+	// 3. Salva le statistiche aggregate nella tabella outbox
 	for _, stat := range stats {
-		// Arricchiamo la statistica con dati contestuali
+		// Arricchiamo la statistica con dati contestuali prima di salvarla
 		stat.Timestamp = alignedEndTime.UTC().Unix()
 		stat.Macrozone = environment.EdgeMacrozone
 
 		logger.Log.Info("Statistics calculated for the type: ", stat.Type, ", min: ", stat.Min, ", max: ", stat.Max, ", avg: ", stat.Avg)
 
-		if err := comunication.SendAggregatedData(stat); err != nil {
-			logger.Log.Error("Failure to send statistics to Kafka, type: ", stat.Type, ", error: ", err)
-			// Non ci fermiamo, proviamo a inviare le altre
+		if err := storage.InsertAggregatedStatsOutbox(ctx, stat); err != nil {
+			logger.Log.Error("Failure to save statistics to outbox, type: ", stat.Type, ", error: ", err)
+			// Non ci fermiamo, proviamo a salvare le altre
 			continue
 		}
-		logger.Log.Info("Statistics successfully sent to Kafka for type: ", stat.Type)
+		logger.Log.Info("Statistics successfully saved to outbox for type: ", stat.Type)
 	}
 }
 

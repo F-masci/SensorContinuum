@@ -33,7 +33,7 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 
 	setupSensorDbConnection()
 	setupRegionDbConnection()
-
+	// Batch per i dati dei sensori
 	var batch = types.NewSensorDataBatch()
 
 	// Timer per la scrittura dei dati in batch

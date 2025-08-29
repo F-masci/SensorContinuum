@@ -11,6 +11,7 @@ type Region struct {
 	Hubs           []RegionHub `json:"hubs,omitempty"`
 }
 
+// Macrozone Large Area
 type Macrozone struct {
 	RegionName   string         `json:"region_name"`
 	Name         string         `json:"name"`

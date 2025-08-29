@@ -13,6 +13,7 @@ var kafkaConfigurationReader *kafka.Reader = nil
 var kafkaStatisticsDataReader *kafka.Reader = nil
 var kafkaHeartbeatReader *kafka.Reader = nil
 
+// connectRealTimeData si connette a Kafka per leggere i dati in tempo reale.
 func connectRealTimeData() {
 	if kafkaRealTimeDataReader != nil {
 		return // already connected

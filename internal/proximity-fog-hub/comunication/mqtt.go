@@ -69,7 +69,7 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 func makeHeartbeatMessageHandler(heartbeatMessageChannel chan types.HeartbeatMsg) MQTT.MessageHandler {
 	return func(client MQTT.Client, msg MQTT.Message) {
 		logger.Log.Debug("Received message on topic: ", msg.Topic())
-
+		// convertiamo il messaggio grezzo MQTT nella struttura dati HeartbeatMsg
 		heartbeatMsg, err := types.CreateHeartbeatMsgFromMqtt(msg)
 		if err != nil {
 			logger.Log.Error("Error parsing sensor data from MQTT message: ", err.Error())

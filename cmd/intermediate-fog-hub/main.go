@@ -34,7 +34,7 @@ func main() {
 	logger.CreateLogger(logger.GetIntermediateHubContext(environment.HubID))
 	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Intermediate Fog Hub...")
-
+	// Inizializza la connessione a Kafka
 	storage.Register()
 
 	// Avvia il processo di gestione dei dati intermedi

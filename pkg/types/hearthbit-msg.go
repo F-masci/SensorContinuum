@@ -13,6 +13,7 @@ type HeartbeatMsg struct {
 	HubID         string `json:"hub_id,omitempty"`
 }
 
+// CreateHeartbeatMsgFromKafka crea un messaggio di heartbeat da un messaggio Kafka
 func CreateHeartbeatMsgFromKafka(msg kafka.Message) (HeartbeatMsg, error) {
 	var heartbeatMsg HeartbeatMsg
 	err := json.Unmarshal(msg.Value, &heartbeatMsg)

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Variabili di ambiente
 var EdgeMacrozone string
 var HubID string
 

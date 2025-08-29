@@ -45,7 +45,7 @@ func connect() {
 	}
 	logger.Log.Info("Connected (write) to Kafka topic for stats data, topic: ", environment.ProximityAggregatedStatsTopic)
 
-	// --- NUOVA LOGICA: Connessione per il topic della configurazione ---
+	// Connessione per il topic della configurazione ---
 	configurationKafkaWriter = &kafka.Writer{
 		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
 		Topic:        environment.ProximityConfigurationTopic,
@@ -54,7 +54,7 @@ func connect() {
 	}
 	logger.Log.Info("Connected (write) to Kafka topic for configuration data, topic: ", environment.ProximityConfigurationTopic)
 
-	// --- NUOVA LOGICA: Connessione per il topic dei messaggi di heartbeat ---
+	//Connessione per il topic dei messaggi di heartbeat ---
 	heartbeatKafkaWriter = &kafka.Writer{
 		Addr:         kafka.TCP(environment.KafkaBroker + ":" + environment.KafkaPort),
 		Topic:        environment.ProximityHeartbeatTopic,

@@ -1,5 +1,6 @@
 package utils
 
+// UniqueUnion prende più slice di stringhe e restituisce una slice contenente solo valori unici
 func UniqueUnion(slices ...[]string) []string {
 	m := make(map[string]struct{})
 	for _, sl := range slices {

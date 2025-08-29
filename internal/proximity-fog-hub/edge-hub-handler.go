@@ -42,6 +42,7 @@ func ProcessEdgeHubData(dataChannel chan types.SensorData) {
 	}
 }
 
+// ProcessEdgeHubConfiguration riceve i messaggi di configurazione che arrivano dal Edge Hub tramite MQTT nel canale
 func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
 	for configMsg := range configChannel {
 		if configMsg == (types.ConfigurationMsg{}) {

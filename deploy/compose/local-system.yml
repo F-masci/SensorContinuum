@@ -102,7 +102,10 @@ services:
       test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server kafka:9092" ]
       interval: 10s
       timeout: 5s
-      retries: 5 # Aumentiamo un po' i tentativi per dare tempo a Kafka di avviarsi
+      retries: 5
+    depends_on:
+        zookeeper:
+          condition: service_healthy
 
   mosquitto:
     build:
@@ -143,9 +146,9 @@ services:
       timescaledb:
         condition: service_healthy
       cloud_metadatadb:
-         condition: service_healthy
+        condition: service_healthy
       region_metadatadb:
-          condition: service_healthy
+        condition: service_healthy
     restart: unless-stopped
 
   proximity-fog-hub:

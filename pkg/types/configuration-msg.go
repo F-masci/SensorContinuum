@@ -8,6 +8,7 @@ import (
 
 type MsgType string
 
+// Tipi di messaggi di configurazione
 const (
 	NewProximityMsgType MsgType = "new_proximity"
 	NewEdgeMsgType      MsgType = "new_edge"

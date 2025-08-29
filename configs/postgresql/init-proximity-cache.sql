@@ -14,8 +14,19 @@ CREATE TABLE sensor_measurements_cache (
     value           DOUBLE PRECISION  NOT NULL
 );
 
--- 2. La trasformiamo in un'hypertable, partizionata per tempo
+-- 2. La trasformiamo in un'hypertable, partizionata per tempo sulla colonna 'time'
 SELECT create_hypertable('sensor_measurements_cache', 'time');
 
 -- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 1 giorno
 SELECT add_retention_policy('sensor_measurements_cache', INTERVAL '1 days');
+
+CREATE TABLE IF NOT EXISTS aggregated_stats_outbox (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Chiave primaria univoca per ogni messaggio
+    payload         JSONB NOT NULL,                             -- Il contenuto del messaggio (le statistiche in formato JSON)
+    status          VARCHAR(20) NOT NULL DEFAULT 'pending',     -- Stato del messaggio: 'pending' o 'sent'
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),         -- Timestamp di creazione del record
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()          -- Timestamp dell'ultimo aggiornamento
+);
+
+-- Indice sullo stato per velocizzare la ricerca dei messaggi da inviare.
+CREATE INDEX IF NOT EXISTS idx_aggregated_stats_outbox_status ON aggregated_stats_outbox(status);
