@@ -1,7 +1,6 @@
 package aggregation
 
 import (
-	"SensorContinuum/internal/proximity-fog-hub/comunication"
 	"SensorContinuum/internal/proximity-fog-hub/environment"
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"

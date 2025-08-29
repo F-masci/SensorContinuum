@@ -7,20 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var DBPool *pgxpool.Pool
-
-// OutboxMessage rappresenta un record nella tabella aggregated_stats_outbox
-type OutboxMessage struct {
-	ID      uuid.UUID
-	Payload types.AggregatedStats
-	Status  string
-}
 
 // InitDatabaseConnection inizializza il pool di connessioni al database
 func InitDatabaseConnection() error {
@@ -78,7 +72,7 @@ func InsertAggregatedStatsOutbox(ctx context.Context, stats types.AggregatedStat
 
 // GetPendingOutboxMessages recupera un batch di messaggi in stato 'pending' dalla tabella outbox.
 // Utilizza SELECT ... FOR UPDATE SKIP LOCKED per garantire che worker concorrenti non prelevino gli stessi messaggi.
-func GetPendingOutboxMessages(ctx context.Context, limit int) ([]OutboxMessage, error) {
+func GetPendingOutboxMessages(ctx context.Context, limit int) ([]types.OutboxMessage, error) {
 	query := `
         SELECT id, payload
         FROM aggregated_stats_outbox
@@ -93,9 +87,9 @@ func GetPendingOutboxMessages(ctx context.Context, limit int) ([]OutboxMessage, 
 	}
 	defer rows.Close()
 
-	var messages []OutboxMessage
+	var messages []types.OutboxMessage
 	for rows.Next() {
-		var msg OutboxMessage
+		var msg types.OutboxMessage
 		var payloadBytes []byte
 		if err := rows.Scan(&msg.ID, &payloadBytes); err != nil {
 			logger.Log.Error("Error scanning outbox message row, error:", err)

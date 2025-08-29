@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -79,4 +80,11 @@ func CreateAggregatedStatsFromKafka(msg kafka.Message) (AggregatedStats, error) 
 	var stats AggregatedStats
 	err := json.Unmarshal(msg.Value, &stats)
 	return stats, err
+}
+
+// OutboxMessage rappresenta un record nella tabella aggregated_stats_outbox
+type OutboxMessage struct {
+	ID      uuid.UUID
+	Payload AggregatedStats
+	Status  string
 }

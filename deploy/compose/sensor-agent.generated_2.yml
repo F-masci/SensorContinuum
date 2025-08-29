@@ -2,7 +2,7 @@ services:
 
 
   sensor-agent-01:
-    image: fmasci/sensor-agent:latest
+    image: fmasci/sc-sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile
@@ -27,7 +27,7 @@ services:
 
 
   sensor-agent-02:
-    image: fmasci/sensor-agent:latest
+    image: fmasci/sc-sensor-agent:latest
     build:
       context: ../..
       dockerfile: deploy/docker/sensor-agent.Dockerfile

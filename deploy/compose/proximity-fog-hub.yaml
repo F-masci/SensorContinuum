@@ -21,7 +21,7 @@ services:
       - macrozone-hub-bridge
 
   macrozone-hub-01:
-    image: fmasci/proximity-fog-hub:latest
+    image: fmasci/sc-proximity-fog-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/proximity-fog-hub.Dockerfile

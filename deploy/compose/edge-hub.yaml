@@ -16,7 +16,7 @@ services:
       - zone-hub-bridge
 
   zone-hub-filter-01:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
@@ -44,7 +44,7 @@ services:
       - zone-hub-bridge
 
   zone-hub-filter-02:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
@@ -72,7 +72,7 @@ services:
       - zone-hub-bridge
 
   zone-hub-cleaner-01:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
@@ -100,7 +100,7 @@ services:
       - zone-hub-bridge
 
   zone-hub-aggregator-01:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
@@ -128,7 +128,7 @@ services:
       - zone-hub-bridge
   
   zone-hub-aggregator-02:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile
@@ -156,7 +156,7 @@ services:
       - zone-hub-bridge
 
   zone-hub-configurator-01:
-    image: fmasci/edge-hub:latest
+    image: fmasci/sc-edge-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/edge-hub.Dockerfile

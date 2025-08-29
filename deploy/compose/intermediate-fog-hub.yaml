@@ -1,7 +1,7 @@
 services:
 
   region-hub-01:
-    image: fmasci/intermediate-fog-hub:latest
+    image: fmasci/sc-intermediate-fog-hub:latest
     build:
       context: ../..
       dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
