@@ -120,7 +120,7 @@ func CloseSensorDbConnection() {
 }
 
 // InsertSensorDataBatch inserisce un batch di dati dei sensori nel database gestendo i duplicati
-func InsertSensorDataBatch(batch types.SensorDataBatch) error {
+func InsertSensorDataBatch(batch *types.SensorDataBatch) error {
 	logger.Log.Info("Inserting sensor data batch")
 
 	// Se il batch è vuoto, non fare nulla
@@ -214,7 +214,7 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 }
 
 // UpdateLastSeenBatch aggiorna il campo last_seen dei sensori in base ai dati ricevuti nel batch
-func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
+func UpdateLastSeenBatch(batch *types.SensorDataBatch) error {
 
 	logger.Log.Info("Updating last seen batch")
 
@@ -433,7 +433,7 @@ func GetLastRegionAggregatedData(ctx context.Context) (types.AggregatedStats, er
 }
 
 // InsertMacrozoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch gestendo i duplicati
-func InsertMacrozoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+func InsertMacrozoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error {
 	logger.Log.Info("Inserting macrozone statistics data batch")
 
 	// Se il batch è vuoto, non fare nulla
@@ -521,7 +521,7 @@ func InsertMacrozoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error 
 }
 
 // InsertZoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch gestendo i duplicati
-func InsertZoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+func InsertZoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error {
 	logger.Log.Info("Inserting zone statistics data batch")
 
 	// Se il batch è vuoto, non fare nulla

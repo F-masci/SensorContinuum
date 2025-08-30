@@ -44,11 +44,11 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 		// Viene chiamata quando il batch è pieno o scade il timeout
 		// Salva i dati nel database e aggiorna il last seen dei sensori
 		func(b *types.SensorDataBatch) error {
-			if err := storage.InsertSensorDataBatch(*b); err != nil {
+			if err := storage.InsertSensorDataBatch(b); err != nil {
 				logger.Log.Error("Failed to insert sensor data batch: ", err)
 				os.Exit(1)
 			}
-			if err := storage.UpdateLastSeenBatch(*b); err != nil {
+			if err := storage.UpdateLastSeenBatch(b); err != nil {
 				logger.Log.Error("Failed to update last seen for sensors: ", err)
 				os.Exit(1)
 			}
@@ -89,7 +89,7 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 		// Viene chiamata quando il batch è pieno o scade il timeout
 		// Salva le statistiche nel database
 		func(b *types.AggregatedStatsBatch) error {
-			if err := storage.InsertMacrozoneStatisticsDataBatch(*b); err != nil {
+			if err := storage.InsertMacrozoneStatisticsDataBatch(b); err != nil {
 				logger.Log.Error("Failed to insert macrozone aggregated stats batch: ", err)
 				os.Exit(1)
 			}
@@ -115,7 +115,7 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 		// Viene chiamata quando il batch è pieno o scade il timeout
 		// Salva le statistiche nel database
 		func(b *types.AggregatedStatsBatch) error {
-			if err := storage.InsertZoneStatisticsDataBatch(*b); err != nil {
+			if err := storage.InsertZoneStatisticsDataBatch(b); err != nil {
 				logger.Log.Error("Failed to insert zone aggregated stats batch: ", err)
 				os.Exit(1)
 			}
