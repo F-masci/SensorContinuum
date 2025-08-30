@@ -46,18 +46,18 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 		func(b *types.SensorDataBatch) error {
 			if err := storage.InsertSensorDataBatch(*b); err != nil {
 				logger.Log.Error("Failed to insert sensor data batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			if err := storage.UpdateLastSeenBatch(*b); err != nil {
 				logger.Log.Error("Failed to update last seen for sensors: ", err)
-				return err
+				os.Exit(1)
 			}
 			// Se tutto è andato a buon fine, esegui il commit
 			// dei messaggi Kafka
 			err := comunication.CommitSensorDataBatchMessages(b.GetKafkaMessages())
 			if err != nil {
 				logger.Log.Error("Failed to commit Kafka messages for sensor data batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			return nil
 		})
@@ -91,14 +91,14 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 		func(b *types.AggregatedStatsBatch) error {
 			if err := storage.InsertMacrozoneStatisticsDataBatch(*b); err != nil {
 				logger.Log.Error("Failed to insert macrozone aggregated stats batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			// Se tutto è andato a buon fine, esegui il commit
 			// dei messaggi Kafka
 			err := comunication.CommitStatisticsDataBatchMessages(b.GetKafkaMessages())
 			if err != nil {
 				logger.Log.Error("Failed to commit Kafka messages for aggregated stats batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			return nil
 		})
@@ -117,14 +117,14 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 		func(b *types.AggregatedStatsBatch) error {
 			if err := storage.InsertZoneStatisticsDataBatch(*b); err != nil {
 				logger.Log.Error("Failed to insert zone aggregated stats batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			// Se tutto è andato a buon fine, esegui il commit
 			// dei messaggi Kafka
 			err := comunication.CommitStatisticsDataBatchMessages(b.GetKafkaMessages())
 			if err != nil {
 				logger.Log.Error("Failed to commit Kafka messages for aggregated stats batch: ", err)
-				return err
+				os.Exit(1)
 			}
 			return nil
 		})
