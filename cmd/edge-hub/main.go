@@ -21,12 +21,13 @@ import (
  */
 func main() {
 
-	// Inizializza l'ambiente e il logger
+	// Setup dell'ambiente
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
 		os.Exit(1)
 	}
 
+	// Inizializza il logger
 	logger.CreateLogger(logger.GetEdgeHubContext(environment.ServiceMode, environment.EdgeMacrozone, environment.EdgeZone, environment.HubID))
 	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Edge Hub...")
@@ -70,7 +71,7 @@ func main() {
 
 	/* ----- AGGREGATION SERVICE ------ */
 
-	if (environment.ServiceMode == types.EdgeHubAggregatorService && environment.OperationMode == environment.OperationModeLoop) || environment.ServiceMode == types.EdgeHubService {
+	if (environment.ServiceMode == types.EdgeHubAggregatorService && environment.OperationMode == types.OperationModeLoop) || environment.ServiceMode == types.EdgeHubService {
 
 		// Creazione del canale per i dati filtrati
 		filteredDataChannel := make(chan types.SensorData, 200)
@@ -98,7 +99,7 @@ func main() {
 
 	}
 
-	if environment.ServiceMode == types.EdgeHubAggregatorService && environment.OperationMode == environment.OperationModeOnce {
+	if environment.ServiceMode == types.EdgeHubAggregatorService && environment.OperationMode == types.OperationModeOnce {
 
 		// Creazione del canale per i dati filtrati
 		filteredDataChannel := make(chan types.SensorData, 200)
@@ -115,7 +116,7 @@ func main() {
 
 	// duale a sopra solo rivolto al caso del processo di clean.
 
-	if (environment.ServiceMode == types.EdgeHubCleanerService && environment.OperationMode == environment.OperationModeLoop) || environment.ServiceMode == types.EdgeHubService {
+	if (environment.ServiceMode == types.EdgeHubCleanerService && environment.OperationMode == types.OperationModeLoop) || environment.ServiceMode == types.EdgeHubService {
 
 		cleanHealthTicker := time.NewTicker(time.Minute)
 		defer cleanHealthTicker.Stop()
@@ -133,7 +134,7 @@ func main() {
 
 	}
 
-	if environment.ServiceMode == types.EdgeHubCleanerService && environment.OperationMode == environment.OperationModeOnce {
+	if environment.ServiceMode == types.EdgeHubCleanerService && environment.OperationMode == types.OperationModeOnce {
 		unhealthySensors, removedSensors := edge_hub.CleanUnhealthySensors()
 		edge_hub.NotifyUnhealthySensors(unhealthySensors)
 		edge_hub.NotifyRemovedSensors(removedSensors)
@@ -154,8 +155,7 @@ func main() {
 		}()
 	}
 
+	// Attende il segnale di terminazione (ad esempio Ctrl+C)
 	utils.WaitForTerminationSignal()
-
-	logger.Log.Info("Edge Hub is terminating")
 	logger.Log.Info("Shutting down Edge Hub...")
 }

@@ -30,6 +30,7 @@ func makeSensorDataHandler(sensorDataChannel chan types.SensorData) MQTT.Message
 	return func(client MQTT.Client, msg MQTT.Message) {
 		logger.Log.Debug("Received message on topic: ", msg.Topic())
 
+		// convertiamo il messaggio grezzo MQTT nella struttura dati SensorData
 		sensorData, err := types.CreateSensorDataFromMQTT(msg)
 		if err != nil {
 			logger.Log.Error("Error parsing sensor data from MQTT message: ", err.Error())
@@ -44,6 +45,7 @@ func makeSensorDataHandler(sensorDataChannel chan types.SensorData) MQTT.Message
 			// Messaggio inviato correttamente
 			logger.Log.Debug("Sent message on sensorDataChannel")
 		default:
+			// Se il canale è pieno scartiamo il messaggio per non bloccare la ricezione dei nuovi
 			logger.Log.Warn("Data channel is full. Discarding message from sensor: ", sensorData.SensorID)
 		}
 	}
@@ -70,15 +72,15 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 		select {
 		case configurationMessageChannel <- configMsg:
 			// Messaggio inviato correttamente
+			logger.Log.Debug("Sent configuration message to channel")
 		default:
 			logger.Log.Warn("Data channel is full. Discarding message from sensor: ", configMsg.SensorID)
 		}
 	}
 }
 
-// makeConnectionHandler viene chiamata quando la connessione MQTT è già riuscita e quello che facciamo ora è
-// fare la subscribe al topic dei dati del sensore. Cioè praticamente stiamo dicendo che l edge hub è sottoscritto
-// alla ricezione dei dati da parte dei sensori e quindi li riceve
+// makeConnectionHandler viene chiamata quando la connessione MQTT è già riuscita e quello che fa ora è
+// fare la subscribe al topic dei dati del sensore.
 func makeConnectionHandler(sensorDataChannel chan types.SensorData, configurationMessageChannel chan types.ConfigurationMsg) MQTT.OnConnectHandler {
 	return func(client MQTT.Client) {
 
@@ -116,7 +118,7 @@ func makeConnectionHandler(sensorDataChannel chan types.SensorData, configuratio
 		// Se siamo qui, la connessione è riuscita e abbiamo sottoscritto ai topic
 		// Quindi resettiamo il contatore dei tentativi di connessione
 		connectAttempts = 0
-		logger.Log.Info("Successfully connected to MQTT broker.")
+		logger.Log.Info("Successfully subscribed and connected to MQTT broker.")
 	}
 }
 
@@ -210,7 +212,7 @@ func connectAndManage(sensorDataChannel chan types.SensorData, configurationMess
 
 		logger.Log.Info("Hub attempting to connect to MQTT sensor broker at ", sensorBrokerURL)
 		if token := sensorClient.Connect(); token.WaitTimeout(time.Duration(environment.MaxReconnectionTimeout)*time.Second) && token.Error() != nil {
-			// L'errore di connessione inziale viene solo loggato, il meccanismo di
+			// L'errore di connessione iniziale viene solo loggato, il meccanismo di
 			// AutoReconnect continuerà a tentare in background
 			logger.Log.Error("Hub failed to connect initially:", token.Error())
 		}
@@ -272,9 +274,6 @@ func SetupMQTTConnection(sensorDataChannel chan types.SensorData, configurationM
 }
 
 // PublishFilteredData pubblica i dati filtrati al broker MQTT
-// Praticamente sopra abbiamo fatto la subscribe nel ricevere i dati dai sensori, ora invece
-// facciamo diventare l edge hub un attore che pubblica i dati filtrati (che saranno presi dal
-// proximity fog, il quale farà a sua volta la subscribe al broker mqtt per ricevere i dati)
 func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 
 	// Non procedere se la connessione non è attiva.
@@ -315,6 +314,7 @@ func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 	}
 }
 
+// PublishConfigurationMessage pubblica i messaggi di configurazione al broker MQTT
 func PublishConfigurationMessage(configurationMessageChannel chan types.ConfigurationMsg) {
 
 	// Non procedere se la connessione non è attiva.
@@ -496,4 +496,22 @@ func SendHeartbeatMessage() {
 
 	}
 
+}
+
+// IsConnected verifica se il client MQTT è connesso al broker.
+func IsConnected() bool {
+
+	// Assicura che la connessione sia gestita
+	if hubClient == nil || sensorClient == nil {
+		connectAndManage()
+	}
+
+	// Controlla se il client è connesso
+	if hubClient.IsConnected() && sensorClient.IsConnected() {
+		logger.Log.Debug("MQTT clients is connected.")
+		return true
+	} else {
+		logger.Log.Warn("MQTT clients is not connected.")
+		return false
+	}
 }

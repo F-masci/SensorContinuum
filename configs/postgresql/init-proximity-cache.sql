@@ -1,17 +1,18 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
--- ===============================================================
--- ===========  TABELLA PER CACHE PROXIMITY-FOG-HUB ==============
--- ===============================================================
+-- =========================================================
+-- ===========  TABELLA PER CACHE SENSOR DATA ==============
+-- =========================================================
 
 -- 1. Creiamo la tabella per la cache locale del proximity-hub
-CREATE TABLE sensor_measurements_cache (
+CREATE TABLE IF NOT EXISTS sensor_measurements_cache (
     time            TIMESTAMPTZ       NOT NULL,
     macrozone_name  VARCHAR(255)      NOT NULL,
     zone_name       VARCHAR(255)      NOT NULL,
     sensor_id       VARCHAR(255)      NOT NULL,
     type            VARCHAR(50)       NOT NULL,
-    value           DOUBLE PRECISION  NOT NULL
+    value           DOUBLE PRECISION  NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent'))
 );
 
 -- 2. La trasformiamo in un'hypertable, partizionata per tempo sulla colonna 'time'
@@ -20,13 +21,28 @@ SELECT create_hypertable('sensor_measurements_cache', 'time');
 -- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 1 giorno
 SELECT add_retention_policy('sensor_measurements_cache', INTERVAL '1 days');
 
-CREATE TABLE IF NOT EXISTS aggregated_stats_outbox (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Chiave primaria univoca per ogni messaggio
-    payload         JSONB NOT NULL,                             -- Il contenuto del messaggio (le statistiche in formato JSON)
-    status          VARCHAR(20) NOT NULL DEFAULT 'pending',     -- Stato del messaggio: 'pending' o 'sent'
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),         -- Timestamp di creazione del record
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()          -- Timestamp dell'ultimo aggiornamento
+-- ===========================================================
+-- ===========  TABELLA PER CACHE AGGREGATED STATS ===========
+-- ===========================================================
+
+-- 1. Creiamo la tabella per la cache locale del proximity-hub
+CREATE TABLE IF NOT EXISTS aggregated_stats_cache (
+    time            TIMESTAMPTZ       NOT NULL,
+    zone_name       TEXT              NULL,
+    type            TEXT              NOT NULL,
+    min_value       DOUBLE PRECISION  NOT NULL,
+    max_value       DOUBLE PRECISION  NOT NULL,
+    avg_value       DOUBLE PRECISION  NOT NULL,
+    avg_sum         DOUBLE PRECISION  NOT NULL,
+    avg_count       INTEGER           NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent'))
 );
 
--- Indice sullo stato per velocizzare la ricerca dei messaggi da inviare.
-CREATE INDEX IF NOT EXISTS idx_aggregated_stats_outbox_status ON aggregated_stats_outbox(status);
+-- 2. La trasformiamo in un'hypertable, partizionata per tempo sulla colonna 'time'
+SELECT create_hypertable('aggregated_stats_cache', 'time');
+
+-- 3. Impostiamo una politica di retention per cancellare dati più vecchi di 2 giorno
+SELECT add_retention_policy('aggregated_stats_cache', INTERVAL '2 days');
+
+-- 4. Crea indice per ottimizzare le query
+CREATE INDEX IF NOT EXISTS idx_zone_id ON aggregated_stats_cache (time, zone_name);

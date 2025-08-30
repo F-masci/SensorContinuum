@@ -9,58 +9,117 @@ import (
 	"time"
 )
 
-// PerformAggregationAndSend è la funzione che viene eseguita periodicamente ogni tot minuti stabiliti
-// l'idea non è quella di ricevere i dati degli ultimi tot minuti in maniera casuale ma di restituire i dati
-// compresi in un intervallo temporale che parte da uno start e termina in un end (ovviamente questo
-// intervallo durerà quei tot minuti che ci siamo stabiliti)
-// salva nella tabella 'outbox' le statistiche e un processo 'dispatcher' separato si occuperà poi dell invio
+// Run è la funzione che avvia il processo di aggregazione periodica.
+// Essa avvia un ticker che esegue l'aggregazione ogni intervallo di tempo
+// definito in environment.AggregationInterval.
+// Questa funzione viene eseguita in una goroutine separata.
+func Run(ctx context.Context) {
 
-func PerformAggregationAndSend() {
-	logger.Log.Info("Execution of periodic aggregation started")
-	ctx := context.Background()
+	// Avvio del ticker per l'aggregazione periodica
+	statsTicker := time.NewTicker(environment.AggregationInterval)
+	logger.Log.Info("Aggregation ticker started, aggregating data every ", environment.AggregationInterval.Minutes(), " minutes from now.")
+	defer statsTicker.Stop()
 
-	// calcola il periodo di 2 minuti rispetto
-	// a 5 minuti fa, in modo da avere anche i
-	// dati che hanno subito un ritardo
-	now := time.Now().UTC().Add(-5 * time.Minute)
-	//allineo il tempo attuale al limite di 2 minuti
-	//quindi se ora sono le 15:48:30, alignedEndTime sarà 15:47:00
-	intervalDuration := 2 * time.Minute
-	alignedEndTime := now.Truncate(intervalDuration)
-	//l'inizio del periodo è di 2 minuti prima di alignedEndTime
-	alignedStartTime := alignedEndTime.Add(-intervalDuration)
-	logger.Log.Info("Aggregation data for interval, start_time: ", alignedStartTime.Format(time.RFC3339), ", end_time: ", alignedEndTime.Format(time.RFC3339))
+	for {
+		select {
+		// Permette uno spegnimento pulito quando il contesto viene annullato
+		case <-ctx.Done():
+			logger.Log.Info("Stopping aggregator...")
+			return
+		case <-statsTicker.C:
+			logger.Log.Info("Execution of aggregation started")
+			AggregateSensorData(ctx)
+		}
+	}
 
-	// 2. Esegui la query per ottenere le statistiche dei dati arrivati nell'intervallo alignedStartTime e alignedEndTime
-	stats, err := storage.GetZoneAggregatedData(ctx, alignedStartTime, alignedEndTime)
+}
+
+// AggregateSensorData è la funzione che viene eseguita per l'aggregazione dei dati dei sensori.
+// Questa funzione calcola le statistiche aggregate (min, max, avg, sum, count)
+// per ogni tipo di sensore e per ogni zona, nell'intervallo di tempo specificato.
+// Le statistiche vengono poi salvate nella tabella di cache per essere inviate al Intermediate Hub.
+func AggregateSensorData(ctx context.Context) {
+
+	// 1. Calcola gli intervalli allineati per l'aggregazione
+	lastAggregation, err := storage.GetLastMacrozoneAggregatedData(ctx)
 	if err != nil {
-		logger.Log.Error("Failed to calculate periodic statistics, error: ", err)
+		logger.Log.Error("Failed to get last aggregation time: ", err)
 		return
 	}
 
-	if len(stats) == 0 {
-		logger.Log.Info("No data to send, skipping aggregation")
+	var alignedStartTime time.Time
+	if lastAggregation != (types.AggregatedStats{}) {
+		// Se esiste una precedente aggregazione, usiamo il suo timestamp come inizio del nuovo intervallo
+		alignedStartTime = time.Unix(lastAggregation.Timestamp, 0).UTC()
+		logger.Log.Info("Starting aggregation data from last aggregation time ", alignedStartTime.Format(time.RFC3339))
+	} else {
+		// Se non esiste una precedente aggregazione,
+		// calcola il tempo di inizio considerando l'offset
+		// e allineandolo all'intervallo di aggregazione
+		// Ad esempio, se ora sono le 15:48:30 e l'offset è -10min,
+		// alignedEndTime sarà 15:38:00 (portato a 15:30:00)
+		// e alignedStartTime sarà 15:23:00 (portato a 15:15:00)
+		// Questo assicura che le aggregazioni siano sempre allineate a intervalli regolari
+		// e non inizino in momenti casuali.
+		now := time.Now().UTC()
+		alignedStartTime = now.Add(environment.AggregationStartingOffset + environment.AggregationFetchOffset - environment.AggregationInterval).Truncate(environment.AggregationInterval)
+		logger.Log.Info("No previous aggregation found, starting aggregation data from ", alignedStartTime.Format(time.RFC3339))
+	}
+
+	// Calcola il massimo tempo di fine allineato
+	maxAlignedEndTime := time.Now().UTC().Add(environment.AggregationFetchOffset).Truncate(environment.AggregationInterval)
+	if !alignedStartTime.Before(maxAlignedEndTime) {
+		logger.Log.Warn("Aggregation start time is not before the maximum end time, skipping aggregation")
 		return
 	}
 
-	// Calcola le statistiche aggregate a livello di macrozona
-	macrozoneStats := computeMacrozoneAggregate(stats, alignedEndTime)
-	stats = append(stats, macrozoneStats...)
+	// Calcola gli intervalli di aggregazione da elaborare
+	var intervals []struct{ Start, End time.Time }
+	for start := alignedStartTime; start.Before(maxAlignedEndTime); start = start.Add(environment.AggregationInterval) {
+		end := start.Add(environment.AggregationInterval)
+		if end.After(maxAlignedEndTime) {
+			logger.Log.Error("End time exceeds maximum aligned end time, skipping this interval")
+			break
+		}
+		intervals = append(intervals, struct{ Start, End time.Time }{Start: start, End: end})
+	}
 
-	// 3. Salva le statistiche aggregate nella tabella outbox
-	for _, stat := range stats {
-		// Arricchiamo la statistica con dati contestuali prima di salvarla
-		stat.Timestamp = alignedEndTime.UTC().Unix()
-		stat.Macrozone = environment.EdgeMacrozone
+	for _, interval := range intervals {
+		alignedStartTime = interval.Start
+		alignedEndTime := interval.End
+		logger.Log.Info("Processing aggregation interval from ", alignedStartTime.Format(time.RFC3339), " to ", alignedEndTime.Format(time.RFC3339))
 
-		logger.Log.Info("Statistics calculated for the type: ", stat.Type, ", min: ", stat.Min, ", max: ", stat.Max, ", avg: ", stat.Avg)
-
-		if err := storage.InsertAggregatedStatsOutbox(ctx, stat); err != nil {
-			logger.Log.Error("Failure to save statistics to outbox, type: ", stat.Type, ", error: ", err)
-			// Non ci fermiamo, proviamo a salvare le altre
+		// 2. Esegue la query per ottenere le statistiche dei dati arrivati nell'intervallo alignedStartTime e alignedEndTime
+		stats, err := storage.GetZoneAggregatedData(ctx, alignedStartTime, alignedEndTime)
+		if err != nil {
+			logger.Log.Error("Failed to calculate periodic statistics: ", err)
 			continue
 		}
-		logger.Log.Info("Statistics successfully saved to outbox for type: ", stat.Type)
+
+		if len(stats) == 0 {
+			logger.Log.Warn("No data to send, skipping aggregation")
+			continue
+		}
+
+		// Calcola le statistiche aggregate a livello di macrozona
+		macrozoneStats := computeMacrozoneAggregate(stats, alignedEndTime)
+		stats = append(stats, macrozoneStats...)
+
+		// 3. Salva le statistiche aggregate nella tabella outbox
+		for _, stat := range stats {
+			// Arricchiamo la statistica con dati contestuali prima di salvarla
+			stat.Timestamp = alignedEndTime.UTC().Unix()
+			stat.Macrozone = environment.EdgeMacrozone
+
+			logger.Log.Info("Statistics calculated for the type: ", stat.Type, ", min: ", stat.Min, ", max: ", stat.Max, ", avg: ", stat.Avg)
+
+			if err := storage.InsertAggregatedStats(ctx, stat); err != nil {
+				logger.Log.Error("Failure to save statistics to cache for type ", stat.Type, ": ", err)
+				// Non ci fermiamo, proviamo a salvare le altre
+				continue
+			}
+			logger.Log.Info("Statistics successfully saved to cache for type: ", stat.Type)
+		}
 	}
 }
 

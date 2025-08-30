@@ -8,5 +8,5 @@ const IsAliveSensorTimeout = 5 * time.Minute
 // IsAliveHubTimeout è il timeout per considerare un Hub "vivo"
 const IsAliveHubTimeout = IsAliveSensorTimeout
 
-// HearteatInterval è l'intervallo di invio del messaggio di heartbeat
-const HearteatInterval = 3 * time.Minute
+// HeartbeatInterval è l'intervallo di invio del messaggio di heartbeat
+const HeartbeatInterval = 3 * time.Minute

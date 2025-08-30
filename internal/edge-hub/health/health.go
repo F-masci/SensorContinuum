@@ -1,6 +1,7 @@
 package health
 
-// TODO: implementare un vero controllo di salute
+import "SensorContinuum/internal/edge-hub/comunication"
+
 func isHealthy() bool {
-	return true
+	return comunication.IsConnected()
 }

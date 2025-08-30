@@ -77,7 +77,7 @@ func AggregateAllSensorsData(filteredDataChannel chan types.SensorData) {
 	var results []types.SensorData
 
 	// Calcola l'inizio del minuto corrente considerando l'offset
-	// Ad esempio, se ora è 12:34:45 e l'offset è -2min,
+	// Ad esempio, se ora sono le 12:34:45 e l'offset è -2min,
 	// minuteStart sarà 12:32:00 e aggrego i dati tra 12:32:00 e 12:32:59
 	now := time.Now().UTC()
 	minuteStart := now.Add(environment.AggregationFetchOffset).Truncate(time.Minute)

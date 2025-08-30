@@ -13,26 +13,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// OperationModeType: I valori validi sono:
-// - "loop": per eseguire in un ciclo continuo di aggregazione|pulizia dei dati. (default)
-// - "once": per eseguire una singola iterazione di aggregazione|pulizia dei dati.
-type OperationModeType string
-
-const (
-	OperationModeLoop OperationModeType = "loop"
-	OperationModeOnce OperationModeType = "once"
-)
-
 // OperationMode specifica la modalità di funzionamento del servizio.
-var OperationMode OperationModeType
+var OperationMode types.OperationModeType
 
+// ServiceMode specifica il tipo di servizio Edge Hub in esecuzione.
 var ServiceMode types.Service
 
 var EdgeMacrozone string
 var EdgeZone string
 var HubID string
 
-// Queste impostazioni sono utilizzate per la connessione tra SensorAgent ed EdgeHub.
+// Queste impostazioni sono utilizzate per la connessione tra:
+// - SensorAgent -> EdgeHub
+// - EdgeHub -> ProximityFogHub
 
 // MqttSensorBrokerProtocol specifica il protocollo (es. "tcp", "ws") tra SensorAgent ed EdgeHub.
 var MqttSensorBrokerProtocol string
@@ -114,7 +107,7 @@ const FilteringStdDevFactor float64 = 3
 const UnhealthySensorTimeout = timeouts.IsAliveSensorTimeout
 const RegistrationSensorTimeout = 6 * time.Hour
 
-const HeartbeatInterval = timeouts.HearteatInterval
+const HeartbeatInterval = timeouts.HeartbeatInterval
 
 var HealthzServer bool = false
 var HealthzServerPort string = ":"
@@ -128,13 +121,13 @@ func SetupEnvironment() error {
 	var OperationModeStr string
 	OperationModeStr, exists = os.LookupEnv("OPERATION_MODE")
 	if !exists {
-		OperationMode = OperationModeLoop
+		OperationMode = types.OperationModeLoop
 	} else {
 		switch OperationModeStr {
-		case string(OperationModeLoop):
-			OperationMode = OperationModeLoop
-		case string(OperationModeOnce):
-			OperationMode = OperationModeOnce
+		case string(types.OperationModeLoop):
+			OperationMode = types.OperationModeLoop
+		case string(types.OperationModeOnce):
+			OperationMode = types.OperationModeOnce
 		default:
 			return errors.New("invalid value for OPERATION_MODE: " + OperationModeStr + ". Valid values are 'loop' or 'once'.")
 		}

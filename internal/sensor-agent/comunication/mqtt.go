@@ -192,6 +192,7 @@ func SendRegistrationMessage() {
 	}
 }
 
+// IsConnected verifica se il client MQTT è connesso al broker.
 func IsConnected() bool {
 
 	// Assicura che la connessione sia gestita

@@ -85,7 +85,7 @@ func CreateAggregatedStatsFromKafka(msg kafka.Message) (AggregatedStats, error) 
 	return stats, err
 }
 
-// OutboxMessage rappresenta un record nella tabella aggregated_stats_outbox
+// OutboxMessage rappresenta un record nella tabella aggregated_stats_cache
 type OutboxMessage struct {
 	ID      uuid.UUID
 	Payload AggregatedStats
