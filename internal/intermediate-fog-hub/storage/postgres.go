@@ -119,8 +119,9 @@ func CloseSensorDbConnection() {
 	}
 }
 
-// InsertSensorDataBatch inserisce un batch di dati dei sensori nel database
+// InsertSensorDataBatch inserisce un batch di dati dei sensori nel database gestendo i duplicati
 func InsertSensorDataBatch(batch types.SensorDataBatch) error {
+	logger.Log.Info("Inserting sensor data batch")
 
 	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
@@ -128,10 +129,52 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 		return nil
 	}
 
-	tableName := pgx.Identifier{"sensor_measurements"}
-	columns := []string{"time", "macrozone_name", "zone_name", "sensor_id", "type", "value"}
+	// Inizio transazione
+	ctx := sensorDB.Ctx
+	conn, err := sensorDB.Db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
 
-	// Prepara i dati per l'inserimento
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			err := tx.Rollback(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to rollback transaction: ", err)
+			} else {
+				logger.Log.Debug("Transaction rolled back successfully")
+			}
+		} else {
+			err := tx.Commit(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to commit transaction: ", err)
+			} else {
+				logger.Log.Debug("Transaction committed successfully")
+			}
+		}
+	}()
+
+	// 1. Crea tabella temporanea
+	_, err = tx.Exec(ctx, `
+		CREATE TEMP TABLE temp_sensor_measurements (
+			time TIMESTAMP,
+			macrozone_name TEXT,
+			zone_name TEXT,
+			sensor_id TEXT,
+			type TEXT,
+			value DOUBLE PRECISION
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
 	for _, d := range batch.SensorData {
 		timestamp := time.Unix(d.Timestamp, 0).UTC()
@@ -145,23 +188,35 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 		})
 	}
 
-	// Esegue l'inserimento in batch
-	count, err := sensorDB.Db.CopyFrom(
-		sensorDB.Ctx,
-		tableName,
-		columns,
+	// 3. Inserisci i dati con CopyFrom nella tabella temporanea
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"temp_sensor_measurements"},
+		[]string{"time", "macrozone_name", "zone_name", "sensor_id", "type", "value"},
 		pgx.CopyFromRows(rows),
 	)
 	if err != nil {
 		return err
 	}
 
-	logger.Log.Info("Inserted sensor data rows successfully: ", count)
+	// 4. Copia nella tabella definitiva ignorando i duplicati
+	_, err = tx.Exec(ctx, `
+		INSERT INTO sensor_measurements (time, macrozone_name, zone_name, sensor_id, type, value)
+		SELECT time, macrozone_name, zone_name, sensor_id, type, value FROM temp_sensor_measurements
+		ON CONFLICT (time, macrozone_name, zone_name, sensor_id, type) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info("Inserted sensor data batch successfully: ", len(batch.SensorData), " entries")
 	return nil
 }
 
 // UpdateLastSeenBatch aggiorna il campo last_seen dei sensori in base ai dati ricevuti nel batch
 func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
+
+	logger.Log.Info("Updating last seen batch")
 
 	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
@@ -377,18 +432,54 @@ func GetLastRegionAggregatedData(ctx context.Context) (types.AggregatedStats, er
 	return aggregatedStats, nil
 }
 
-// InsertMacrozoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch
+// InsertMacrozoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch gestendo i duplicati
 func InsertMacrozoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+	logger.Log.Info("Inserting macrozone statistics data batch")
+
 	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
 		logger.Log.Info("No macrozone statistics data to insert, skipping")
 		return nil
 	}
 
-	tableName := pgx.Identifier{"macrozone_aggregated_statistics"}
-	columns := []string{"time", "macrozone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"}
+	// Inizio transazione
+	ctx := sensorDB.Ctx
+	conn, err := sensorDB.Db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
 
-	// Prepara i dati per l'inserimento
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		} else {
+			_ = tx.Commit(ctx)
+		}
+	}()
+
+	// 1. Crea tabella temporanea
+	_, err = tx.Exec(ctx, `
+		CREATE TEMP TABLE temp_macrozone_aggregated_statistics (
+			time TIMESTAMP,
+			macrozone_name TEXT,
+			type TEXT,
+			min_value DOUBLE PRECISION,
+			max_value DOUBLE PRECISION,
+			avg_value DOUBLE PRECISION,
+			avg_sum DOUBLE PRECISION,
+			avg_count INT
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
 	for _, s := range batch.Stats {
 		timestamp := time.Unix(s.Timestamp, 0).UTC()
@@ -404,33 +495,80 @@ func InsertMacrozoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error 
 		})
 	}
 
-	// Esegue l'inserimento in batch
-	count, err := sensorDB.Db.CopyFrom(
-		sensorDB.Ctx,
-		tableName,
-		columns,
+	// 3. Inserisci i dati con CopyFrom nella tabella temporanea
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"temp_macrozone_aggregated_statistics"},
+		[]string{"time", "macrozone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"},
 		pgx.CopyFromRows(rows),
 	)
 	if err != nil {
 		return err
 	}
 
-	logger.Log.Info("Inserted macrozone statistics data rows successfully: ", count)
+	// 4. Copia nella tabella definitiva ignorando i duplicati
+	_, err = tx.Exec(ctx, `
+		INSERT INTO macrozone_aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
+		SELECT time, macrozone_name, type, min_value, max_value, avg_value, avg_sum, avg_count FROM temp_macrozone_aggregated_statistics
+		ON CONFLICT (time, macrozone_name, type) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info("Inserted macrozone statistics data batch successfully: ", len(batch.Stats), " entries")
 	return nil
 }
 
-// InsertZoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch
+// InsertZoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch gestendo i duplicati
 func InsertZoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+	logger.Log.Info("Inserting zone statistics data batch")
+
 	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
 		logger.Log.Info("No zone statistics data to insert, skipping")
 		return nil
 	}
 
-	tableName := pgx.Identifier{"zone_aggregated_statistics"}
-	columns := []string{"time", "macrozone_name", "zone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"}
+	// Inizio transazione
+	ctx := sensorDB.Ctx
+	conn, err := sensorDB.Db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
 
-	// Prepara i dati per l'inserimento
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		} else {
+			_ = tx.Commit(ctx)
+		}
+	}()
+
+	// 1. Crea tabella temporanea
+	_, err = tx.Exec(ctx, `
+		CREATE TEMP TABLE temp_zone_aggregated_statistics (
+			time TIMESTAMP,
+			macrozone_name TEXT,
+			zone_name TEXT,
+			type TEXT,
+			min_value DOUBLE PRECISION,
+			max_value DOUBLE PRECISION,
+			avg_value DOUBLE PRECISION,
+			avg_sum DOUBLE PRECISION,
+			avg_count INT
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
 	for _, s := range batch.Stats {
 		timestamp := time.Unix(s.Timestamp, 0).UTC()
@@ -447,18 +585,28 @@ func InsertZoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
 		})
 	}
 
-	// Esegue l'inserimento in batch
-	count, err := sensorDB.Db.CopyFrom(
-		sensorDB.Ctx,
-		tableName,
-		columns,
+	// 3. Inserisci i dati con CopyFrom nella tabella temporanea
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"temp_zone_aggregated_statistics"},
+		[]string{"time", "macrozone_name", "zone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"},
 		pgx.CopyFromRows(rows),
 	)
 	if err != nil {
 		return err
 	}
 
-	logger.Log.Info("Inserted zone statistics data rows successfully: ", count)
+	// 4. Copia nella tabella definitiva ignorando i duplicati
+	_, err = tx.Exec(ctx, `
+		INSERT INTO zone_aggregated_statistics (time, macrozone_name, zone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
+		SELECT time, macrozone_name, zone_name, type, min_value, max_value, avg_value, avg_sum, avg_count FROM temp_zone_aggregated_statistics
+		ON CONFLICT (time, macrozone_name, zone_name, type) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info("Inserted zone statistics data batch successfully: ", len(batch.Stats), " entries")
 	return nil
 }
 

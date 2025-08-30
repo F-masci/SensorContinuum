@@ -55,7 +55,7 @@ func AggregateSensorData(ctx context.Context) {
 	}
 
 	var alignedStartTime time.Time
-	if lastAggregation != (types.AggregatedStats{}) {
+	if lastAggregation.Timestamp != 0 {
 		// Se esiste una precedente aggregazione, usiamo il suo timestamp come inizio del nuovo intervallo
 		alignedStartTime = time.Unix(lastAggregation.Timestamp, 0).UTC()
 		logger.Log.Info("Starting aggregation data from last aggregation time ", alignedStartTime.Format(time.RFC3339))

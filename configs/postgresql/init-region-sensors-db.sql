@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS sensor_measurements (
     zone_name       TEXT              NOT NULL,
     sensor_id       TEXT              NOT NULL,
     type            TEXT              NOT NULL,
-    value           DOUBLE PRECISION  NOT NULL
+    value           DOUBLE PRECISION  NOT NULL,
+    PRIMARY KEY (time, macrozone_name, zone_name, sensor_id, type)
 );
 
 -- 2. Crea la hypertable (solo se non esiste già)
@@ -38,7 +39,8 @@ CREATE TABLE IF NOT EXISTS region_aggregated_statistics (
     max_value       DOUBLE PRECISION  NOT NULL,
     avg_value       DOUBLE PRECISION  NOT NULL,
     avg_sum         DOUBLE PRECISION  NOT NULL,
-    avg_count       INTEGER           NOT NULL
+    avg_count       INTEGER           NOT NULL,
+    PRIMARY KEY (time, type)
 );
 
 -- 2. Crea la hypertable (solo se non esiste già)
@@ -57,7 +59,8 @@ CREATE TABLE IF NOT EXISTS macrozone_aggregated_statistics (
     max_value       DOUBLE PRECISION  NOT NULL,
     avg_value       DOUBLE PRECISION  NOT NULL,
     avg_sum         DOUBLE PRECISION  NOT NULL,
-    avg_count       INTEGER           NOT NULL
+    avg_count       INTEGER           NOT NULL,
+    PRIMARY KEY (time, macrozone_name, type)
 );
 
 -- 2. Crea la hypertable (solo se non esiste già)
@@ -77,7 +80,8 @@ CREATE TABLE IF NOT EXISTS zone_aggregated_statistics (
     max_value       DOUBLE PRECISION  NOT NULL,
     avg_value       DOUBLE PRECISION  NOT NULL,
     avg_sum         DOUBLE PRECISION  NOT NULL,
-    avg_count       INTEGER           NOT NULL
+    avg_count       INTEGER           NOT NULL,
+    PRIMARY KEY (time, macrozone_name, zone_name, type)
 );
 
 -- 2. Crea la hypertable (solo se non esiste già)

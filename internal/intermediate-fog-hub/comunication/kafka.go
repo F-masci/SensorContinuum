@@ -5,6 +5,7 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -106,7 +107,7 @@ func PullRealTimeData(dataChannel chan types.SensorData) error {
 	ctx := context.Background()
 	for {
 		// Legge il messaggio dal topic Kafka
-		m, err := kafkaRealTimeDataReader.ReadMessage(ctx)
+		m, err := kafkaRealTimeDataReader.FetchMessage(ctx)
 		if err != nil {
 			return err
 		}
@@ -133,6 +134,31 @@ func PullRealTimeData(dataChannel chan types.SensorData) error {
 	}
 }
 
+// CommitSensorDataBatchMessages esegue il commit degli offset dei messaggi Kafka in un batch di dati sensori.
+func CommitSensorDataBatchMessages(messages []kafka.Message) error {
+	// Se il lettore Kafka non è inizializzato, non fare nulla
+	if kafkaRealTimeDataReader == nil {
+		return nil
+	}
+
+	if len(messages) == 0 {
+		return nil
+	}
+
+	// Esegue il commit dei messaggi
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(environment.KafkaCommitTimeout)*time.Second)
+	defer cancel()
+
+	err := kafkaRealTimeDataReader.CommitMessages(ctx, messages...)
+	if err != nil {
+		logger.Log.Error("Failed to commit Kafka messages: ", err)
+		return err
+	}
+
+	logger.Log.Debug("Committed Kafka ", len(messages), " messages")
+	return nil
+}
+
 // PullStatisticsData si occupa di leggere i dati statistici aggregati.
 func PullStatisticsData(statsChannel chan types.AggregatedStats) error {
 
@@ -142,7 +168,7 @@ func PullStatisticsData(statsChannel chan types.AggregatedStats) error {
 	ctx := context.Background()
 	for {
 		// Legge il messaggio dal topic Kafka
-		m, err := kafkaStatisticsDataReader.ReadMessage(ctx)
+		m, err := kafkaStatisticsDataReader.FetchMessage(ctx)
 		if err != nil {
 			return err
 		}
@@ -170,6 +196,31 @@ func PullStatisticsData(statsChannel chan types.AggregatedStats) error {
 			logger.Log.Warn("Stats channel is full, discarding aggregated stats: ", stats)
 		}
 	}
+}
+
+// CommitStatisticsDataBatchMessages esegue il commit degli offset dei messaggi Kafka in un batch di dati statistici.
+func CommitStatisticsDataBatchMessages(messages []kafka.Message) error {
+	// Se il lettore Kafka non è inizializzato, non fare nulla
+	if kafkaStatisticsDataReader == nil {
+		return nil
+	}
+
+	if len(messages) == 0 {
+		return nil
+	}
+
+	// Esegue il commit dei messaggi
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(environment.KafkaCommitTimeout)*time.Second)
+	defer cancel()
+
+	err := kafkaStatisticsDataReader.CommitMessages(ctx, messages...)
+	if err != nil {
+		logger.Log.Error("Failed to commit Kafka messages: ", err)
+		return err
+	}
+
+	logger.Log.Debug("Committed Kafka ", len(messages), " messages")
+	return nil
 }
 
 // PullConfigurationMessage si occupa di leggere i messaggi di configurazione.

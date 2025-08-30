@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -16,17 +17,22 @@ type SensorData struct {
 	Timestamp     int64   `json:"timestamp"`
 	Type          string  `json:"type"`
 	Data          float64 `json:"data"`
+
+	KafkaMsg kafka.Message
+	MQTTMsg  MQTT.Message
 }
 
 func CreateSensorDataFromMQTT(msg MQTT.Message) (SensorData, error) {
 	var data SensorData
 	err := json.Unmarshal(msg.Payload(), &data)
+	data.MQTTMsg = msg
 	return data, err
 }
 
 func CreateSensorDataFromKafka(msg kafka.Message) (SensorData, error) {
 	var data SensorData
 	err := json.Unmarshal(msg.Value, &data)
+	data.KafkaMsg = msg
 	return data, err
 }
 
@@ -38,6 +44,8 @@ type SensorDataBatch struct {
 	maxCount   int
 	timeout    time.Duration
 	stopChan   chan struct{}
+	mu         sync.Mutex
+	saving     bool
 }
 
 // NewSensorDataBatch crea un nuovo batch di dati sensori con salvataggio e ticker
@@ -84,12 +92,19 @@ func (sdb *SensorDataBatch) startTicker() {
 			select {
 			// Al timeout del ticker, salva i dati se ce ne sono
 			case <-sdb.ticker.C:
+				// Acquisisci il lock per evitare salvataggi concorrenti
+				sdb.mu.Lock()
+
+				// Salva i dati se la funzione è definita
 				if sdb.SaveData != nil {
 					_ = sdb.SaveData(sdb)
 				}
+
 				// Dopo il salvataggio, resetta il batch e riavvia il ticker
+				// rilasciando il lock
 				sdb.Clear()
-				sdb.restartTicker()
+				sdb.mu.Unlock()
+				sdb.startTicker()
 			case <-sdb.stopChan:
 				return
 			}
@@ -97,21 +112,30 @@ func (sdb *SensorDataBatch) startTicker() {
 	}()
 }
 
-// restartTicker ferma il ticker corrente e ne crea uno nuovo
-func (sdb *SensorDataBatch) restartTicker() {
-	sdb.ticker.Stop()
-	sdb.ticker = time.NewTicker(sdb.timeout)
-}
-
 // AddSensorData aggiunge un nuovo dato sensore al batch e salva se il batch è pieno
 func (sdb *SensorDataBatch) AddSensorData(data SensorData) {
+	// Acquisisci il lock per evitare race condition
+	sdb.mu.Lock()
+	defer sdb.mu.Unlock()
+
 	if sdb.counter >= sdb.maxCount && sdb.SaveData != nil {
 		_ = sdb.SaveData(sdb)
 		sdb.Clear()
-		sdb.restartTicker()
+		sdb.startTicker()
 	}
 	sdb.SensorData = append(sdb.SensorData, data)
 	sdb.counter++
+}
+
+// GetKafkaMessages restituisce tutti i messaggi Kafka nel batch
+func (sdb *SensorDataBatch) GetKafkaMessages() []kafka.Message {
+	messages := make([]kafka.Message, 0, sdb.counter)
+	for _, data := range sdb.SensorData {
+		if data.KafkaMsg.Value != nil {
+			messages = append(messages, data.KafkaMsg)
+		}
+	}
+	return messages
 }
 
 // Count restituisce il numero di dati sensori nel batch
@@ -150,12 +174,15 @@ type AggregatedStats struct {
 	WeightedAvg   float64 `json:"weighted_avg,omitempty"`
 	WeightedSum   float64 `json:"weighted_sum,omitempty"`
 	WeightedCount float64 `json:"weighted_count,omitempty"`
+
+	KafkaMsg kafka.Message
 }
 
 // CreateAggregatedStatsFromKafka deserializza un messaggio Kafka in AggregatedStats
 func CreateAggregatedStatsFromKafka(msg kafka.Message) (AggregatedStats, error) {
 	var stats AggregatedStats
 	err := json.Unmarshal(msg.Value, &stats)
+	stats.KafkaMsg = msg
 	return stats, err
 }
 
@@ -167,6 +194,7 @@ type AggregatedStatsBatch struct {
 	maxCount  int
 	timeout   time.Duration
 	stopChan  chan struct{}
+	mu        sync.Mutex
 }
 
 // NewAggregatedStatsBatch crea un nuovo batch di statistiche aggregate con salvataggio e ticker
@@ -203,11 +231,19 @@ func (asb *AggregatedStatsBatch) startTicker() {
 		for {
 			select {
 			case <-asb.ticker.C:
+				// Acquisisci il lock per evitare salvataggi concorrenti
+				asb.mu.Lock()
+
+				// Salva le statistiche se la funzione è definita
 				if asb.SaveStats != nil {
 					_ = asb.SaveStats(asb)
 				}
+
+				// Dopo il salvataggio, resetta il batch e riavvia il ticker
+				// rilasciando il lock
 				asb.Clear()
-				asb.restartTicker()
+				asb.mu.Unlock()
+				asb.startTicker()
 			case <-asb.stopChan:
 				return
 			}
@@ -215,21 +251,31 @@ func (asb *AggregatedStatsBatch) startTicker() {
 	}()
 }
 
-// restartTicker ferma il ticker corrente e ne crea uno nuovo
-func (asb *AggregatedStatsBatch) restartTicker() {
-	asb.ticker.Stop()
-	asb.ticker = time.NewTicker(asb.timeout)
-}
-
 // AddAggregatedStats aggiunge una nuova statistica e salva se il batch è pieno
 func (asb *AggregatedStatsBatch) AddAggregatedStats(stats AggregatedStats) {
+
+	// Acquisisci il lock per evitare race condition
+	asb.mu.Lock()
+	defer asb.mu.Unlock()
+
 	if asb.counter >= asb.maxCount && asb.SaveStats != nil {
 		_ = asb.SaveStats(asb)
 		asb.Clear()
-		asb.restartTicker()
+		asb.startTicker()
 	}
 	asb.Stats = append(asb.Stats, stats)
 	asb.counter++
+}
+
+// GetKafkaMessages restituisce tutti i messaggi Kafka nel batch
+func (asb *AggregatedStatsBatch) GetKafkaMessages() []kafka.Message {
+	messages := make([]kafka.Message, 0, asb.counter)
+	for _, stats := range asb.Stats {
+		if stats.KafkaMsg.Value != nil {
+			messages = append(messages, stats.KafkaMsg)
+		}
+	}
+	return messages
 }
 
 // Count restituisce il numero di statistiche nel batch

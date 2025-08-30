@@ -1,6 +1,7 @@
 package intermediate_fog_hub
 
 import (
+	"SensorContinuum/internal/intermediate-fog-hub/comunication"
 	"SensorContinuum/internal/intermediate-fog-hub/environment"
 	"SensorContinuum/internal/intermediate-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
@@ -51,6 +52,13 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 				logger.Log.Error("Failed to update last seen for sensors: ", err)
 				return err
 			}
+			// Se tutto è andato a buon fine, esegui il commit
+			// dei messaggi Kafka
+			err := comunication.CommitSensorDataBatchMessages(b.GetKafkaMessages())
+			if err != nil {
+				logger.Log.Error("Failed to commit Kafka messages for sensor data batch: ", err)
+				return err
+			}
 			return nil
 		})
 	if err != nil {
@@ -62,6 +70,9 @@ func ProcessRealTimeData(dataChannel chan types.SensorData) {
 		logger.Log.Info("Real-time sensor data received: ", data)
 		batch.AddSensorData(data)
 	}
+
+	logger.Log.Warn("Data channel closed, stopping real-time data processing")
+	os.Exit(1)
 }
 
 // ProcessStatisticsData gestisce le statistiche aggregate e le salva.
@@ -80,6 +91,13 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 		func(b *types.AggregatedStatsBatch) error {
 			if err := storage.InsertMacrozoneStatisticsDataBatch(*b); err != nil {
 				logger.Log.Error("Failed to insert macrozone aggregated stats batch: ", err)
+				return err
+			}
+			// Se tutto è andato a buon fine, esegui il commit
+			// dei messaggi Kafka
+			err := comunication.CommitStatisticsDataBatchMessages(b.GetKafkaMessages())
+			if err != nil {
+				logger.Log.Error("Failed to commit Kafka messages for aggregated stats batch: ", err)
 				return err
 			}
 			return nil
@@ -101,6 +119,13 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 				logger.Log.Error("Failed to insert zone aggregated stats batch: ", err)
 				return err
 			}
+			// Se tutto è andato a buon fine, esegui il commit
+			// dei messaggi Kafka
+			err := comunication.CommitStatisticsDataBatchMessages(b.GetKafkaMessages())
+			if err != nil {
+				logger.Log.Error("Failed to commit Kafka messages for aggregated stats batch: ", err)
+				return err
+			}
 			return nil
 		})
 	if err != nil {
@@ -116,6 +141,9 @@ func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 			macrozoneBatch.AddAggregatedStats(stats)
 		}
 	}
+
+	logger.Log.Warn("Statistics channel closed, stopping statistics data processing")
+	os.Exit(1)
 }
 
 // ProcessProximityFogHubConfiguration gestisce i messaggi di configurazione per il Proximity Fog Hub.
@@ -148,6 +176,9 @@ func ProcessProximityFogHubConfiguration(msgChannel chan types.ConfigurationMsg)
 		logger.Log.Info("Configuration message processed: ", msg)
 
 	}
+
+	logger.Log.Warn("Configuration channel closed, stopping configuration message processing")
+	os.Exit(1)
 }
 
 // ProcessProximityFogHubHeartbeat gestisce i messaggi di heartbeat per il Proximity Fog Hub.
@@ -171,4 +202,7 @@ func ProcessProximityFogHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
 
 		logger.Log.Info("Heartbeat message processed successfully for hub: ", heartbeatMsg.HubID)
 	}
+
+	logger.Log.Warn("Heartbeat channel closed, stopping heartbeat message processing")
+	os.Exit(1)
 }

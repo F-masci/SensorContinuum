@@ -38,6 +38,9 @@ var ProximityConfigurationTopic string
 // ProximityHeartbeatTopic specifica il topic Kafka per i messaggi di heartbeat.
 var ProximityHeartbeatTopic string
 
+// KafkaCommitTimeout specifica il timeout per il commit degli offset Kafka.
+var KafkaCommitTimeout int = 5
+
 // Queste impostazioni sono utilizzate per la connessione ai databases PostgreSQL.
 
 /* ------ POSTGRESQL DATABASES ------ */
@@ -211,6 +214,16 @@ func SetupEnvironment() error {
 	ProximityHeartbeatTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC")
 	if !exists {
 		ProximityHeartbeatTopic = kafka.PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC
+	}
+
+	var KafkaCommitTimeoutStr string
+	KafkaCommitTimeoutStr, exists = os.LookupEnv("KAFKA_COMMIT_TIMEOUT")
+	if exists {
+		var err error
+		KafkaCommitTimeout, err = strconv.Atoi(KafkaCommitTimeoutStr)
+		if err != nil || KafkaCommitTimeout <= 0 {
+			return errors.New("invalid value for KAFKA_COMMIT_TIMEOUT: " + KafkaCommitTimeoutStr + ". Must be a positive integer representing seconds.")
+		}
 	}
 
 	/* ----- POSTGRESQL DATABASES SETTINGS ----- */

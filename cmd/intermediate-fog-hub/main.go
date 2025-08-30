@@ -63,7 +63,7 @@ func main() {
 	if environment.ServiceMode == types.IntermediateHubRealtimeService || environment.ServiceMode == types.IntermediateHubService {
 
 		// Avvia il processo di gestione dei dati intermedi
-		realTimeDataChannel := make(chan types.SensorData)
+		realTimeDataChannel := make(chan types.SensorData, environment.SensorDataBatchSize*3)
 		go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel)
 
 		go func() {
@@ -83,7 +83,7 @@ func main() {
 	if environment.ServiceMode == types.IntermediateHubStatisticsService || environment.ServiceMode == types.IntermediateHubService {
 
 		// Avvia il processo di gestione dei dati statistici
-		statsDataChannel := make(chan types.AggregatedStats)
+		statsDataChannel := make(chan types.AggregatedStats, environment.AggregatedDataBatchSize*3)
 		go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
 
 		go func() {
