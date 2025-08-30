@@ -222,7 +222,7 @@ func SetupEnvironment() error {
 		MqttHubBrokerPort = commonPort
 	}
 
-	SensorDataTopic = "$share/edge-hub-data/sensor-data/" + EdgeMacrozone + "/" + EdgeZone
+	SensorDataTopic = "$share/edge-hub_" + EdgeMacrozone + "_" + EdgeZone + "/sensor-data/" + EdgeMacrozone + "/" + EdgeZone
 	FilteredDataTopic = "filtered-data/" + EdgeMacrozone + "/" + EdgeZone
 	HubConfigurationTopic = "configuration/hub/" + EdgeMacrozone + "/" + EdgeZone
 	SensorConfigurationTopic = "configuration/sensor/" + EdgeMacrozone + "/" + EdgeZone

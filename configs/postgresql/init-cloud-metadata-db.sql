@@ -1,7 +1,8 @@
 -- 1. Tabella regioni con name come chiave primaria
 CREATE TABLE IF NOT EXISTS regions (
     name                TEXT PRIMARY KEY,
-    location            geometry(Polygon, 4326) NOT NULL
+    location            geometry(Polygon, 4326) NOT NULL,
+    creation_time       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_regions_location ON regions USING GIST (location);
@@ -12,7 +13,7 @@ CREATE TABLE IF NOT EXISTS macrozones (
     name                TEXT NOT NULL,
     location            geometry(Polygon, 4326) NOT NULL,
     type                TEXT NOT NULL CHECK (type IN ('indoor', 'outdoor')),
-    creation_time       TIMESTAMP,
+    creation_time       TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (region_name, name)
 );
 
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS zones (
     macrozone_name          TEXT NOT NULL,
     name                    TEXT NOT NULL,
     location                geometry(Polygon, 4326) NOT NULL,
-    creation_time           TIMESTAMP,
+    creation_time           TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (region_name, macrozone_name, name),
     FOREIGN KEY (region_name, macrozone_name)
         REFERENCES macrozones(region_name, name) ON DELETE CASCADE

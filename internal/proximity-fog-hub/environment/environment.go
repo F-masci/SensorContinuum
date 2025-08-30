@@ -17,7 +17,7 @@ import (
 // OperationMode specifica la modalità di funzionamento del servizio.
 var OperationMode types.OperationModeType
 
-// ServiceMode specifica il tipo di servizio Edge Hub in esecuzione.
+// ServiceMode specifica il tipo di servizio in esecuzione.
 var ServiceMode types.Service
 
 var EdgeMacrozone string
@@ -109,38 +109,35 @@ var PostgresPort string
 // PostgresDatabase specifica il nome del database PostgreSQL.
 var PostgresDatabase string
 
-// AggregationInterval specifica l'intervallo di tempo per l'aggregazione dei dati.
-const AggregationInterval = 15 * time.Minute
+const (
+	// AggregationInterval specifica l'intervallo di tempo per l'aggregazione dei dati.
+	AggregationInterval = 15 * time.Minute
+	// AggregationStartingOffset è il tempo in meno per costruire il primo intervallo di aggregazione,
+	// in modo da includere eventuali dati ricevuti prima dell'avvio del servizio.
+	AggregationStartingOffset = -24 * time.Hour
+	// AggregationFetchOffset è il tempo extra per recuperare i dati dai sensori,
+	// in modo da includere eventuali ritardi nella ricezione dei messaggi.
+	// Specifica l'offest negativo di tempo rispetto all'istante corrente
+	// per recuperare i dati aggregati.
+	AggregationFetchOffset = -10 * time.Minute
 
-// AggregationStartingOffset è il tempo in meno per costruire il primo intervallo di aggregazione,
-// in modo da includere eventuali dati ricevuti prima dell'avvio del servizio.
-const AggregationStartingOffset = -24 * time.Hour
+	// OutboxPollInterval definisce ogni quanto il dispatcher controlla la tabella outbox.
+	OutboxPollInterval = 2 * time.Minute
+	// OutboxBatchSize definisce quanti messaggi il dispatcher tenta di inviare in ogni ciclo.
+	OutboxBatchSize = 50
+	// OutboxMaxAttempts definisce il numero massimo di tentativi di invio per ogni batch di messaggi.
+	OutboxMaxAttempts = 3
 
-// AggregationFetchOffset è il tempo extra per recuperare i dati dai sensori,
-// in modo da includere eventuali ritardi nella ricezione dei messaggi.
-// Specifica l'offest negativo di tempo rispetto all'istante corrente
-// per recuperare i dati aggregati.
-const AggregationFetchOffset = -10 * time.Minute
+	// CleanerInterval definisce ogni quanto il cleaner si attiva per pulire la tabella outbox.
+	CleanerInterval = 5 * time.Minute
+	// SentMessageMaxAge definisce l'età minima che un messaggio 'sent' deve avere prima di essere eliminato.
+	// Questo fornisce una finestra di sicurezza per il debug o l'auditing, evitando di cancellare
+	// messaggi che sono stati appena inviati.
+	SentMessageMaxAge = 12 * time.Hour
 
-// OutboxPollInterval definisce ogni quanto il dispatcher controlla la tabella outbox.
-const OutboxPollInterval = 2 * time.Minute
-
-// OutboxBatchSize definisce quanti messaggi il dispatcher tenta di inviare in ogni ciclo.
-const OutboxBatchSize = 50
-
-// OutboxMaxAttempts definisce il numero massimo di tentativi di invio per ogni batch di messaggi.
-const OutboxMaxAttempts = 3
-
-// CleanerInterval definisce ogni quanto il cleaner si attiva per pulire la tabella outbox.
-const CleanerInterval = 5 * time.Minute
-
-// SentMessageMaxAge definisce l'età minima che un messaggio 'sent' deve avere prima di essere eliminato.
-// Questo fornisce una finestra di sicurezza per il debug o l'auditing, evitando di cancellare
-// messaggi che sono stati appena inviati.
-const SentMessageMaxAge = 12 * time.Hour
-
-// HeartbeatInterval specifica l'intervallo di tempo tra i messaggi di heartbeat inviati all'Intermediate Fog Hub.
-const HeartbeatInterval = timeouts.HeartbeatInterval
+	// HeartbeatInterval specifica l'intervallo di tempo tra i messaggi di heartbeat inviati all'Intermediate Fog Hub.
+	HeartbeatInterval = timeouts.HeartbeatInterval
+)
 
 var HealthzServer bool = false
 var HealthzServerPort string = ":"
@@ -221,7 +218,7 @@ func SetupEnvironment() error {
 		MqttPort = mosquitto.PORT
 	}
 
-	FilteredDataTopic = "$share/proximity-fog-hub/filtered-data/" + EdgeMacrozone
+	FilteredDataTopic = "$share/proximity-fog-hub_" + EdgeMacrozone + "/filtered-data/" + EdgeMacrozone
 	HubConfigurationTopic = "configuration/hub/" + EdgeMacrozone
 	HeartbeatTopic = "heartbeat/" + EdgeMacrozone
 

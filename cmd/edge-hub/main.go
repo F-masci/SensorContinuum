@@ -69,7 +69,7 @@ func main() {
 
 	}
 
-	/* ----- AGGREGATION SERVICE ------ */
+	/* ----- AGGREGATOR SERVICE ------ */
 
 	if (environment.ServiceMode == types.EdgeHubAggregatorService && environment.OperationMode == types.OperationModeLoop) || environment.ServiceMode == types.EdgeHubService {
 

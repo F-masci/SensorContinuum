@@ -127,16 +127,22 @@ func SendAggregatedData(statsBatch []types.AggregatedStats) error {
 	return statsKafkaWriter.WriteMessages(ctx, messages...)
 }
 
+// SendConfigurationMessage invia i messaggi di configurazione al topic Kafka dedicato
 func SendConfigurationMessage(msg types.ConfigurationMsg) error {
+	// Assicuriamoci di essere connessi a Kafka
 	connect()
 
+	// Serializza il messaggio in JSON
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
+
+	// Imposta un contesto con timeout per evitare blocchi indefiniti
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(environment.KafkaPublishTimeout)*time.Second)
 	defer cancel()
 
+	// Invia il messaggio a Kafka
 	return configurationKafkaWriter.WriteMessages(ctx,
 		kafka.Message{
 			Key:   []byte(environment.EdgeMacrozone),
@@ -174,15 +180,23 @@ func SendOwnRegistrationMessage() {
 
 // SendHeartbeatMessage invia un messaggio di heartbeat al topic Kafka dedicato
 func SendHeartbeatMessage(msg types.HeartbeatMsg) error {
+	// Assicuriamoci di essere connessi a Kafka
 	connect()
 
+	// Serializza il messaggio in JSON
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
+
+	// Imposta un contesto con timeout per evitare blocchi indefiniti
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(environment.KafkaPublishTimeout)*time.Second)
 	defer cancel()
 
+	// Crea una chiave unica per il messaggio di heartbeat
+	// in modo che i messaggi vengano distribuiti uniformemente tra le partizioni
+	// e non si sovrascrivano a vicenda
+	// La chiave è composta da Macroarea-Zona-HubID
 	key := msg.EdgeMacrozone + "-" + msg.EdgeZone + "-" + msg.HubID
 	return heartbeatKafkaWriter.WriteMessages(ctx,
 		kafka.Message{
@@ -195,21 +209,27 @@ func SendHeartbeatMessage(msg types.HeartbeatMsg) error {
 
 // SendOwnHeartbeatMessage invia periodicamente un messaggio di heartbeat al Intermediate Fog Hub
 func SendOwnHeartbeatMessage() {
+
+	// Invia il messaggio di heartbeat periodicamente
 	for {
+
 		logger.Log.Info("Sending own heartbeat message to Intermediate Fog Hub...")
 
+		// Crea il messaggio di heartbeat
 		heartbeatMsg := types.HeartbeatMsg{
 			EdgeMacrozone: environment.EdgeMacrozone,
 			HubID:         environment.HubID,
 			Timestamp:     time.Now().UTC().Unix(),
 		}
 
+		// Invia il messaggio di heartbeat
 		if err := SendHeartbeatMessage(heartbeatMsg); err != nil {
 			logger.Log.Error("Failed to send own heartbeat message, error: ", err)
 		}
 
 		logger.Log.Info("Own heartbeat message sent successfully.")
 
+		// Attende l'intervallo di heartbeat prima di inviare il prossimo messaggio
 		time.Sleep(environment.HeartbeatInterval)
 
 	}

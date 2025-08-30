@@ -1,6 +1,7 @@
 package main
 
 import (
+	"SensorContinuum/configs/timeouts"
 	"SensorContinuum/internal/intermediate-fog-hub"
 	"SensorContinuum/internal/intermediate-fog-hub/aggregation"
 	"SensorContinuum/internal/intermediate-fog-hub/comunication"
@@ -10,6 +11,7 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
+	"context"
 	"os"
 	"time"
 )
@@ -24,89 +26,135 @@ import (
 */
 func main() {
 
-	// Inizializza l'ambiente
+	// Setup dell'ambiente
 	if err := environment.SetupEnvironment(); err != nil {
 		println("Failed to setup environment:", err.Error())
-		return
+		os.Exit(1)
 	}
 
-	// Inizializza il logger con il contesto
+	// Inizializza il logger
 	logger.CreateLogger(logger.GetIntermediateHubContext(environment.HubID))
 	logger.PrintCurrentLevel()
 	logger.Log.Info("Starting Intermediate Fog Hub...")
-	// Inizializza la connessione a Kafka
-	storage.Register()
 
-	// Avvia il processo di gestione dei dati intermedi
-	realTimeDataChannel := make(chan types.SensorData)
-	go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel)
+	// Si registra nel sistema
+	logger.Log.Info("Registering the intermediate fog hub...")
+	if err := storage.SelfRegistration(); err != nil {
+		logger.Log.Error("Failed to register the intermediate fog hub: ", err)
+		os.Exit(1)
+	}
+	logger.Log.Info("Intermediate fog hub registered successfully.")
 
-	// Avvia il processo di gestione dei dati statistici
-	statsDataChannel := make(chan types.AggregatedStats)
-	go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
-
-	// Avvia il processo di gestione dei messaggi di configurazione
-	configurationMessageChannel := make(chan types.ConfigurationMsg)
-	go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMessageChannel)
-
-	// Avvia il processo di gestione dei messaggi di heartbeat
-	heartbeatChannel := make(chan types.HeartbeatMsg)
-	go intermediate_fog_hub.ProcessProximityFogHubHeartbeat(heartbeatChannel)
-
+	// Avvia il thread per l'aggiornamento del last seen
 	go func() {
-		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
-		// Questo farà terminare l'applicazione.
-		err := comunication.PullRealTimeData(realTimeDataChannel)
-		if err != nil {
-			logger.Log.Error("Kafka consumer for the real time data has stopped: ", err.Error())
-			os.Exit(1)
+		for {
+			err := storage.UpdateLastSeenRegionHub()
+			if err != nil {
+				logger.Log.Error("Failed to update last seen timestamp: ", err)
+				os.Exit(1)
+			}
+			logger.Log.Info("Updated last seen timestamp")
+			time.Sleep(timeouts.HeartbeatInterval)
 		}
 	}()
 
-	go func() {
-		err := comunication.PullStatisticsData(statsDataChannel)
-		if err != nil {
+	/* -------- REAL-TIME SERVICE -------- */
+
+	if environment.ServiceMode == types.IntermediateHubRealtimeService || environment.ServiceMode == types.IntermediateHubService {
+
+		// Avvia il processo di gestione dei dati intermedi
+		realTimeDataChannel := make(chan types.SensorData)
+		go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel)
+
+		go func() {
 			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 			// Questo farà terminare l'applicazione.
-			logger.Log.Error("Kafka consumer for statistics has stopped: ", err)
-			os.Exit(1)
-		}
-	}()
-
-	go func() {
-		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
-		// Questo farà terminare l'applicazione.
-		err := comunication.PullConfigurationMessage(configurationMessageChannel)
-		if err != nil {
-			logger.Log.Error("Kafka consumer for configuration message has stopped: ", err.Error())
-			os.Exit(1)
-		}
-	}()
-
-	go func() {
-		// Se la funzione ritorna (a causa di un errore), lo logghiamo.
-		// Questo farà terminare l'applicazione.
-		err := comunication.PullHeartbeatMessage(heartbeatChannel)
-		if err != nil {
-			logger.Log.Error("Kafka consumer for heartbeat has stopped: ", err.Error())
-			os.Exit(1)
-		}
-	}()
-
-	// Avvio del ticker per l'aggregazione periodica, per ora metto ogni 2 minuti ma poi passa a ogni 5
-	statsTicker := time.NewTicker(2 * time.Minute)
-	logger.Log.Info("Ticker started, aggregating data every 2 minutes from now.")
-	defer statsTicker.Stop()
-
-	go func() {
-
-		for {
-			select {
-			case <-statsTicker.C:
-				aggregation.PerformAggregationAndSave()
+			err := comunication.PullRealTimeData(realTimeDataChannel)
+			if err != nil {
+				logger.Log.Error("Kafka consumer for the real time data has stopped: ", err.Error())
+				os.Exit(1)
 			}
-		}
-	}()
+		}()
+
+	}
+
+	/* -------- STATISTICS SERVICE -------- */
+
+	if environment.ServiceMode == types.IntermediateHubStatisticsService || environment.ServiceMode == types.IntermediateHubService {
+
+		// Avvia il processo di gestione dei dati statistici
+		statsDataChannel := make(chan types.AggregatedStats)
+		go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
+
+		go func() {
+			err := comunication.PullStatisticsData(statsDataChannel)
+			if err != nil {
+				// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+				// Questo farà terminare l'applicazione.
+				logger.Log.Error("Kafka consumer for statistics has stopped: ", err)
+				os.Exit(1)
+			}
+		}()
+
+	}
+
+	/* -------- CONFIGURATION SERVICE -------- */
+
+	if environment.ServiceMode == types.IntermediateHubConfigurationService || environment.ServiceMode == types.IntermediateHubService {
+
+		// Avvia il processo di gestione dei messaggi di configurazione
+		configurationMessageChannel := make(chan types.ConfigurationMsg)
+		go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMessageChannel)
+
+		go func() {
+			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+			// Questo farà terminare l'applicazione.
+			err := comunication.PullConfigurationMessage(configurationMessageChannel)
+			if err != nil {
+				logger.Log.Error("Kafka consumer for configuration message has stopped: ", err.Error())
+				os.Exit(1)
+			}
+		}()
+
+	}
+
+	/* -------- HEARTBEAT SERVICE -------- */
+
+	if environment.ServiceMode == types.IntermediateHubHeartbeatService || environment.ServiceMode == types.IntermediateHubService {
+
+		// Avvia il processo di gestione dei messaggi di heartbeat
+		heartbeatChannel := make(chan types.HeartbeatMsg)
+		go intermediate_fog_hub.ProcessProximityFogHubHeartbeat(heartbeatChannel)
+
+		go func() {
+			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
+			// Questo farà terminare l'applicazione.
+			err := comunication.PullHeartbeatMessage(heartbeatChannel)
+			if err != nil {
+				logger.Log.Error("Kafka consumer for heartbeat has stopped: ", err.Error())
+				os.Exit(1)
+			}
+		}()
+
+	}
+
+	/* -------- AGGREGATOR SERVICE -------- */
+
+	if (environment.ServiceMode == types.IntermediateHubAggregatorService && environment.OperationMode == types.OperationModeLoop) || environment.ServiceMode == types.IntermediateHubService {
+		// Avvia il servizio di aggregazione in una goroutine separata.
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		aggregation.Run(ctx)
+	}
+
+	if environment.ServiceMode == types.IntermediateHubAggregatorService && environment.OperationMode == types.OperationModeOnce {
+		// Esegue una singola aggregazione e termina.
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		aggregation.AggregateSensorData(ctx)
+		logger.Log.Info("Aggregation completed. The service will now terminate.")
+		os.Exit(0)
+	}
 
 	/* -------- HEALTH CHECK SERVER -------- */
 

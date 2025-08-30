@@ -99,7 +99,7 @@ func main() {
 		go proximity_fog_hub.ProcessEdgeHubHeartbeat(heartbeatMessageChannel)
 	}
 
-	/* ----- AGGREGATION SERVICE ------ */
+	/* ----- AGGREGATOR SERVICE ------ */
 
 	if (environment.ServiceMode == types.ProximityHubAggregatorService && environment.OperationMode == types.OperationModeLoop) || environment.ServiceMode == types.ProximityHubService {
 		// Avvia il servizio di aggregazione in una goroutine separata.

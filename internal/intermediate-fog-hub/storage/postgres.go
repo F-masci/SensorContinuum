@@ -21,8 +21,10 @@ type postgresDb struct {
 	Url string
 }
 
+// Connect stabilisce la connessione al database PostgreSQL
 func (p *postgresDb) Connect() error {
 
+	// Se la connessione è già stabilita, non fare nulla
 	if p.Db != nil {
 		logger.Log.Debug("Database connection already established")
 		return nil
@@ -35,35 +37,43 @@ func (p *postgresDb) Connect() error {
 		logger.Log.Error("Unable to connect to the database: ", err)
 		os.Exit(1)
 	}
+
 	logger.Log.Info("Connected to the database successfully")
 	return nil
 }
 
+// Close chiude la connessione al database PostgreSQL
 func (p *postgresDb) Close() {
 	p.Db.Close()
 }
 
+// regionDB è l'istanza del database per i metadati della regione
 var regionDB postgresDb = postgresDb{
 	Db:  nil,
 	Ctx: context.Background(),
 	Url: "",
 }
 
+// SetupRegionDbConnection configura e stabilisce la connessione al database dei metadati della regione
 func SetupRegionDbConnection() error {
 
+	// Se la connessione è già stabilita, non fare nulla
 	if regionDB.Db != nil {
 		logger.Log.Debug("Database connection already established")
 		return nil
 	}
 
+	// Costruisce la stringa di connessione
 	regionDB.Url = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		environment.PostgresRegionUser, environment.PostgresRegionPass, environment.PostgresRegionHost, environment.PostgresRegionPort, environment.PostgresRegionDatabase,
 	)
 
+	// Stabilisce la connessione
 	return regionDB.Connect()
 }
 
+// CloseRegionDbConnection chiude la connessione al database dei metadati della regione
 func CloseRegionDbConnection() {
 	if regionDB.Db != nil {
 		regionDB.Close()
@@ -73,27 +83,33 @@ func CloseRegionDbConnection() {
 	}
 }
 
+// sensorDB è l'istanza del database per le misurazioni dei sensori
 var sensorDB postgresDb = postgresDb{
 	Db:  nil,
 	Ctx: context.Background(),
 	Url: "",
 }
 
+// SetupSensorDbConnection configura e stabilisce la connessione al database delle misurazioni dei sensori
 func SetupSensorDbConnection() error {
 
+	// Se la connessione è già stabilita, non fare nulla
 	if sensorDB.Db != nil {
 		logger.Log.Debug("Database connection already established")
 		return nil
 	}
 
+	// Costruisce la stringa di connessione
 	sensorDB.Url = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		environment.PostgresSensorUser, environment.PostgresSensorPass, environment.PostgresSensorHost, environment.PostgresSensorPort, environment.PostgresSensorDatabase,
 	)
 
+	// Stabilisce la connessione
 	return sensorDB.Connect()
 }
 
+// CloseSensorDbConnection chiude la connessione al database delle misurazioni dei sensori
 func CloseSensorDbConnection() {
 	if sensorDB.Db != nil {
 		sensorDB.Close()
@@ -103,16 +119,19 @@ func CloseSensorDbConnection() {
 	}
 }
 
+// InsertSensorDataBatch inserisce un batch di dati dei sensori nel database
 func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 
+	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
-		logger.Log.Warn("No sensor data to insert")
+		logger.Log.Info("No sensor data to insert, skipping")
 		return nil
 	}
 
 	tableName := pgx.Identifier{"sensor_measurements"}
 	columns := []string{"time", "macrozone_name", "zone_name", "sensor_id", "type", "value"}
 
+	// Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
 	for _, d := range batch.SensorData {
 		timestamp := time.Unix(d.Timestamp, 0).UTC()
@@ -126,6 +145,7 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 		})
 	}
 
+	// Esegue l'inserimento in batch
 	count, err := sensorDB.Db.CopyFrom(
 		sensorDB.Ctx,
 		tableName,
@@ -140,10 +160,12 @@ func InsertSensorDataBatch(batch types.SensorDataBatch) error {
 	return nil
 }
 
+// UpdateLastSeenBatch aggiorna il campo last_seen dei sensori in base ai dati ricevuti nel batch
 func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 
+	// Se il batch è vuoto, non fare nulla
 	if batch.Count() == 0 {
-		logger.Log.Warn("No sensor data to update last seen")
+		logger.Log.Info("No sensor data to update last seen, skipping")
 		return nil
 	}
 
@@ -177,6 +199,7 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 		return rows
 	}
 
+	// Inizio transazione
 	ctx := regionDB.Ctx
 	conn, err := regionDB.Db.Acquire(ctx)
 	if err != nil {
@@ -209,6 +232,7 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 		return err
 	}
 
+	// Inserisco i dati calcolati nella tabella temporanea
 	rows := buildRows(lastSeenSensors, 3)
 	logger.Log.Debug("Updating last seen for sensors: ", len(rows), " entries")
 	for r := range rows {
@@ -246,6 +270,7 @@ func UpdateLastSeenBatch(batch types.SensorDataBatch) error {
 	return nil
 }
 
+// UpdateLastSeenRegionHub aggiorna il campo last_seen dell'hub regionale
 func UpdateLastSeenRegionHub() error {
 	query := `
 		UPDATE region_hubs
@@ -256,6 +281,7 @@ func UpdateLastSeenRegionHub() error {
 	return err
 }
 
+// UpdateLastSeenMacrozoneHub aggiorna il campo last_seen dell'hub di macrozona
 func UpdateLastSeenMacrozoneHub(heartbeatMsg types.HeartbeatMsg) error {
 	query := `
 		UPDATE macrozone_hubs
@@ -267,6 +293,7 @@ func UpdateLastSeenMacrozoneHub(heartbeatMsg types.HeartbeatMsg) error {
 	return err
 }
 
+// UpdateLastSeenZoneHub aggiorna il campo last_seen dell'hub di zona
 func UpdateLastSeenZoneHub(heartbeatMsg types.HeartbeatMsg) error {
 	query := `
 		UPDATE zone_hubs
@@ -278,6 +305,7 @@ func UpdateLastSeenZoneHub(heartbeatMsg types.HeartbeatMsg) error {
 	return err
 }
 
+// InsertRegionStatisticsData inserisce i dati aggregati delle statistiche nel database
 func InsertRegionStatisticsData(s types.AggregatedStats) error {
 	query := `
 		INSERT INTO region_aggregated_statistics (time, type, min_value, max_value, avg_value, avg_sum, avg_count)
@@ -315,26 +343,123 @@ func GetMacrozoneStatisticsData(ctx context.Context, startTime, endTime time.Tim
 	return stats, nil
 }
 
-// InsertMacrozoneStatisticsData inserisce i dati aggregati delle statistiche nel database
-func InsertMacrozoneStatisticsData(s types.AggregatedStats) error {
+// GetLastRegionAggregatedData ritorna le ultime statistiche aggregate a livello di regione
+func GetLastRegionAggregatedData(ctx context.Context) (types.AggregatedStats, error) {
 	query := `
-        INSERT INTO macrozone_aggregated_statistics (time, macrozone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `
-	t := time.Unix(s.Timestamp, 0).UTC()
-	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Type, s.Min, s.Max, s.Avg, s.Sum, s.Count)
-	return err
+		SELECT 
+		    time,
+			type,
+			min_value,
+			max_value,
+			avg_value,
+			avg_sum,
+			avg_count
+		FROM region_aggregated_statistics
+		ORDER BY time DESC
+		LIMIT 1
+	`
+	rows, err := sensorDB.Db.Query(ctx, query)
+	if err != nil {
+		return types.AggregatedStats{}, fmt.Errorf("query for last macrozone aggregated data failed: %w", err)
+	}
+	defer rows.Close()
+
+	var aggregatedStats types.AggregatedStats
+	for rows.Next() {
+		var t time.Time
+		err := rows.Scan(&t, &aggregatedStats.Type, &aggregatedStats.Min, &aggregatedStats.Max, &aggregatedStats.Avg, &aggregatedStats.Sum, &aggregatedStats.Count)
+		if err != nil {
+			return types.AggregatedStats{}, fmt.Errorf("scanning last macrozone aggregated data failed: %w", err)
+		}
+		aggregatedStats.Timestamp = t.Unix()
+	}
+
+	return aggregatedStats, nil
 }
 
-// InsertZoneStatisticsData inserisce i dati aggregati delle statistiche nel database
-func InsertZoneStatisticsData(s types.AggregatedStats) error {
-	query := `
-        INSERT INTO zone_aggregated_statistics (time, macrozone_name, zone_name, type, min_value, max_value, avg_value, avg_sum, avg_count)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `
-	t := time.Unix(s.Timestamp, 0).UTC()
-	_, err := sensorDB.Db.Exec(sensorDB.Ctx, query, t, s.Macrozone, s.Zone, s.Type, s.Min, s.Max, s.Avg, s.Sum, s.Count)
-	return err
+// InsertMacrozoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch
+func InsertMacrozoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+	// Se il batch è vuoto, non fare nulla
+	if batch.Count() == 0 {
+		logger.Log.Info("No macrozone statistics data to insert, skipping")
+		return nil
+	}
+
+	tableName := pgx.Identifier{"macrozone_aggregated_statistics"}
+	columns := []string{"time", "macrozone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"}
+
+	// Prepara i dati per l'inserimento
+	rows := make([][]interface{}, 0, batch.Count())
+	for _, s := range batch.Stats {
+		timestamp := time.Unix(s.Timestamp, 0).UTC()
+		rows = append(rows, []interface{}{
+			timestamp,
+			s.Macrozone,
+			s.Type,
+			s.Min,
+			s.Max,
+			s.Avg,
+			s.Sum,
+			s.Count,
+		})
+	}
+
+	// Esegue l'inserimento in batch
+	count, err := sensorDB.Db.CopyFrom(
+		sensorDB.Ctx,
+		tableName,
+		columns,
+		pgx.CopyFromRows(rows),
+	)
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info("Inserted macrozone statistics data rows successfully: ", count)
+	return nil
+}
+
+// InsertZoneStatisticsDataBatch inserisce i dati aggregati delle statistiche nel database in batch
+func InsertZoneStatisticsDataBatch(batch types.AggregatedStatsBatch) error {
+	// Se il batch è vuoto, non fare nulla
+	if batch.Count() == 0 {
+		logger.Log.Info("No zone statistics data to insert, skipping")
+		return nil
+	}
+
+	tableName := pgx.Identifier{"zone_aggregated_statistics"}
+	columns := []string{"time", "macrozone_name", "zone_name", "type", "min_value", "max_value", "avg_value", "avg_sum", "avg_count"}
+
+	// Prepara i dati per l'inserimento
+	rows := make([][]interface{}, 0, batch.Count())
+	for _, s := range batch.Stats {
+		timestamp := time.Unix(s.Timestamp, 0).UTC()
+		rows = append(rows, []interface{}{
+			timestamp,
+			s.Macrozone,
+			s.Zone,
+			s.Type,
+			s.Min,
+			s.Max,
+			s.Avg,
+			s.Sum,
+			s.Count,
+		})
+	}
+
+	// Esegue l'inserimento in batch
+	count, err := sensorDB.Db.CopyFrom(
+		sensorDB.Ctx,
+		tableName,
+		columns,
+		pgx.CopyFromRows(rows),
+	)
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info("Inserted zone statistics data rows successfully: ", count)
+	return nil
 }
 
 // RegisterMacrozoneHub Registra o aggiorna un hub di macrozona (proximity fog hub)
@@ -379,14 +504,17 @@ func RegisterSensor(msg types.ConfigurationMsg) error {
 	return err
 }
 
-func Register() error {
+// SelfRegistration registra o aggiorna l'hub regionale
+func SelfRegistration() error {
 
+	// Assicura che la connessione al database sia attiva
 	err := SetupRegionDbConnection()
 	if err != nil {
 		logger.Log.Error("Failed to connect to the sensor database: ", err)
 		os.Exit(1)
 	}
 
+	// Inserisce o aggiorna l'hub regionale
 	query := `
 	INSERT INTO region_hubs (id, service, registration_time, last_seen)
 	VALUES ($1, $2, CURRENT_TIMESTAMP AT TIME ZONE 'UTC', CURRENT_TIMESTAMP AT TIME ZONE 'UTC')

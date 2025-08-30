@@ -103,6 +103,7 @@ func ProcessRawPendingMessages(ctx context.Context) {
 
 // ProcessAggregatedPendingMessages recupera e processa i messaggi pendenti dalla tabella outbox.
 func ProcessAggregatedPendingMessages(ctx context.Context) {
+
 	var attempts int = 0
 	nMessages := environment.OutboxBatchSize
 

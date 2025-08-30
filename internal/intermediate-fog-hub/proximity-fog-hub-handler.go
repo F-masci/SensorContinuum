@@ -31,78 +31,89 @@ func setupRegionDbConnection() {
 // ProcessRealTimeData gestisce i dati in tempo reale ricevuti dai sensori e li salva in batch.
 func ProcessRealTimeData(dataChannel chan types.SensorData) {
 
+	// Connessione ai databases
 	setupSensorDbConnection()
 	setupRegionDbConnection()
+
 	// Batch per i dati dei sensori
-	var batch = types.NewSensorDataBatch()
-
-	// Timer per la scrittura dei dati in batch
-	timer := time.NewTimer(time.Second * time.Duration(environment.SensorDataBatchTimeout))
-
-	for {
-		select {
-		case data := <-dataChannel:
-			logger.Log.Info("Received real-time Data from: ", data.SensorID)
-
-			if batch.Count() >= environment.SensorDataBatchSize {
-				logger.Log.Info("Inserting batch data into the database")
-				if err := storage.InsertSensorDataBatch(batch); err != nil {
-					logger.Log.Error("Failed to insert sensor data batch: ", err)
-				}
-				logger.Log.Info("Updating last seen for batch sensors")
-				if err := storage.UpdateLastSeenBatch(batch); err != nil {
-					logger.Log.Error("Failed to update last seen for sensors: ", err)
-				}
-				logger.Log.Info("Clearing batch after processing")
-				batch.Clear()
-				timer.Reset(time.Second * 10)
-				continue
+	batch, err := types.NewSensorDataBatch(
+		environment.SensorDataBatchSize,
+		time.Duration(environment.SensorDataBatchTimeout)*time.Second,
+		// Funzione di salvataggio dei dati
+		// Viene chiamata quando il batch è pieno o scade il timeout
+		// Salva i dati nel database e aggiorna il last seen dei sensori
+		func(b *types.SensorDataBatch) error {
+			if err := storage.InsertSensorDataBatch(*b); err != nil {
+				logger.Log.Error("Failed to insert sensor data batch: ", err)
+				return err
 			}
-
-			logger.Log.Debug("Adding sensor data to batch: ", data.SensorID)
-			batch.AddSensorData(data)
-
-		case <-timer.C:
-			if batch.Count() > 0 {
-				logger.Log.Info("Inserting batch data into the database")
-				if err := storage.InsertSensorDataBatch(batch); err != nil {
-					logger.Log.Error("Failed to insert sensor data batch: ", err)
-				}
-				logger.Log.Info("Updating last seen for batch sensors")
-				if err := storage.UpdateLastSeenBatch(batch); err != nil {
-					logger.Log.Error("Failed to update last seen for sensors: ", err)
-				}
-				logger.Log.Info("Clearing batch after processing")
-				batch.Clear()
+			if err := storage.UpdateLastSeenBatch(*b); err != nil {
+				logger.Log.Error("Failed to update last seen for sensors: ", err)
+				return err
 			}
-			timer.Reset(time.Second * 10)
-		}
+			return nil
+		})
+	if err != nil {
+		logger.Log.Error("Failed to create sensor data batch: ", err)
+		os.Exit(1)
+	}
+
+	for data := range dataChannel {
+		logger.Log.Info("Real-time sensor data received: ", data)
+		batch.AddSensorData(data)
 	}
 }
 
 // ProcessStatisticsData gestisce le statistiche aggregate e le salva.
 func ProcessStatisticsData(statsChannel chan types.AggregatedStats) {
 
+	// Connessione al database dei sensori
 	setupSensorDbConnection()
 
-	for stats := range statsChannel {
+	// Batch per le statistiche aggregate a livello di macrozona
+	macrozoneBatch, err := types.NewAggregatedStatsBatch(
+		environment.AggregatedDataBatchSize,
+		time.Duration(environment.AggregatedDataBatchTimeout)*time.Second,
+		// Funzione di salvataggio delle statistiche
+		// Viene chiamata quando il batch è pieno o scade il timeout
+		// Salva le statistiche nel database
+		func(b *types.AggregatedStatsBatch) error {
+			if err := storage.InsertMacrozoneStatisticsDataBatch(*b); err != nil {
+				logger.Log.Error("Failed to insert macrozone aggregated stats batch: ", err)
+				return err
+			}
+			return nil
+		})
+	if err != nil {
+		logger.Log.Error("Failed to create aggregated stats batch: ", err)
+		os.Exit(1)
+	}
 
-		if stats.Zone == "" {
-			logger.Log.Info("Aggregated statistics for macrozone (", stats.Macrozone, ") received: ", stats.Type, " - avg ", stats.Avg)
-			if err := storage.InsertMacrozoneStatisticsData(stats); err != nil {
-				logger.Log.Error("Failed to insert statistics: ", err)
-				os.Exit(-1)
-			} else {
-				logger.Log.Info("Statistics successfully inserted into the database")
+	// Batch per le statistiche aggregate a livello di zona
+	zoneBatch, err := types.NewAggregatedStatsBatch(
+		environment.AggregatedDataBatchSize,
+		time.Duration(environment.AggregatedDataBatchTimeout)*time.Second,
+		// Funzione di salvataggio delle statistiche
+		// Viene chiamata quando il batch è pieno o scade il timeout
+		// Salva le statistiche nel database
+		func(b *types.AggregatedStatsBatch) error {
+			if err := storage.InsertZoneStatisticsDataBatch(*b); err != nil {
+				logger.Log.Error("Failed to insert zone aggregated stats batch: ", err)
+				return err
 			}
-		} else {
-			logger.Log.Info("Aggregated statistics for zone (", stats.Macrozone, " - ", stats.Zone, ") received: ", stats.Type, " - avg ", stats.Avg)
-			if err := storage.InsertZoneStatisticsData(stats); err != nil {
-				logger.Log.Error("Failed to insert statistics: ", err)
-				os.Exit(-1)
-			} else {
-				logger.Log.Info("Statistics successfully inserted into the database")
-			}
+			return nil
+		})
+	if err != nil {
+		logger.Log.Error("Failed to create aggregated stats batch: ", err)
+		os.Exit(1)
+	}
+
+	for stats := range statsChannel {
+		logger.Log.Info("Aggregated stats received: ", stats)
+		if stats.Zone != "" {
+			zoneBatch.AddAggregatedStats(stats)
+		} else if stats.Macrozone != "" && stats.Zone == "" {
+			macrozoneBatch.AddAggregatedStats(stats)
 		}
 	}
 }

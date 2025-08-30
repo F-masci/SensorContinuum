@@ -35,6 +35,16 @@ const (
 
 	// IntermediateHubService servizio completo dell' intermediate-fog-hub
 	IntermediateHubService Service = "intermediate_hub"
+	// IntermediateHubRealtimeService si occupa di gestire i dati in tempo reale
+	IntermediateHubRealtimeService Service = "intermediate_hub_realtime"
+	// IntermediateHubStatisticsService si occupa di gestire i dati statistici
+	IntermediateHubStatisticsService Service = "intermediate_hub_statistics"
+	// IntermediateHubConfigurationService si occupa di gestire i messaggi di configurazione
+	IntermediateHubConfigurationService Service = "intermediate_hub_configuration"
+	// IntermediateHubHeartbeatService si occupa di gestire i messaggi di heartbeat
+	IntermediateHubHeartbeatService Service = "intermediate_hub_heartbeat"
+	// IntermediateHubAggregatorService si occupa di calcolare e salvare i dati aggregati nel database centrale
+	IntermediateHubAggregatorService Service = "intermediate_hub_aggregator"
 )
 
 // OperationModeType Definizione dei tipi di modalità operativa

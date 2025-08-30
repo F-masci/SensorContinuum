@@ -208,14 +208,14 @@ FROM region_aggregated_statistics
 GROUP BY year, type;
 
 -- Macrozone
-SELECT add_continuous_aggregate_policy('macrozone_daily_agg', start_offset=>'2 days', end_offset=>'0 hours', schedule_interval=>'1 hour');
-SELECT add_continuous_aggregate_policy('macrozone_weekly_agg', start_offset=>'2 weeks', end_offset=>'0 hours', schedule_interval=>'6 hours');
-SELECT add_continuous_aggregate_policy('macrozone_monthly_agg', start_offset=>'2 months', end_offset=>'0 hours', schedule_interval=>'12 hours');
-SELECT add_continuous_aggregate_policy('macrozone_yearly_agg', start_offset=>'2 years', end_offset=>'0 hours', schedule_interval=>'1 day');
+SELECT add_continuous_aggregate_policy('macrozone_daily_agg', start_offset=>'2 days', end_offset=>'0 hours', schedule_interval=>'1 day', initial_start=>date_trunc('day', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('macrozone_weekly_agg', start_offset=>'2 weeks', end_offset=>'0 hours', schedule_interval=>'1 week', initial_start=>date_trunc('week', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('macrozone_monthly_agg', start_offset=>'2 months', end_offset=>'0 hours', schedule_interval=>'1 month', initial_start=>date_trunc('month', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('macrozone_yearly_agg', start_offset=>'2 years', end_offset=>'0 hours', schedule_interval=>'1 year', initial_start=>date_trunc('year', now()) + interval '10 minutes');
 
 -- Regione
-SELECT add_continuous_aggregate_policy('region_daily_agg', start_offset=>'2 days', end_offset=>'0 hours', schedule_interval=>'1 hour');
-SELECT add_continuous_aggregate_policy('region_weekly_agg', start_offset=>'2 weeks', end_offset=>'0 hours', schedule_interval=>'6 hours');
-SELECT add_continuous_aggregate_policy('region_monthly_agg', start_offset=>'2 months', end_offset=>'0 hours', schedule_interval=>'12 hours');
-SELECT add_continuous_aggregate_policy('region_yearly_agg', start_offset=>'2 years', end_offset=>'0 hours', schedule_interval=>'1 day');
+SELECT add_continuous_aggregate_policy('region_daily_agg', start_offset=>'2 days', end_offset=>'0 hours', schedule_interval=>'1 day', initial_start=>date_trunc('day', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('region_weekly_agg', start_offset=>'2 weeks', end_offset=>'0 hours', schedule_interval=>'1 week', initial_start=>date_trunc('week', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('region_monthly_agg', start_offset=>'2 months', end_offset=>'0 hours', schedule_interval=>'1 month', initial_start=>date_trunc('month', now()) + interval '10 minutes');
+SELECT add_continuous_aggregate_policy('region_yearly_agg', start_offset=>'2 years', end_offset=>'0 hours', schedule_interval=>'1 year', initial_start=>date_trunc('year', now()) + interval '10 minutes');
 
