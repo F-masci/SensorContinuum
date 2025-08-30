@@ -501,11 +501,6 @@ func SendHeartbeatMessage() {
 // IsConnected verifica se il client MQTT è connesso al broker.
 func IsConnected() bool {
 
-	// Assicura che la connessione sia gestita
-	if hubClient == nil || sensorClient == nil {
-		connectAndManage()
-	}
-
 	// Controlla se il client è connesso
 	if hubClient.IsConnected() && sensorClient.IsConnected() {
 		logger.Log.Debug("MQTT clients is connected.")
