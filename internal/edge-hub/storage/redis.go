@@ -32,9 +32,18 @@ func InitRedisConnection() {
 }
 
 // TryOrRenewLeader prova ad acquisire il lock di leader election
-func TryOrRenewLeader(ctx context.Context, instanceID string) (bool, error) {
+func TryOrRenewLeader(ctx context.Context) (bool, error) {
+	// Per limitare la possibilità che venga saltata un tick di aggregazione
+	// a causa del lock che scade in ritardo, il TTL del lock
+	// viene allineato all'intervallo di aggregazione
+	now := time.Now()
+	nextTick := now.Truncate(environment.AggregationInterval).Add(environment.AggregationInterval)
+	leaderTTL := nextTick.Sub(now)
+
+	logger.Log.Debug("Attempting to acquire or renew leader lock with TTL: ", leaderTTL)
+
 	// Prova ad acquisire il lock
-	ok, err := RedisClient.SetNX(ctx, environment.LeaderKey, instanceID, environment.LeaderTTL).Result()
+	ok, err := RedisClient.SetNX(ctx, environment.LeaderKey, environment.HubID, leaderTTL).Result()
 	if err != nil {
 		return false, err
 	}
@@ -47,7 +56,7 @@ func TryOrRenewLeader(ctx context.Context, instanceID string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if val == instanceID {
+	if val == environment.HubID {
 		// Sei già leader, rinnova il TTL
 		_, err = RedisClient.Expire(ctx, environment.LeaderKey, environment.LeaderTTL).Result()
 		return true, err
@@ -136,6 +145,7 @@ func GetSensorHistoryByMinute(ctx context.Context, sensorID string, minute time.
 	return readings, nil
 }
 
+// GetAllSensorIDs Recupera tutti gli ID dei sensori presenti in Redis.
 func GetAllSensorIDs(ctx context.Context) ([]string, error) {
 	set := mapset.NewSet[string]()
 	keysMeta, err := RedisClient.Keys(ctx, "sensor:*:metadata").Result()
@@ -160,6 +170,7 @@ func GetAllSensorIDs(ctx context.Context) ([]string, error) {
 	return sensorIDs, nil
 }
 
+// RemoveSensorHistory Rimuove la cronologia delle letture di un sensore.
 func RemoveSensorHistory(ctx context.Context, sensorID string) error {
 	key := fmt.Sprintf(sensorHistoryKey, sensorID)
 	_, err := RedisClient.Del(ctx, key).Result()
@@ -171,6 +182,7 @@ func RemoveSensorHistory(ctx context.Context, sensorID string) error {
 	return nil
 }
 
+// RemoveSensor Rimuove un sensore dalla cache Redis.
 func RemoveSensor(ctx context.Context, sensorID string) error {
 	key := fmt.Sprintf(sensorMetadataKey, sensorID)
 	_, err := RedisClient.Del(ctx, key).Result()

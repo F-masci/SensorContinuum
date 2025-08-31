@@ -47,6 +47,18 @@ func AggregateSensorData(ctx context.Context) {
 		os.Exit(1)
 	}
 
+	// Prova a diventare il leader per l'aggregazione
+	isLeader, err := storage.TryAcquireAggregationLock(ctx)
+	if err != nil {
+		logger.Log.Error("Failed to acquire aggregation lock: ", err)
+		return
+	} else if !isLeader {
+		// Se non è il leader, esce
+		logger.Log.Info("Another instance is the leader for aggregation, skipping this run.")
+		return
+	}
+	// Rilascia il lock solo quando il processo termina
+
 	// 1. Calcola gli intervalli allineati per l'aggregazione
 	lastAggregation, err := storage.GetLastRegionAggregatedData(ctx)
 	if err != nil {
@@ -85,7 +97,7 @@ func AggregateSensorData(ctx context.Context) {
 	for start := alignedStartTime; start.Before(maxAlignedEndTime); start = start.Add(environment.AggregationInterval) {
 		end := start.Add(environment.AggregationInterval)
 		if end.After(maxAlignedEndTime) {
-			logger.Log.Error("End time exceeds maximum aligned end time, skipping this interval")
+			logger.Log.Debug("End time exceeds maximum aligned end time, skipping this interval")
 			break
 		}
 		intervals = append(intervals, struct{ Start, End time.Time }{Start: start, End: end})
@@ -99,13 +111,13 @@ func AggregateSensorData(ctx context.Context) {
 		// 2. Esegui la query per ottenere le statistiche dei dati arrivati nell'intervallo alignedStartTime e alignedEndTime
 		stats, err := storage.GetMacrozoneStatisticsData(ctx, alignedStartTime, alignedEndTime)
 		if err != nil {
-			logger.Log.Error("Failed to calculate periodic statistics, error: ", err)
+			logger.Log.Error("Failed to calculate periodic statistics: ", err)
 			return
 		}
 
 		if len(stats) == 0 {
 			logger.Log.Info("No data to send, skipping aggregation")
-			return
+			continue
 		}
 
 		// 3. Salva le statistiche aggregate
@@ -146,7 +158,7 @@ func AggregateSensorData(ctx context.Context) {
 			logger.Log.Debug("Aggregated region data: ", agg)
 			if err := storage.InsertRegionStatisticsData(agg); err != nil {
 				logger.Log.Error("Failed to save region aggregated data, type: ", agg.Type, ", error: ", err)
-				continue
+				return
 			}
 			logger.Log.Info("Macrozone region data saved successfully, type: ", agg.Type)
 		}

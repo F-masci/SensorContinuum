@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -18,6 +19,10 @@ import (
 // per garantire che i dati aggregati vengano inviati in modo affidabile
 // all' Intermediate Fog Hub tramite Kafka.
 var DBPool *pgxpool.Pool
+
+// aggregationLockConnection Connessione dedicata per il lock di aggregazione
+// Usata per mantenere il lock attivo finché la connessione è aperta
+var aggregationLockConnection *pgx.Conn
 
 // InitDatabaseConnection inizializza il pool di connessioni al database
 func InitDatabaseConnection() error {
@@ -38,6 +43,18 @@ func InitDatabaseConnection() error {
 	}
 
 	DBPool = pool
+
+	// Connessione dedicata per il lock di aggregazione
+	aggregationLockConnection, err = pgx.Connect(ctx, dbURL)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database for aggregation lock: %w", err)
+	}
+
+	// Verifica la connessione dedicata
+	if err := aggregationLockConnection.Ping(ctx); err != nil {
+		return fmt.Errorf("unable to connect to database for aggregation lock: %w", err)
+	}
+
 	logger.Log.Info("Connection to TimescaleDB for local cache successfully established.")
 	return nil
 }
@@ -51,6 +68,7 @@ func InsertSensorData(ctx context.Context, d types.SensorData) error {
 	query := `
         INSERT INTO sensor_measurements_cache (time, macrozone_name, zone_name, sensor_id, type, value, status)
         VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        ON CONFLICT (time, macrozone_name, zone_name, sensor_id, type) DO NOTHING
     `
 	t := time.Unix(d.Timestamp, 0).UTC()
 	_, err := DBPool.Exec(ctx, query, t, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type, d.Data)
@@ -159,15 +177,10 @@ func InsertAggregatedStats(ctx context.Context, stats types.AggregatedStats) err
 	query := `
 		INSERT INTO aggregated_stats_cache (time, zone_name, type, min_value, max_value, avg_value, avg_sum, avg_count, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+		ON CONFLICT (time, zone_name, type) DO NOTHING;
 	`
 	t := time.Unix(stats.Timestamp, 0).UTC()
-	var z any
-	if stats.Zone == "" {
-		z = nil // imposta NULL
-	} else {
-		z = stats.Zone
-	}
-	_, err := DBPool.Exec(ctx, query, t, z, stats.Type, stats.Min, stats.Max, stats.Avg, stats.Sum, stats.Count)
+	_, err := DBPool.Exec(ctx, query, t, stats.Zone, stats.Type, stats.Min, stats.Max, stats.Avg, stats.Sum, stats.Count)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -280,6 +293,23 @@ func DeleteAggregatedStats(ctx context.Context, olderThan time.Duration) (int64,
 }
 
 /* ----------- DATI AGGREGATI ----------- */
+
+// TryAcquireAggregationLock prova ad acquisire il lock in Postgres.
+// Restituisce true se il processo è leader, false altrimenti.
+func TryAcquireAggregationLock(ctx context.Context) (bool, error) {
+	var gotLock bool
+	err := aggregationLockConnection.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", environment.AggregationLockId).Scan(&gotLock)
+	if err != nil {
+		return false, fmt.Errorf("failed to acquire advisory lock: %w", err)
+	}
+	return gotLock, nil
+}
+
+// ReleaseAggregationLock rilascia il lock (opzionale: si rilascia anche chiudendo la connessione)
+func ReleaseAggregationLock(ctx context.Context) error {
+	_, err := aggregationLockConnection.Exec(ctx, "SELECT pg_advisory_unlock($1)", environment.AggregationLockId)
+	return err
+}
 
 // GetZoneAggregatedData calcola le statistiche aggregate (min, max, avg, sum, count)
 // per ogni tipo di sensore e per ogni zona, nell'intervallo di tempo specificato.

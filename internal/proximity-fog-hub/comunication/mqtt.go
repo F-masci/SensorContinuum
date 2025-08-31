@@ -105,8 +105,8 @@ func makeConnectionHandler(filteredDataChannel chan types.SensorData, configurat
 			logger.Log.Debug("Subscribing to topic: ", topic)
 
 			// Sottoscrivi al topic per ricevere i dati dai sensori
-			// QoS 0, cioè "at most once", il messaggio può andare perso
-			token = client.Subscribe(topic, 0, makeSensorDataHandler(filteredDataChannel)) // Il message handler è globale
+			// QoS 1, cioè "at least once", il messaggio viene consegnato almeno una volta, possono esserci duplicati
+			token = client.Subscribe(topic, 1, makeSensorDataHandler(filteredDataChannel)) // Il message handler è globale
 			logger.Log.Info("Subscribed to topic: ", topic)
 			if token.WaitTimeout(time.Duration(environment.MqttMaxSubscriptionTimeout)*time.Second) && token.Error() != nil {
 				logger.Log.Error("Failed to subscribe to topic:", topic, "error:", token.Error())

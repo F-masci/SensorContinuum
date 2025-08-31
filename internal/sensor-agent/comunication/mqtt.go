@@ -147,7 +147,10 @@ func SendRegistrationMessage() {
 		if !client.IsConnected() {
 			logger.Log.Warn("MQTT client not connected. Skipping data publishing.")
 			// L'opzione AutoReconnect della libreria sta già lavorando per riconnettersi.
-			return
+			// Quindi non è necessario riconnettersi manualmente qui.
+			// Il sensore continuerà a tentare di riconnettersi in background.
+			time.Sleep(time.Duration(environment.MaxReconnectionInterval) * time.Second)
+			continue
 		}
 
 		payload, err := json.Marshal(types.ConfigurationMsg{
@@ -167,19 +170,16 @@ func SendRegistrationMessage() {
 		}
 
 		// QoS (Quality of Service) in MQTT:
-		// 0: At most once - Nessuna conferma, il messaggio può andare perso.
-		// 1: At least once - Il messaggio viene consegnato almeno una volta, può essere duplicato.
 		// 2: Exactly once - Il messaggio viene consegnato una sola volta, senza duplicati.
 		//
-		// Retained:
-		// true  - Il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti.
-		// false - Il messaggio non viene conservato dal broker.
+		// Retained: true
+		//  Il broker conserva l’ultimo messaggio pubblicato su un topic e lo invia ai nuovi iscritti.
 		topic := environment.ConfigurationTopic + "/" + environment.SensorId
-		token := client.Publish(topic, 0, true, payload)
+		token := client.Publish(topic, 2, true, payload)
 
 		// Usiamo WaitTimeout per non ciclare all'infinito
 		if !token.WaitTimeout(time.Duration(environment.MessagePublishTimeout) * time.Second) {
-			logger.Log.Warn("Timeout publishing configuration message (", environment.MessagePublishTimeout, " seconds) to MQTT broker. Retryng...")
+			logger.Log.Warn("Timeout publishing configuration message (", environment.MessagePublishTimeout, " seconds) to MQTT broker. Retrying...")
 			continue
 		} else if err := token.Error(); err != nil {
 			logger.Log.Error("Error publishing message: ", err.Error())

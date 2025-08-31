@@ -131,6 +131,9 @@ const (
 	// Specifica l'offest negativo di tempo rispetto all'istante corrente
 	// per recuperare i dati aggregati.
 	AggregationFetchOffset = -20 * time.Minute
+	// AggregationLockId specifica l'ID del lock per l'aggregazione.
+	// Serve per evitare che più istanze del servizio eseguano l'aggregazione contemporaneamente.
+	AggregationLockId = 472
 )
 
 var HealthzServer bool = false

@@ -16,9 +16,10 @@ import (
 
 // postgresDb incapsula la connessione al database PostgreSQL
 type postgresDb struct {
-	Db  *pgxpool.Pool
-	Ctx context.Context
-	Url string
+	Db   *pgxpool.Pool
+	Lock *pgx.Conn
+	Ctx  context.Context
+	Url  string
 }
 
 // Connect stabilisce la connessione al database PostgreSQL
@@ -38,20 +39,64 @@ func (p *postgresDb) Connect() error {
 		os.Exit(1)
 	}
 
+	// Verifica la connessione
+	err = p.Db.Ping(p.Ctx)
+	if err != nil {
+		logger.Log.Error("Unable to ping the database: ", err)
+		os.Exit(1)
+	}
+
+	// Connessione per il lock
+	p.Lock, err = pgx.Connect(p.Ctx, p.Url)
+	if err != nil {
+		logger.Log.Error("Unable to connect to the database for locking: ", err)
+		os.Exit(1)
+	}
+
+	// Verifica la connessione per il lock
+	err = p.Lock.Ping(p.Ctx)
+	if err != nil {
+		logger.Log.Error("Unable to ping the database for locking: ", err)
+		os.Exit(1)
+	}
+
 	logger.Log.Info("Connected to the database successfully")
 	return nil
+}
+
+// TryBecomeLeader prova ad acquisire il lock in Postgres.
+// Restituisce true se il processo è leader, false altrimenti.
+func (p *postgresDb) TryBecomeLeader(ctx context.Context) (bool, error) {
+	var gotLock bool
+	err := p.Lock.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", environment.AggregationLockId).Scan(&gotLock)
+	if err != nil {
+		return false, fmt.Errorf("failed to acquire advisory lock: %w", err)
+	}
+	return gotLock, nil
+}
+
+// ReleaseLeadership rilascia il lock (opzionale: si rilascia anche chiudendo la connessione)
+func (p *postgresDb) ReleaseLeadership(ctx context.Context) error {
+	_, err := p.Lock.Exec(ctx, "SELECT pg_advisory_unlock($1)", environment.AggregationLockId)
+	return err
 }
 
 // Close chiude la connessione al database PostgreSQL
 func (p *postgresDb) Close() {
 	p.Db.Close()
+	err := p.Lock.Close(p.Ctx)
+	if err != nil {
+		logger.Log.Error("Unable to close the lock connection: ", err)
+		os.Exit(1)
+	}
 }
 
 // regionDB è l'istanza del database per i metadati della regione
 var regionDB postgresDb = postgresDb{
-	Db:  nil,
-	Ctx: context.Background(),
-	Url: "",
+	Db:   nil,
+	Lock: nil,
+	Ctx:  context.Background(),
+	Url:  "",
 }
 
 // SetupRegionDbConnection configura e stabilisce la connessione al database dei metadati della regione
@@ -73,6 +118,16 @@ func SetupRegionDbConnection() error {
 	return regionDB.Connect()
 }
 
+// TryAcquireAggregationLock prova ad acquisire il lock per l'aggregazione
+func TryAcquireAggregationLock(ctx context.Context) (bool, error) {
+	return regionDB.TryBecomeLeader(ctx)
+}
+
+// ReleaseAggregationLock rilascia il lock per l'aggregazione
+func ReleaseAggregationLock(ctx context.Context) error {
+	return regionDB.ReleaseLeadership(ctx)
+}
+
 // CloseRegionDbConnection chiude la connessione al database dei metadati della regione
 func CloseRegionDbConnection() {
 	if regionDB.Db != nil {
@@ -85,9 +140,10 @@ func CloseRegionDbConnection() {
 
 // sensorDB è l'istanza del database per le misurazioni dei sensori
 var sensorDB postgresDb = postgresDb{
-	Db:  nil,
-	Ctx: context.Background(),
-	Url: "",
+	Db:   nil,
+	Lock: nil,
+	Ctx:  context.Background(),
+	Url:  "",
 }
 
 // SetupSensorDbConnection configura e stabilisce la connessione al database delle misurazioni dei sensori

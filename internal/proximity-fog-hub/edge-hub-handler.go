@@ -14,7 +14,7 @@ import (
 func ProcessEdgeHubData(dataChannel chan types.SensorData) {
 	// si mette in attesa di ricevere i dati
 	for data := range dataChannel {
-		logger.Log.Info("Filtered data received, sensorId: ", data.SensorID, ", value:", data.Data)
+		logger.Log.Info("Filtered data received, sensorId: ", data.SensorID, ", value: ", data.Data)
 
 		// Salva il dato nella cache locale (TimescaleDB)
 		// Usiamo un contesto separato per l'operazione sul DB per non bloccare tutto.

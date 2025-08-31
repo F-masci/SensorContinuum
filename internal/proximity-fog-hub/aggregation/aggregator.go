@@ -47,6 +47,18 @@ func AggregateSensorData(ctx context.Context) {
 		return
 	}
 
+	// Prova a diventare il leader per l'aggregazione
+	isLeader, err := storage.TryAcquireAggregationLock(ctx)
+	if err != nil {
+		logger.Log.Error("Failed to acquire aggregation lock: ", err)
+		return
+	} else if !isLeader {
+		// Se non è il leader, esce
+		logger.Log.Info("Another instance is the leader for aggregation, skipping this run.")
+		return
+	}
+	// Rilascia il lock solo quando il processo termina
+
 	var alignedStartTime time.Time
 	if lastAggregation.Timestamp != 0 {
 		// Se esiste una precedente aggregazione, usiamo il suo timestamp come inizio del nuovo intervallo

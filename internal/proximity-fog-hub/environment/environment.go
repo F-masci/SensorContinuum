@@ -111,7 +111,7 @@ var PostgresDatabase string
 
 const (
 	// AggregationInterval specifica l'intervallo di tempo per l'aggregazione dei dati.
-	AggregationInterval = 15 * time.Minute
+	AggregationInterval = 1 * time.Minute
 	// AggregationStartingOffset è il tempo in meno per costruire il primo intervallo di aggregazione,
 	// in modo da includere eventuali dati ricevuti prima dell'avvio del servizio.
 	AggregationStartingOffset = -24 * time.Hour
@@ -120,6 +120,9 @@ const (
 	// Specifica l'offest negativo di tempo rispetto all'istante corrente
 	// per recuperare i dati aggregati.
 	AggregationFetchOffset = -10 * time.Minute
+	// AggregationLockId specifica l'ID del lock per l'aggregazione.
+	// Serve per evitare che più istanze del servizio eseguano l'aggregazione contemporaneamente.
+	AggregationLockId = 472
 
 	// OutboxPollInterval definisce ogni quanto il dispatcher controlla la tabella outbox.
 	OutboxPollInterval = 2 * time.Minute

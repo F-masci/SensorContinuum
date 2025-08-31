@@ -293,7 +293,7 @@ func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 		topic := environment.FilteredDataTopic + "/" + filteredData.SensorID
 
 		// Invia i dati al broker MQTT
-		// QoS 0, cioè "at most once", il messaggio può andare perso
+		// QoS 1, cioè "at least once", il messaggio viene consegnato almeno una volta, può essere duplicato
 		// Retained false, il messaggio non viene conservato dal broker
 		//
 		// Usiamo WaitTimeout per non bloccare l'hub all'infinito,
@@ -301,7 +301,7 @@ func PublishFilteredData(filteredDataChannel chan types.SensorData) {
 		// anche se il timeout scade e si raggiunge il max dei
 		// retry il programma comunque prosegue
 		for i := 0; i < environment.MessagePublishAttempts; i++ {
-			token := hubClient.Publish(topic, 0, false, payload)
+			token := hubClient.Publish(topic, 1, false, payload)
 			if !token.WaitTimeout(time.Duration(environment.MessagePublishTimeout) * time.Second) {
 				logger.Log.Warn("Timeout publishing message. Retry ", i+1)
 			} else if err := token.Error(); err != nil {

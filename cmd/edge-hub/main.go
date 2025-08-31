@@ -8,6 +8,7 @@ import (
 	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
+	"math/rand"
 	"os"
 	"time"
 )
@@ -80,8 +81,35 @@ func main() {
 
 		// Crea un ticker che scatta ogni AggregationInterval (1 minuto di default).
 		// Ogni volta che scatta, chiama AggregateAllSensorsData per aggregare i dati.
-		aggregateTicker := time.NewTicker(environment.AggregationInterval)
+		// Per evitare che tutti gli edge hub facciano l'aggregazione nello stesso istante,
+		// si calcola un ritardo casuale tra 0 e AggregationInterval all'inizio.
+		// In questo modo, anche se tutti gli edge hub partono nello stesso momento,
+		// l'aggregazione avverrà in momenti diversi, cercando di evitare race condition.
+		// Calcola il prossimo tick allineato all'intervallo
+		logger.Log.Debug("Calculating initial random delay for aggregation ticker")
+		now := time.Now()
+		interval := environment.AggregationInterval
+		startOfInterval := now.Truncate(interval)
+		secondsSinceStart := now.Sub(startOfInterval).Seconds()
+		secondsToEnd := interval.Seconds() - secondsSinceStart
+
+		applyDelay := secondsSinceStart <= 5 || secondsToEnd <= 5
+
+		var randomDelay time.Duration
+		if applyDelay {
+			// Genera un offset casuale tra 5 e interval-5
+			offset := time.Duration(5 + rand.Int63n(int64(interval)-5))
+			nextTick := startOfInterval.Add(interval)
+			randomDelay = nextTick.Sub(now) + offset
+			logger.Log.Info("Applying initial random delay of ", randomDelay.String())
+			time.Sleep(randomDelay)
+		} else {
+			logger.Log.Info("No initial random delay applied")
+		}
+
+		aggregateTicker := time.NewTicker(interval)
 		defer aggregateTicker.Stop()
+		logger.Log.Info("Aggregation ticker started with interval ", interval.String())
 
 		// avvia una goroutine che vivrà per sempre
 		go func() {
