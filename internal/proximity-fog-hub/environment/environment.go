@@ -111,7 +111,7 @@ var PostgresDatabase string
 
 const (
 	// AggregationInterval specifica l'intervallo di tempo per l'aggregazione dei dati.
-	AggregationInterval = 1 * time.Minute
+	AggregationInterval = 15 * time.Minute
 	// AggregationStartingOffset è il tempo in meno per costruire il primo intervallo di aggregazione,
 	// in modo da includere eventuali dati ricevuti prima dell'avvio del servizio.
 	AggregationStartingOffset = -24 * time.Hour
