@@ -54,7 +54,7 @@ func Simulate(nValue int, dataChannel chan types.SensorData) error {
 
 		logger.Log.Info("Sensor reading: ", sensorData.Data)
 
-		if dataChannel != nil && sensorData.Timestamp != 0 {
+		if dataChannel != nil && sensorData.Timestamp > 0 {
 			select {
 			case dataChannel <- sensorData:
 			default:

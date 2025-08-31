@@ -1,5 +1,34 @@
+# --- environment base per tutti i zone hub ---
+x-zone-hub-env: &zone-hub-env
+  EDGE_MACROZONE: "${EDGE_MACROZONE}"
+  EDGE_ZONE: "${EDGE_ZONE}"
+  MQTT_BROKER_ADDRESS: "${EDGE_ZONE}.mqtt-broker.local"
+  REDIS_ADDRESS: "zone-hub-${EDGE_ZONE}-cache"
+  OPERATION_MODE: "loop"
+  HEALTHZ_SERVER: "true"
+  HEALTHZ_SERVER_PORT: "8080"
+
+# --- blocco base per tutti i zone hub ---
+x-zone-hub-base: &zone-hub-base
+  image: fmasci/sc-edge-hub:latest
+  build:
+    context: ../..
+    dockerfile: deploy/docker/edge-hub.Dockerfile
+  restart: unless-stopped
+  healthcheck:
+    test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+    interval: 60s
+    timeout: 30s
+    retries: 10
+  networks:
+    - zone-hub-bridge
+  depends_on:
+    zone-hub-redis-cache:
+      condition: service_healthy
+
 services:
 
+  # --- REDIS CACHE ---
   zone-hub-redis-cache:
     image: redis:latest
     container_name: zone-hub-${EDGE_ZONE}-cache
@@ -15,201 +44,65 @@ services:
     networks:
       - zone-hub-bridge
 
+  # --- FILTER ---
   zone-hub-filter-01:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-filter-${EDGE_ZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-filter-01
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_filter
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-filter-01"
+      SERVICE_MODE: "edge_hub_filter"
 
   zone-hub-filter-02:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-filter-${EDGE_ZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-filter-02
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_filter
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-filter-02"
+      SERVICE_MODE: "edge_hub_filter"
 
+  # --- CLEANER ---
   zone-hub-cleaner-01:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-cleaner-${EDGE_ZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-cleaner-01
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_cleaner
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-cleaner-01"
+      SERVICE_MODE: "edge_hub_cleaner"
 
+  # --- AGGREGATOR ---
   zone-hub-aggregator-01:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-aggregator-${EDGE_ZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-aggregator-01
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_aggregator
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
-  
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-aggregator-01"
+      SERVICE_MODE: "edge_hub_aggregator"
+
   zone-hub-aggregator-02:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-aggregator-${EDGE_ZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-aggregator-02
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_aggregator
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-aggregator-02"
+      SERVICE_MODE: "edge_hub_aggregator"
 
+  # --- CONFIGURATOR ---
   zone-hub-configurator-01:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-configurator-${EDGE_ZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-configurator-01
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_configuration
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-configurator-01"
+      SERVICE_MODE: "edge_hub_configuration"
 
   zone-hub-configurator-02:
-    image: fmasci/sc-edge-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/edge-hub.Dockerfile
+    <<: *zone-hub-base
     container_name: zone-hub-configurator-${EDGE_ZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - EDGE_ZONE=${EDGE_ZONE}
-      - HUB_ID=zone-hub-configurator-02
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.mqtt-broker.local
-      - REDIS_ADDRESS=zone-hub-${EDGE_ZONE}-cache
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=edge_hub_configuration
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      zone-hub-redis-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - zone-hub-bridge
+      <<: *zone-hub-env
+      HUB_ID: "zone-hub-configurator-02"
+      SERVICE_MODE: "edge_hub_configuration"
 
 networks:
   zone-hub-bridge:

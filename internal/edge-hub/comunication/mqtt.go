@@ -62,7 +62,7 @@ func makeConfigurationMessageHandler(configurationMessageChannel chan types.Conf
 			return
 		}
 
-		if configMsg == (types.ConfigurationMsg{}) {
+		if configMsg.Timestamp <= 0 {
 			logger.Log.Debug("Received nil configuration message. Skipping processing.")
 			return
 		}

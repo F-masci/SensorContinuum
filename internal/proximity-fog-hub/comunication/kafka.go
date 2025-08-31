@@ -163,7 +163,7 @@ func SendOwnRegistrationMessage() {
 			EdgeMacrozone: environment.EdgeMacrozone,
 			Timestamp:     time.Now().UTC().Unix(),
 			HubID:         environment.HubID,
-			Service:       types.ProximityHubService,
+			Service:       environment.ServiceMode,
 		}
 
 		// Invia il messaggio di registrazione

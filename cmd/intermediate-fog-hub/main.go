@@ -64,12 +64,13 @@ func main() {
 
 		// Avvia il processo di gestione dei dati intermedi
 		realTimeDataChannel := make(chan types.SensorData, environment.SensorDataBatchSize*3)
-		go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel)
+		realTimePauseSignal := utils.NewPauseSignal()
+		go intermediate_fog_hub.ProcessRealTimeData(realTimeDataChannel, realTimePauseSignal)
 
 		go func() {
 			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 			// Questo farà terminare l'applicazione.
-			err := comunication.PullRealTimeData(realTimeDataChannel)
+			err := comunication.PullRealTimeData(realTimeDataChannel, realTimePauseSignal)
 			if err != nil {
 				logger.Log.Error("Kafka consumer for the real time data has stopped: ", err.Error())
 				os.Exit(1)
@@ -84,10 +85,12 @@ func main() {
 
 		// Avvia il processo di gestione dei dati statistici
 		statsDataChannel := make(chan types.AggregatedStats, environment.AggregatedDataBatchSize*3)
-		go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel)
+		zoneStatsPauseSignal := utils.NewPauseSignal()
+		macrozoneStatsPauseSignal := utils.NewPauseSignal()
+		go intermediate_fog_hub.ProcessStatisticsData(statsDataChannel, zoneStatsPauseSignal, macrozoneStatsPauseSignal)
 
 		go func() {
-			err := comunication.PullStatisticsData(statsDataChannel)
+			err := comunication.PullStatisticsData(statsDataChannel, zoneStatsPauseSignal, macrozoneStatsPauseSignal)
 			if err != nil {
 				// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 				// Questo farà terminare l'applicazione.
@@ -103,13 +106,14 @@ func main() {
 	if environment.ServiceMode == types.IntermediateHubConfigurationService || environment.ServiceMode == types.IntermediateHubService {
 
 		// Avvia il processo di gestione dei messaggi di configurazione
-		configurationMessageChannel := make(chan types.ConfigurationMsg)
-		go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMessageChannel)
+		configurationMessageChannel := make(chan types.ConfigurationMsg, environment.ConfigurationMessageBatchSize*3)
+		configurationPauseSignal := utils.NewPauseSignal()
+		go intermediate_fog_hub.ProcessProximityFogHubConfiguration(configurationMessageChannel, configurationPauseSignal)
 
 		go func() {
 			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 			// Questo farà terminare l'applicazione.
-			err := comunication.PullConfigurationMessage(configurationMessageChannel)
+			err := comunication.PullConfigurationMessage(configurationMessageChannel, configurationPauseSignal)
 			if err != nil {
 				logger.Log.Error("Kafka consumer for configuration message has stopped: ", err.Error())
 				os.Exit(1)
@@ -123,13 +127,14 @@ func main() {
 	if environment.ServiceMode == types.IntermediateHubHeartbeatService || environment.ServiceMode == types.IntermediateHubService {
 
 		// Avvia il processo di gestione dei messaggi di heartbeat
-		heartbeatChannel := make(chan types.HeartbeatMsg)
-		go intermediate_fog_hub.ProcessProximityFogHubHeartbeat(heartbeatChannel)
+		heartbeatChannel := make(chan types.HeartbeatMsg, environment.HeartbeatMessageBatchSize*3)
+		heartbeatPauseSignal := utils.NewPauseSignal()
+		go intermediate_fog_hub.ProcessProximityFogHubHeartbeat(heartbeatChannel, heartbeatPauseSignal)
 
 		go func() {
 			// Se la funzione ritorna (a causa di un errore), lo logghiamo.
 			// Questo farà terminare l'applicazione.
-			err := comunication.PullHeartbeatMessage(heartbeatChannel)
+			err := comunication.PullHeartbeatMessage(heartbeatChannel, heartbeatPauseSignal)
 			if err != nil {
 				logger.Log.Error("Kafka consumer for heartbeat has stopped: ", err.Error())
 				os.Exit(1)

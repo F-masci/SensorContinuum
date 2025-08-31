@@ -109,9 +109,12 @@ func GetSensorHistory(ctx context.Context, sensorID string, n int) ([]types.Sens
 	readings := make([]types.SensorData, 0, len(vals))
 	for _, v := range vals {
 		var d types.SensorData
-		if err := json.Unmarshal([]byte(v), &d); err == nil {
-			readings = append(readings, d)
+		if err := json.Unmarshal([]byte(v), &d); err != nil {
+			logger.Log.Error("Error unmarshalling sensor data: ", err)
+			continue
+
 		}
+		readings = append(readings, d)
 	}
 	return readings, nil
 }
@@ -152,22 +155,23 @@ func GetAllSensorIDs(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	set.Append(keysMeta...)
+	for _, key := range keysMeta {
+		sensorID := strings.TrimPrefix(key, "sensor:")
+		sensorID = strings.TrimSuffix(sensorID, ":metadata")
+		set.Append(sensorID)
+	}
+
 	keysHist, err := RedisClient.Keys(ctx, "sensor:*:history").Result()
 	if err != nil {
 		return nil, err
 	}
-	set.Append(keysHist...)
-
-	keys := set.ToSlice()
-	sensorIDs := make([]string, 0, len(keys))
-	for _, key := range keys {
+	for _, key := range keysHist {
 		sensorID := strings.TrimPrefix(key, "sensor:")
-		sensorID = strings.TrimSuffix(sensorID, ":metadata")
-		logger.Log.Debug("Retrieving sensor ID from redis: ", sensorID)
-		sensorIDs = append(sensorIDs, sensorID)
+		sensorID = strings.TrimSuffix(sensorID, ":history")
+		set.Append(sensorID)
 	}
-	return sensorIDs, nil
+
+	return set.ToSlice(), nil
 }
 
 // RemoveSensorHistory Rimuove la cronologia delle letture di un sensore.

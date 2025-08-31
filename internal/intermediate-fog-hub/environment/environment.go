@@ -38,6 +38,12 @@ var ProximityConfigurationTopic string
 // ProximityHeartbeatTopic specifica il topic Kafka per i messaggi di heartbeat.
 var ProximityHeartbeatTopic string
 
+// KafkaMaxAttempts specifica il numero massimo di tentativi di invio di un messaggio di kafka sul canale.
+var KafkaMaxAttempts int = 10
+
+// KafkaAttemptDelay specifica il ritardo tra i tentativi di invio di un messaggio di kafka sul canale, in secondi.
+var KafkaAttemptDelay int = 750
+
 // KafkaCommitTimeout specifica il timeout per il commit degli offset Kafka.
 var KafkaCommitTimeout int = 5
 
@@ -114,6 +120,18 @@ var AggregatedDataBatchSize int = 100
 // AggregatedDataBatchTimeout specifica il timeout per il batch dei dati aggregati.
 var AggregatedDataBatchTimeout int = 15
 
+// ConfigurationMessageBatchSize specifica la dimensione del batch per i messaggi di configurazione.
+var ConfigurationMessageBatchSize int = 50
+
+// ConfigurationMessageBatchTimeout specifica il timeout per il batch dei messaggi di configurazione.
+var ConfigurationMessageBatchTimeout int = 5
+
+// HeartbeatMessageBatchSize specifica la dimensione del batch per i messaggi di heartbeat.
+var HeartbeatMessageBatchSize int = 50
+
+// HeartbeatMessageBatchTimeout specifica il timeout per il batch dei messaggi di heartbeat.
+var HeartbeatMessageBatchTimeout int = 5
+
 const (
 	// KafkaGroupId specifica il group ID per i consumer Kafka.
 	// Poiché il fog hub gestisce una singola regione, tutti i servizi usanono lo stesso group ID.
@@ -169,14 +187,18 @@ func SetupEnvironment() error {
 		switch ServiceModeStr {
 		case string(types.IntermediateHubService):
 			ServiceMode = types.IntermediateHubService
-		case string(types.IntermediateHubAggregatorService):
-			ServiceMode = types.IntermediateHubAggregatorService
+		case string(types.IntermediateHubRealtimeService):
+			ServiceMode = types.IntermediateHubRealtimeService
+		case string(types.IntermediateHubStatisticsService):
+			ServiceMode = types.IntermediateHubStatisticsService
 		case string(types.IntermediateHubConfigurationService):
 			ServiceMode = types.IntermediateHubConfigurationService
 		case string(types.IntermediateHubHeartbeatService):
 			ServiceMode = types.IntermediateHubHeartbeatService
+		case string(types.IntermediateHubAggregatorService):
+			ServiceMode = types.IntermediateHubAggregatorService
 		default:
-			return errors.New("invalid value for SERVICE_MODE: " + ServiceModeStr + ". Valid values are 'intermediate_hub_service', 'intermediate_hub_aggregator_service', 'intermediate_hub_configuration_service' or 'intermediate_hub_heartbeat_service'.")
+			return errors.New("invalid value for SERVICE_MODE: " + ServiceModeStr + ". Valid values are 'intermediate_hub', 'intermediate_hub_realtime', 'intermediate_hub_statistics', 'intermediate_hub_configuration', 'intermediate_hub_heartbeat' or 'intermediate_hub_aggregator'.")
 		}
 	}
 
@@ -217,6 +239,26 @@ func SetupEnvironment() error {
 	ProximityHeartbeatTopic, exists = os.LookupEnv("KAFKA_PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC")
 	if !exists {
 		ProximityHeartbeatTopic = kafka.PROXIMITY_FOG_HUB_HEARTBEAT_TOPIC
+	}
+
+	var KafkaMaxAttemptsStr string
+	KafkaMaxAttemptsStr, exists = os.LookupEnv("KAFKA_MAX_ATTEMPTS")
+	if exists {
+		var err error
+		KafkaMaxAttempts, err = strconv.Atoi(KafkaMaxAttemptsStr)
+		if err != nil || KafkaMaxAttempts <= 0 {
+			return errors.New("invalid value for KAFKA_MAX_ATTEMPTS: " + KafkaMaxAttemptsStr + ". Must be a positive integer.")
+		}
+	}
+
+	var KafkaAttemptDelayStr string
+	KafkaAttemptDelayStr, exists = os.LookupEnv("KAFKA_ATTEMPT_DELAY")
+	if exists {
+		var err error
+		KafkaAttemptDelay, err = strconv.Atoi(KafkaAttemptDelayStr)
+		if err != nil || KafkaAttemptDelay <= 0 {
+			return errors.New("invalid value for KAFKA_ATTEMPT_DELAY: " + KafkaAttemptDelayStr + ". Must be a positive integer representing milliseconds.")
+		}
 	}
 
 	var KafkaCommitTimeoutStr string

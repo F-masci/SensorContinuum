@@ -148,8 +148,9 @@ func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string
 		}
 
 		// Trova il timestamp più recente tra le letture
-		latestTime := time.Time{}
+		latestTime := time.Now().UTC().Add(-environment.RegistrationSensorTimeout).Truncate(environment.RegistrationSensorTimeout)
 		for _, reading := range readings {
+			logger.Log.Debug("Sensor ", sensorID, " reading timestamp: ", time.Unix(reading.Timestamp, 0).UTC().Format(time.RFC3339))
 			t := time.Unix(reading.Timestamp, 0).UTC()
 			if t.After(latestTime) {
 				latestTime = t
@@ -158,7 +159,7 @@ func CleanUnhealthySensors() (unhealthySensors []string, removedSensors []string
 
 		// Caso: sensore non comunica da troppo tempo (UnhealthySensorTimeout) -> rimuovo la storia del sensore
 		if time.Since(latestTime) > environment.UnhealthySensorTimeout {
-			logger.Log.Warn("Sensor " + sensorID + " inactive for too times. Removing history from Redis.")
+			logger.Log.Warn("Sensor "+sensorID+" inactive for too times (", latestTime.Format(time.RFC3339), "). Removing history from Redis.")
 			if err := storage.RemoveSensorHistory(ctx, sensorID); err != nil {
 				logger.Log.Error("Error removing sensor ", sensorID, " from Redis: ", err)
 			}

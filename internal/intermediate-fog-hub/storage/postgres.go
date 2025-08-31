@@ -232,7 +232,7 @@ func InsertSensorDataBatch(batch *types.SensorDataBatch) error {
 
 	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
-	for _, d := range batch.SensorData {
+	for _, d := range batch.Items() {
 		timestamp := time.Unix(d.Timestamp, 0).UTC()
 		rows = append(rows, []interface{}{
 			timestamp,
@@ -265,12 +265,12 @@ func InsertSensorDataBatch(batch *types.SensorDataBatch) error {
 		return err
 	}
 
-	logger.Log.Info("Inserted sensor data batch successfully: ", len(batch.SensorData), " entries")
+	logger.Log.Info("Inserted sensor data batch successfully: ", len(batch.Items()), " entries")
 	return nil
 }
 
-// UpdateLastSeenBatch aggiorna il campo last_seen dei sensori in base ai dati ricevuti nel batch
-func UpdateLastSeenBatch(batch *types.SensorDataBatch) error {
+// UpdateSensorLastSeenBatch aggiorna il campo last_seen dei sensori in base ai dati ricevuti nel batch
+func UpdateSensorLastSeenBatch(batch *types.SensorDataBatch) error {
 
 	logger.Log.Info("Updating last seen batch")
 
@@ -287,7 +287,7 @@ func UpdateLastSeenBatch(batch *types.SensorDataBatch) error {
 	lastSeenSensors := make(map[string]time.Time)
 
 	// Calcola il timestamp massimo per ogni sensore
-	for _, d := range batch.SensorData {
+	for _, d := range batch.Items() {
 		timestamp := time.Unix(d.Timestamp, 0).UTC()
 		sensorKey := d.EdgeMacrozone + keySeparator + d.EdgeZone + keySeparator + d.SensorID
 		if ts, ok := lastSeenSensors[sensorKey]; !ok || timestamp.After(ts) {
@@ -389,30 +389,6 @@ func UpdateLastSeenRegionHub() error {
 		WHERE id = $1
 	`
 	_, err := regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID)
-	return err
-}
-
-// UpdateLastSeenMacrozoneHub aggiorna il campo last_seen dell'hub di macrozona
-func UpdateLastSeenMacrozoneHub(heartbeatMsg types.HeartbeatMsg) error {
-	query := `
-		UPDATE macrozone_hubs
-		SET last_seen = $1
-		WHERE id = $2 AND macrozone_name = $3
-	`
-	t := time.Unix(heartbeatMsg.Timestamp, 0).UTC()
-	_, err := regionDB.Db.Exec(regionDB.Ctx, query, t, heartbeatMsg.HubID, heartbeatMsg.EdgeMacrozone)
-	return err
-}
-
-// UpdateLastSeenZoneHub aggiorna il campo last_seen dell'hub di zona
-func UpdateLastSeenZoneHub(heartbeatMsg types.HeartbeatMsg) error {
-	query := `
-		UPDATE zone_hubs
-		SET last_seen = $1
-		WHERE id = $2 AND macrozone_name = $3 AND zone_name = $4
-	`
-	t := time.Unix(heartbeatMsg.Timestamp, 0).UTC()
-	_, err := regionDB.Db.Exec(regionDB.Ctx, query, t, heartbeatMsg.HubID, heartbeatMsg.EdgeMacrozone, heartbeatMsg.EdgeZone)
 	return err
 }
 
@@ -537,7 +513,7 @@ func InsertMacrozoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error
 
 	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
-	for _, s := range batch.Stats {
+	for _, s := range batch.Items() {
 		timestamp := time.Unix(s.Timestamp, 0).UTC()
 		rows = append(rows, []interface{}{
 			timestamp,
@@ -572,7 +548,7 @@ func InsertMacrozoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error
 		return err
 	}
 
-	logger.Log.Info("Inserted macrozone statistics data batch successfully: ", len(batch.Stats), " entries")
+	logger.Log.Info("Inserted macrozone statistics data batch successfully: ", len(batch.Items()), " entries")
 	return nil
 }
 
@@ -626,7 +602,7 @@ func InsertZoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error {
 
 	// 2. Prepara i dati per l'inserimento
 	rows := make([][]interface{}, 0, batch.Count())
-	for _, s := range batch.Stats {
+	for _, s := range batch.Items() {
 		timestamp := time.Unix(s.Timestamp, 0).UTC()
 		rows = append(rows, []interface{}{
 			timestamp,
@@ -662,50 +638,200 @@ func InsertZoneStatisticsDataBatch(batch *types.AggregatedStatsBatch) error {
 		return err
 	}
 
-	logger.Log.Info("Inserted zone statistics data batch successfully: ", len(batch.Stats), " entries")
+	logger.Log.Info("Inserted zone statistics data batch successfully: ", len(batch.Items()), " entries")
 	return nil
 }
 
-// RegisterMacrozoneHub Registra o aggiorna un hub di macrozona (proximity fog hub)
-func RegisterMacrozoneHub(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0).UTC()
-	query := `
+// RegisterDevicesFromBatch registra o aggiorna hub e sensori in batch
+func RegisterDevicesFromBatch(batch *types.ConfigurationMsgBatch) error {
+	logger.Log.Info("Registering devices from batch")
+
+	// Se il batch è vuoto, non fare nulla
+	if batch.Count() == 0 {
+		logger.Log.Info("No devices to register, skipping")
+		return nil
+	}
+
+	// Inizio transazione
+	ctx := regionDB.Ctx
+	conn, err := regionDB.Db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			err = tx.Rollback(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to rollback transaction: ", err)
+				os.Exit(1)
+			} else {
+				logger.Log.Debug("Transaction rolled back successfully")
+			}
+		} else {
+			err = tx.Commit(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to commit transaction: ", err)
+				os.Exit(1)
+			} else {
+				logger.Log.Debug("Transaction committed successfully")
+			}
+		}
+	}()
+
+	// 1. Crea tabelle temporanee
+	_, err = tx.Exec(ctx, `
+		CREATE TEMP TABLE tmp_macrozone_hubs (
+			hub_id TEXT,
+			macrozone_name TEXT,
+			service TEXT,
+			timestamp TIMESTAMPTZ
+		) ON COMMIT DROP;
+
+		CREATE TEMP TABLE tmp_zone_hubs (
+			hub_id TEXT,
+			macrozone_name TEXT,
+			zone_name TEXT,
+			service TEXT,
+			timestamp TIMESTAMPTZ
+		) ON COMMIT DROP;
+
+		CREATE TEMP TABLE tmp_sensors (
+			sensor_id TEXT,
+			macrozone_name TEXT,
+			zone_name TEXT,
+			sensor_type TEXT,
+			sensor_reference TEXT,
+			timestamp TIMESTAMPTZ
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return fmt.Errorf("errore creazione tabelle temporanee: %w", err)
+	}
+
+	// 2. Prepara i dati per l'inserimento
+	now := time.Now().UTC()
+	rowsMacro := make([][]interface{}, 0)
+	rowsZone := make([][]interface{}, 0)
+	rowsSensor := make([][]interface{}, 0)
+
+	for _, msg := range batch.Items() {
+		timestamp := time.Unix(msg.Timestamp, 0).UTC()
+		if timestamp.IsZero() {
+			timestamp = now
+		}
+
+		switch msg.MsgType {
+		case types.NewSensorMsgType:
+			// Nuovo sensore
+			rowsSensor = append(rowsSensor, []interface{}{
+				msg.SensorID, msg.EdgeMacrozone, msg.EdgeZone,
+				msg.SensorType, msg.SensorReference, timestamp,
+			})
+		case types.NewEdgeMsgType:
+			// Nuovo hub di zona
+			rowsZone = append(rowsZone, []interface{}{
+				msg.HubID, msg.EdgeMacrozone, msg.EdgeZone, msg.Service, timestamp,
+			})
+		case types.NewProximityMsgType:
+			// Nuovo hub di macrozona
+			rowsMacro = append(rowsMacro, []interface{}{
+				msg.HubID, msg.EdgeMacrozone, msg.Service, timestamp,
+			})
+		default:
+			// Messaggio non riconosciuto, salta
+			logger.Log.Warn("Unknown message type in configuration batch: ", msg.MsgType)
+			continue
+		}
+	}
+
+	// 3. Inserisci i dati nelle temp tables
+	if len(rowsMacro) > 0 {
+		_, err = tx.CopyFrom(
+			ctx,
+			pgx.Identifier{"tmp_macrozone_hubs"},
+			[]string{"hub_id", "macrozone_name", "service", "timestamp"},
+			pgx.CopyFromRows(rowsMacro),
+		)
+		if err != nil {
+			return fmt.Errorf("copyFrom tmp_macrozone_hubs: %w", err)
+		}
+	}
+	if len(rowsZone) > 0 {
+		_, err = tx.CopyFrom(
+			ctx,
+			pgx.Identifier{"tmp_zone_hubs"},
+			[]string{"hub_id", "macrozone_name", "zone_name", "service", "timestamp"},
+			pgx.CopyFromRows(rowsZone),
+		)
+		if err != nil {
+			return fmt.Errorf("copyFrom tmp_zone_hubs: %w", err)
+		}
+	}
+	if len(rowsSensor) > 0 {
+		_, err = tx.CopyFrom(
+			ctx,
+			pgx.Identifier{"tmp_sensors"},
+			[]string{"sensor_id", "macrozone_name", "zone_name", "sensor_type", "sensor_reference", "timestamp"},
+			pgx.CopyFromRows(rowsSensor),
+		)
+		if err != nil {
+			return fmt.Errorf("copyFrom tmp_sensors: %w", err)
+		}
+	}
+
+	// 4. Copia nelle tabelle reali con upsert
+	_, err = tx.Exec(ctx, `
 		INSERT INTO macrozone_hubs (id, macrozone_name, service, registration_time, last_seen)
-		VALUES ($1, $2, $3, $4, $4)
-		ON CONFLICT (id, macrozone_name) DO UPDATE
-		SET last_seen = EXCLUDED.last_seen
-		WHERE macrozone_hubs.last_seen IS NULL OR macrozone_hubs.last_seen < EXCLUDED.last_seen
-	`
-	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.Service, timestamp)
-	return err
-}
-
-// RegisterZoneHub Registra o aggiorna un hub di zona (edge hub)
-func RegisterZoneHub(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0).UTC()
-	query := `
+		SELECT hub_id,
+			   macrozone_name,
+			   service,
+			   MIN(timestamp) AS registration_time,
+			   MAX(timestamp) AS last_seen
+		FROM tmp_macrozone_hubs
+		GROUP BY hub_id, macrozone_name, service
+		ON CONFLICT (id, macrozone_name) DO
+		UPDATE SET last_seen = EXCLUDED.last_seen
+		WHERE macrozone_hubs.last_seen IS NULL OR macrozone_hubs.last_seen < EXCLUDED.last_seen;
+		
 		INSERT INTO zone_hubs (id, macrozone_name, zone_name, service, registration_time, last_seen)
-		VALUES ($1, $2, $3, $4, $5, $5)
-		ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE
-		SET last_seen = EXCLUDED.last_seen
-		WHERE zone_hubs.last_seen IS NULL OR zone_hubs.last_seen < EXCLUDED.last_seen
-	`
-	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.HubID, msg.EdgeMacrozone, msg.EdgeZone, msg.Service, timestamp)
-	return err
-}
+		SELECT hub_id,
+			   macrozone_name,
+			   zone_name,
+			   service,
+			   MIN(timestamp) AS registration_time,
+			   MAX(timestamp) AS last_seen
+		FROM tmp_zone_hubs
+		GROUP BY hub_id, macrozone_name, zone_name, service
+		ON CONFLICT (id, macrozone_name, zone_name) DO
+		UPDATE SET last_seen = EXCLUDED.last_seen
+		WHERE zone_hubs.last_seen IS NULL OR zone_hubs.last_seen < EXCLUDED.last_seen;
+		
+		INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
+		SELECT sensor_id,
+			   macrozone_name,
+			   zone_name,
+			   sensor_type,
+			   sensor_reference,
+			   MIN(timestamp) AS registration_time,
+			   MAX(timestamp) AS last_seen
+		FROM tmp_sensors
+		GROUP BY sensor_id, macrozone_name, zone_name, sensor_type, sensor_reference
+		ON CONFLICT (id, macrozone_name, zone_name) DO
+		UPDATE SET last_seen = EXCLUDED.last_seen
+		WHERE sensors.last_seen IS NULL OR sensors.last_seen < EXCLUDED.last_seen;
+	`)
+	if err != nil {
+		return fmt.Errorf("errore insert finali: %w", err)
+	}
 
-// RegisterSensor Registra o aggiorna un sensore associato a un edge hub
-func RegisterSensor(msg types.ConfigurationMsg) error {
-	timestamp := time.Unix(msg.Timestamp, 0).UTC()
-	query := `
-        INSERT INTO sensors (id, macrozone_name, zone_name, type, reference, registration_time, last_seen)
-        VALUES ($1, $2, $3, $4, $5, $6, $6)
-        ON CONFLICT (id, macrozone_name, zone_name) DO UPDATE
-        SET last_seen = EXCLUDED.last_seen
-		WHERE sensors.last_seen IS NULL OR sensors.last_seen < EXCLUDED.last_seen
-    `
-	_, err := regionDB.Db.Exec(regionDB.Ctx, query, msg.SensorID, msg.EdgeMacrozone, msg.EdgeZone, msg.SensorType, msg.SensorReference, timestamp)
-	return err
+	logger.Log.Info("Registered devices batch successfully: ", len(batch.Items()), " entries")
+	return nil
 }
 
 // SelfRegistration registra o aggiorna l'hub regionale
@@ -726,6 +852,146 @@ func SelfRegistration() error {
 	SET last_seen = EXCLUDED.last_seen
 	WHERE region_hubs.last_seen IS NULL OR region_hubs.last_seen < EXCLUDED.last_seen
 `
-	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, types.IntermediateHubService)
+	_, err = regionDB.Db.Exec(regionDB.Ctx, query, environment.HubID, environment.ServiceMode)
 	return err
+}
+
+// UpdateHubLastSeen aggiorna il campo last_seen di hub e sensori in base ai messaggi di heartbeat ricevuti
+func UpdateHubLastSeen(batch *types.HeartbeatMsgBatch) error {
+	logger.Log.Info("Updating hub last_seen from heartbeat batch")
+
+	// Se il batch è vuoto, non fare nulla
+	if batch.Count() == 0 {
+		logger.Log.Info("No heartbeat data to update, skipping")
+		return nil
+	}
+
+	// Inizio transazione
+	ctx := regionDB.Ctx
+	conn, err := regionDB.Db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			err = tx.Rollback(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to rollback transaction: ", err)
+				os.Exit(1)
+			} else {
+				logger.Log.Debug("Transaction rolled back successfully")
+			}
+		} else {
+			err = tx.Commit(ctx)
+			if err != nil {
+				logger.Log.Error("Unable to commit transaction: ", err)
+				os.Exit(1)
+			} else {
+				logger.Log.Debug("Transaction committed successfully")
+			}
+		}
+	}()
+
+	// 1. Crea tabelle temporanee
+	_, err = tx.Exec(ctx, `
+		CREATE TEMP TABLE tmp_macrozone_hb (
+			hub_id TEXT,
+			macrozone_name TEXT,
+			timestamp TIMESTAMPTZ
+		) ON COMMIT DROP;
+
+		CREATE TEMP TABLE tmp_zone_hb (
+			hub_id TEXT,
+			macrozone_name TEXT,
+			zone_name TEXT,
+			timestamp TIMESTAMPTZ
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return fmt.Errorf("errore creazione tabelle temporanee: %w", err)
+	}
+
+	// 2. Prepara i dati per l’inserimento
+	now := time.Now().UTC()
+	rowsMacro := make([][]interface{}, 0)
+	rowsZone := make([][]interface{}, 0)
+
+	for _, hb := range batch.Items() {
+		timestamp := time.Unix(hb.Timestamp, 0).UTC()
+		if timestamp.IsZero() {
+			timestamp = now
+		}
+
+		if hb.HubID == "" {
+			// Messaggio non valido, salta
+			logger.Log.Warn("Heartbeat message with empty HubID, skipping")
+			continue
+		}
+
+		if hb.EdgeMacrozone == "" {
+			// Messaggio non valido, salta
+			logger.Log.Warn("Heartbeat message with empty Macrozone, skipping")
+			continue
+		}
+
+		if hb.EdgeZone != "" {
+			rowsZone = append(rowsZone, []interface{}{hb.HubID, hb.EdgeMacrozone, hb.EdgeZone, timestamp})
+		} else {
+			rowsMacro = append(rowsMacro, []interface{}{hb.HubID, hb.EdgeMacrozone, timestamp})
+		}
+	}
+
+	// 3. Inserisci i dati nelle temp tables
+	if len(rowsMacro) > 0 {
+		_, err = tx.CopyFrom(
+			ctx,
+			pgx.Identifier{"tmp_macrozone_hb"},
+			[]string{"hub_id", "macrozone_name", "timestamp"},
+			pgx.CopyFromRows(rowsMacro),
+		)
+		if err != nil {
+			return fmt.Errorf("copyFrom tmp_macrozone_hb: %w", err)
+		}
+	}
+	if len(rowsZone) > 0 {
+		_, err = tx.CopyFrom(
+			ctx,
+			pgx.Identifier{"tmp_zone_hb"},
+			[]string{"hub_id", "macrozone_name", "zone_name", "timestamp"},
+			pgx.CopyFromRows(rowsZone),
+		)
+		if err != nil {
+			return fmt.Errorf("copyFrom tmp_zone_hb: %w", err)
+		}
+	}
+
+	// 4. Update massivo nelle tabelle reali
+	_, err = tx.Exec(ctx, `
+		UPDATE macrozone_hubs m
+		SET last_seen = t.timestamp
+		FROM tmp_macrozone_hb t
+		WHERE m.id = t.hub_id
+		  AND m.macrozone_name = t.macrozone_name
+		  AND (m.last_seen IS NULL OR m.last_seen < t.timestamp);
+
+		UPDATE zone_hubs z
+		SET last_seen = t.timestamp
+		FROM tmp_zone_hb t
+		WHERE z.id = t.hub_id
+		  AND z.macrozone_name = t.macrozone_name
+		  AND z.zone_name = t.zone_name
+		  AND (z.last_seen IS NULL OR z.last_seen < t.timestamp);
+	`)
+	if err != nil {
+		return fmt.Errorf("errore update last_seen: %w", err)
+	}
+
+	logger.Log.Info("Updated hub last_seen successfully: ", len(batch.Items()), " entries")
+	return nil
 }

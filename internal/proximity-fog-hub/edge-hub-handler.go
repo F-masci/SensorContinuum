@@ -32,7 +32,7 @@ func ProcessEdgeHubData(dataChannel chan types.SensorData) {
 // ProcessEdgeHubConfiguration riceve i messaggi di configurazione che arrivano dal Edge Hub tramite MQTT nel canale
 func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
 	for configMsg := range configChannel {
-		if configMsg == (types.ConfigurationMsg{}) {
+		if configMsg.Timestamp <= 0 {
 			logger.Log.Warn("Received empty configuration message, skipping...")
 			continue
 		}
@@ -51,7 +51,7 @@ func ProcessEdgeHubConfiguration(configChannel chan types.ConfigurationMsg) {
 // ProcessEdgeHubHeartbeat riceve i messaggi di heartbeat che arrivano dal Edge Hub tramite MQTT nel canale
 func ProcessEdgeHubHeartbeat(heartbeatChannel chan types.HeartbeatMsg) {
 	for heartbeatMsg := range heartbeatChannel {
-		if heartbeatMsg == (types.HeartbeatMsg{}) {
+		if heartbeatMsg.Timestamp <= 0 {
 			logger.Log.Warn("Received empty heartbeat message, skipping...")
 			continue
 		}

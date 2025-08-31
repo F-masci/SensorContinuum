@@ -148,6 +148,7 @@ func main() {
 
 		cleanHealthTicker := time.NewTicker(time.Minute)
 		defer cleanHealthTicker.Stop()
+		logger.Log.Info("Starting cleaning ticker with interval 1 minute")
 
 		go func() {
 			for {

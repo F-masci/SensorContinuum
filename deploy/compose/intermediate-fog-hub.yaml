@@ -1,31 +1,118 @@
+# --- environment base ---
+x-region-hub-env: &region-hub-env
+  KAFKA_BROKER_ADDRESS: "${REGION}.kafka-broker.local"
+  KAFKA_BROKER_PORT: "${KAFKA_PORT}"
+  POSTGRES_CLOUD_HOST: "metadata-db.cloud.sensorcontinuum.node"
+  POSTGRES_CLOUD_PORT: "${POSTGRES_CLOUD_METADATA_PORT}"
+  POSTGRES_REGION_HOST: "metadata-db.${REGION}.sensorcontinuum.node"
+  POSTGRES_REGION_PORT: "${POSTGRES_REGION_METADATA_PORT}"
+  POSTGRES_SENSOR_HOST: "mesurament-db.${REGION}.sensorcontinuum.node"
+  POSTGRES_SENSOR_PORT: "${POSTGRES_REGION_SENSOR_PORT}"
+  OPERATION_MODE: "loop"
+  HEALTHZ_SERVER: "true"
+  HEALTHZ_SERVER_PORT: "8080"
+
+# --- blocco base per tutti i region hub ---
+x-region-hub-base: &region-hub-base
+  image: fmasci/sc-intermediate-fog-hub:latest
+  build:
+    context: ../..
+    dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
+  restart: unless-stopped
+  healthcheck:
+    test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+    interval: 60s
+    timeout: 30s
+    retries: 10
+  networks:
+    - region-hub-bridge
+
 services:
 
-  region-hub-01:
-    image: fmasci/sc-intermediate-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
-    container_name: region-hub-${REGION}-01
+  # --- REALTIME ---
+  region-hub-realtime-01:
+    <<: *region-hub-base
+    container_name: region-hub-realtime-${REGION}-01
     environment:
-      - HUB_ID=region-hub-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=${KAFKA_PORT}
-      - POSTGRES_CLOUD_HOST=metadata-db.cloud.sensorcontinuum.node
-      - POSTGRES_CLOUD_PORT=${POSTGRES_CLOUD_METADATA_PORT}
-      - POSTGRES_REGION_HOST=metadata-db.${REGION}.sensorcontinuum.node
-      - POSTGRES_REGION_PORT=${POSTGRES_REGION_METADATA_PORT}
-      - POSTGRES_SENSOR_HOST=mesurament-db.${REGION}.sensorcontinuum.node
-      - POSTGRES_SENSOR_PORT=${POSTGRES_REGION_SENSOR_PORT}
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    networks:
-      - region-hub-bridge
+      <<: *region-hub-env
+      HUB_ID: "region-hub-realtime-01"
+      SERVICE_MODE: "intermediate_hub_realtime"
+
+  region-hub-realtime-02:
+    <<: *region-hub-base
+    container_name: region-hub-realtime-${REGION}-02
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-realtime-02"
+      SERVICE_MODE: "intermediate_hub_realtime"
+
+  # --- STATISTICS ---
+  region-hub-statistics-01:
+    <<: *region-hub-base
+    container_name: region-hub-statistics-${REGION}-01
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-statistics-01"
+      SERVICE_MODE: "intermediate_hub_statistics"
+
+  region-hub-statistics-02:
+    <<: *region-hub-base
+    container_name: region-hub-statistics-${REGION}-02
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-statistics-02"
+      SERVICE_MODE: "intermediate_hub_statistics"
+
+  # --- CONFIGURATION ---
+  region-hub-config-01:
+    <<: *region-hub-base
+    container_name: region-hub-config-${REGION}-01
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-config-01"
+      SERVICE_MODE: "intermediate_hub_configuration"
+
+  region-hub-config-02:
+    <<: *region-hub-base
+    container_name: region-hub-config-${REGION}-02
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-config-02"
+      SERVICE_MODE: "intermediate_hub_configuration"
+
+  # --- HEARTBEAT ---
+  region-hub-heartbeat-01:
+    <<: *region-hub-base
+    container_name: region-hub-heartbeat-${REGION}-01
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-heartbeat-01"
+      SERVICE_MODE: "intermediate_hub_heartbeat"
+
+  region-hub-heartbeat-02:
+    <<: *region-hub-base
+    container_name: region-hub-heartbeat-${REGION}-02
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-heartbeat-02"
+      SERVICE_MODE: "intermediate_hub_heartbeat"
+
+  # --- AGGREGATOR ---
+  region-hub-aggregator-01:
+    <<: *region-hub-base
+    container_name: region-hub-aggregator-${REGION}-01
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-aggregator-01"
+      SERVICE_MODE: "intermediate_hub_aggregator"
+
+  region-hub-aggregator-02:
+    <<: *region-hub-base
+    container_name: region-hub-aggregator-${REGION}-02
+    environment:
+      <<: *region-hub-env
+      HUB_ID: "region-hub-aggregator-02"
+      SERVICE_MODE: "intermediate_hub_aggregator"
 
 networks:
   region-hub-bridge:

@@ -1,5 +1,36 @@
+# --- environment base per tutti i macrozone hub ---
+x-macrozone-hub-env: &macrozone-hub-env
+  EDGE_MACROZONE: "${EDGE_MACROZONE}"
+  KAFKA_BROKER_ADDRESS: "${REGION}.kafka-broker.local"
+  KAFKA_BROKER_PORT: "9094"
+  MQTT_BROKER_ADDRESS: "${EDGE_MACROZONE}.mqtt-broker.local"
+  POSTGRES_HOST: "macrozone-hub-${EDGE_MACROZONE}-cache"
+  POSTGRES_PORT: "5432"
+  OPERATION_MODE: "loop"
+  HEALTHZ_SERVER: "true"
+  HEALTHZ_SERVER_PORT: "8080"
+
+# --- blocco base per tutti i macrozone hub ---
+x-macrozone-hub-base: &macrozone-hub-base
+  image: fmasci/sc-proximity-fog-hub:latest
+  build:
+    context: ../..
+    dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+  restart: unless-stopped
+  healthcheck:
+    test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+    interval: 60s
+    timeout: 30s
+    retries: 10
+  networks:
+    - macrozone-hub-bridge
+  depends_on:
+    macrozone-hub-postgres-cache:
+      condition: service_healthy
+
 services:
 
+  # --- POSTGRES CACHE ---
   macrozone-hub-postgres-cache:
     image: timescale/timescaledb:latest-pg17
     container_name: macrozone-hub-${EDGE_MACROZONE}-cache
@@ -20,365 +51,107 @@ services:
     networks:
       - macrozone-hub-bridge
 
+  # --- LOCAL CACHE ---
   macrozone-hub-local-cache-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-local-cache-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-local-cache-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_local_cache
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-local-cache-01"
+      SERVICE_MODE: "proximity_hub_local_cache"
 
   macrozone-hub-local-cache-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-local-cache-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-local-cache-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_local_cache
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-local-cache-02"
+      SERVICE_MODE: "proximity_hub_local_cache"
 
+  # --- CONFIGURATOR ---
   macrozone-hub-configurator-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-configurator-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-configurator-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_configuration
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-configurator-01"
+      SERVICE_MODE: "proximity_hub_configuration"
 
   macrozone-hub-configurator-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-configurator-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-configurator-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_configuration
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-configurator-02"
+      SERVICE_MODE: "proximity_hub_configuration"
 
+  # --- HEARTBEAT ---
   macrozone-hub-heartbeat-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-heartbeat-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-heartbeat-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_heartbeat
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-heartbeat-01"
+      SERVICE_MODE: "proximity_hub_heartbeat"
 
   macrozone-hub-heartbeat-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-heartbeat-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-heartbeat-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_heartbeat
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-heartbeat-02"
+      SERVICE_MODE: "proximity_hub_heartbeat"
 
+  # --- AGGREGATOR ---
   macrozone-hub-aggregator-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-aggregator-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-aggregator-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_aggregator
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-aggregator-01"
+      SERVICE_MODE: "proximity_hub_aggregator"
 
   macrozone-hub-aggregator-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-aggregator-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-aggregator-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_aggregator
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-aggregator-02"
+      SERVICE_MODE: "proximity_hub_aggregator"
 
+  # --- DISPATCHER ---
   macrozone-hub-dispatcher-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-dispatcher-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-dispatcher-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_dispatcher
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-dispatcher-01"
+      SERVICE_MODE: "proximity_hub_dispatcher"
 
   macrozone-hub-dispatcher-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-dispatcher-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-dispatcher-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_dispatcher
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-dispatcher-02"
+      SERVICE_MODE: "proximity_hub_dispatcher"
 
+  # --- CLEANER ---
   macrozone-hub-cleaner-01:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-cleaner-${EDGE_MACROZONE}-01
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-cleaner-01
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_cleaner
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-cleaner-01"
+      SERVICE_MODE: "proximity_hub_cleaner"
 
   macrozone-hub-cleaner-02:
-    image: fmasci/sc-proximity-fog-hub:latest
-    build:
-      context: ../..
-      dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
+    <<: *macrozone-hub-base
     container_name: macrozone-hub-cleaner-${EDGE_MACROZONE}-02
     environment:
-      - EDGE_MACROZONE=${EDGE_MACROZONE}
-      - HUB_ID=macrozone-hub-cleaner-02
-      - KAFKA_BROKER_ADDRESS=${REGION}.kafka-broker.local
-      - KAFKA_BROKER_PORT=9094
-      - MQTT_BROKER_ADDRESS=${EDGE_MACROZONE}.mqtt-broker.local
-      - POSTGRES_HOST=macrozone-hub-${EDGE_MACROZONE}-cache
-      - POSTGRES_PORT=5432
-      - OPERATION_MODE=loop
-      - SERVICE_MODE=proximity_hub_cleaner
-      - HEALTHZ_SERVER=true
-      - HEALTHZ_SERVER_PORT=8080
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-    depends_on:
-      macrozone-hub-postgres-cache:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - macrozone-hub-bridge
+      <<: *macrozone-hub-env
+      HUB_ID: "macrozone-hub-cleaner-02"
+      SERVICE_MODE: "proximity_hub_cleaner"
 
 networks:
   macrozone-hub-bridge:

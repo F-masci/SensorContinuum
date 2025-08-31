@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,10 @@ var DBPool *pgxpool.Pool
 // aggregationLockConnection Connessione dedicata per il lock di aggregazione
 // Usata per mantenere il lock attivo finché la connessione è aperta
 var aggregationLockConnection *pgx.Conn
+
+// dispatcherLockConnection Connessione dedicata per il lock del dispatcher
+// Usata per mantenere il lock attivo finché la connessione è aperta
+var dispatcherLockConnection *pgx.Conn
 
 // InitDatabaseConnection inizializza il pool di connessioni al database
 func InitDatabaseConnection() error {
@@ -55,8 +60,36 @@ func InitDatabaseConnection() error {
 		return fmt.Errorf("unable to connect to database for aggregation lock: %w", err)
 	}
 
+	// Connessione dedicata per il lock del dispatcher
+	dispatcherLockConnection, err = pgx.Connect(ctx, dbURL)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database for dispatcher lock: %w", err)
+	}
+
+	// Verifica la connessione dedicata
+	if err := dispatcherLockConnection.Ping(ctx); err != nil {
+		return fmt.Errorf("unable to connect to database for dispatcher lock: %w", err)
+	}
+
 	logger.Log.Info("Connection to TimescaleDB for local cache successfully established.")
 	return nil
+}
+
+// TryAcquireDispatcherLock prova ad acquisire il lock in Postgres.
+// Restituisce true se il processo è leader, false altrimenti.
+func TryAcquireDispatcherLock(ctx context.Context) (bool, error) {
+	var gotLock bool
+	err := dispatcherLockConnection.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", environment.DispatcherLockId).Scan(&gotLock)
+	if err != nil {
+		return false, fmt.Errorf("failed to acquire advisory lock: %w", err)
+	}
+	return gotLock, nil
+}
+
+// ReleaseDispatcherLock rilascia il lock (opzionale: si rilascia anche chiudendo la connessione)
+func ReleaseDispatcherLock(ctx context.Context) error {
+	_, err := dispatcherLockConnection.Exec(ctx, "SELECT pg_advisory_unlock($1)", environment.DispatcherLockId)
+	return err
 }
 
 /* ----------- TRANSACTIONAL OUTBOX PATTERN ----------- */
@@ -126,16 +159,27 @@ func UpdateSensorData(ctx context.Context, data []types.SensorData, newStatus st
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil && tx != nil {
+			if rerr := tx.Rollback(ctx); rerr != nil && !errors.Is(rerr, pgx.ErrTxClosed) {
+				logger.Log.Error("failed to rollback transaction: ", rerr)
+				os.Exit(1)
+			}
+		}
+	}()
 
 	query := `
 		UPDATE sensor_measurements_cache
 		SET status = $1
-		WHERE time = $2 AND sensor_id IS NOT DISTINCT FROM $3
+		WHERE time = $2
+		  	AND macrozone_name = $3
+		  	AND zone_name = $4
+			AND sensor_id = $5
+			AND type = $6
 	`
 	for _, d := range data {
 		t := time.Unix(d.Timestamp, 0).UTC()
-		_, err := tx.Exec(ctx, query, newStatus, t, d.SensorID)
+		_, err := tx.Exec(ctx, query, newStatus, t, d.EdgeMacrozone, d.EdgeZone, d.SensorID, d.Type)
 		if err != nil {
 			return fmt.Errorf("failed to update outbox message status for %s_%s: %w", d.SensorID, t.Format(time.RFC3339), err)
 		}
@@ -243,22 +287,25 @@ func UpdateAggregatedStats(ctx context.Context, data []types.AggregatedStats, ne
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil && tx != nil {
+			if rerr := tx.Rollback(ctx); rerr != nil && !errors.Is(rerr, pgx.ErrTxClosed) {
+				logger.Log.Error("failed to rollback transaction: ", rerr)
+				os.Exit(1)
+			}
+		}
+	}()
 
 	query := `
 		UPDATE aggregated_stats_cache
 		SET status = $1
-		WHERE time = $2 AND zone_name IS NOT DISTINCT FROM $3
+		WHERE time = $2 
+		  AND zone_name = $3
+		  AND type = $4
 	`
 	for _, d := range data {
 		t := time.Unix(d.Timestamp, 0).UTC()
-		var z any
-		if d.Zone == "" {
-			z = nil
-		} else {
-			z = d.Zone
-		}
-		_, err := tx.Exec(ctx, query, newStatus, t, z)
+		_, err := tx.Exec(ctx, query, newStatus, t, d.Zone, d.Type)
 		if err != nil {
 			return fmt.Errorf("failed to update outbox message status for %s_%s: %w", d.Zone, t.Format(time.RFC3339), err)
 		}
@@ -360,7 +407,7 @@ func GetLastMacrozoneAggregatedData(ctx context.Context) (types.AggregatedStats,
 			avg_sum,
 			avg_count
 		FROM aggregated_stats_cache
-		WHERE zone_name IS NULL
+		WHERE zone_name = ''
 		ORDER BY time DESC
 		LIMIT 1
 	`

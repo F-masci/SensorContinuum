@@ -36,6 +36,19 @@ func Run(ctx context.Context) {
 
 // ProcessPendingMessages recupera e processa i messaggi pendenti dalla tabella outbox.
 func ProcessPendingMessages(ctx context.Context) {
+
+	// Prova a diventare il leader per il dispatching
+	isLeader, err := storage.TryAcquireDispatcherLock(ctx)
+	if err != nil {
+		logger.Log.Error("Failed to acquire dispatcher lock: ", err)
+		return
+	} else if !isLeader {
+		// Se non è il leader, esce
+		logger.Log.Info("Another instance is the leader for dispatching, skipping this run.")
+		return
+	}
+	// Rilascia il lock solo quando il processo termina
+
 	// Processa i messaggi di dati grezzi
 	ProcessRawPendingMessages(ctx)
 	// Processa i messaggi di statistiche aggregate

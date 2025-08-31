@@ -130,6 +130,9 @@ const (
 	OutboxBatchSize = 50
 	// OutboxMaxAttempts definisce il numero massimo di tentativi di invio per ogni batch di messaggi.
 	OutboxMaxAttempts = 3
+	// DispatcherLockId specifica l'ID del lock per il dispatcher.
+	// Serve per evitare che più istanze del servizio eseguano il dispatching contemporaneamente.
+	DispatcherLockId = 853
 
 	// CleanerInterval definisce ogni quanto il cleaner si attiva per pulire la tabella outbox.
 	CleanerInterval = 5 * time.Minute
