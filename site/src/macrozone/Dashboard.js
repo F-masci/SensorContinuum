@@ -111,7 +111,7 @@ function Dashboard() {
 
     const handleShowMacrozoneData = () => {
         setShowMacrozoneModal(true);
-        const url = process.env.REACT_APP_MACROZONE_DATA_AGGREGATED_URL
+        const url = process.env.REACT_APP_MACROZONE_DATA_AGGREGATED_NAME_URL
             .replace("{region}", encodeURIComponent(regionName))
             .replace("{macrozone}", encodeURIComponent(macrozoneName));
         fetch(url)

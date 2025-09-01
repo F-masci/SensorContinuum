@@ -32,6 +32,7 @@ type TrendSimilarityResult struct {
 	SlopeMacro    float64 `json:"slope_macro"`
 	SlopeRegion   float64 `json:"slope_region"`
 	Divergence    float64 `json:"divergence"`
+	Timestamp     int64   `json:"timestamp"`
 
 	// Serie utilizzate nei calcoli
 	MacrozoneSeries []AggregatedStats `json:"macrozone_series"`

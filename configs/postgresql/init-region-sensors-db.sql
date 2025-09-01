@@ -223,3 +223,53 @@ SELECT add_continuous_aggregate_policy('region_weekly_agg', start_offset=>'2 wee
 SELECT add_continuous_aggregate_policy('region_monthly_agg', start_offset=>'2 months', end_offset=>'0 hours', schedule_interval=>'1 month', initial_start=>date_trunc('month', now()) + interval '10 minutes');
 SELECT add_continuous_aggregate_policy('region_yearly_agg', start_offset=>'2 years', end_offset=>'0 hours', schedule_interval=>'1 year', initial_start=>date_trunc('year', now()) + interval '10 minutes');
 
+-- ==================================================
+-- ======== TABELLE PER LE ANALISI CLOUD ============
+-- ==================================================
+
+-- Creazione tabella per i risultati delle variazioni
+CREATE TABLE IF NOT EXISTS macrozone_yearly_variation (
+    time        TIMESTAMPTZ       NOT NULL,
+    macrozone   TEXT              NOT NULL,
+    type        TEXT              NOT NULL,
+    current     DOUBLE PRECISION  NOT NULL,
+    previous    DOUBLE PRECISION  NOT NULL,
+    delta_perc  DOUBLE PRECISION  NOT NULL,
+    PRIMARY KEY (time, macrozone, type)
+);
+
+-- Convertiamo in hypertable (partizionata per tempo)
+SELECT create_hypertable('macrozone_yearly_variation', 'time', if_not_exists => TRUE, chunk_time_interval => interval '1 month');
+
+-- Creazione tabella per i risultati delle anomalie
+CREATE TABLE IF NOT EXISTS macrozone_yearly_anomalies (
+    time                TIMESTAMPTZ       NOT NULL,
+    macrozone           TEXT              NOT NULL,
+    type                TEXT              NOT NULL,
+    current             DOUBLE PRECISION  NOT NULL,
+    previous            DOUBLE PRECISION  NOT NULL,
+    delta_perc          DOUBLE PRECISION  NOT NULL,
+    neighbor_mean       DOUBLE PRECISION  NOT NULL,
+    neighbor_std_dev    DOUBLE PRECISION  NOT NULL,
+    abs_error           DOUBLE PRECISION  NOT NULL,
+    z_score             DOUBLE PRECISION  NOT NULL,
+    PRIMARY KEY (time, macrozone, type)
+);
+
+-- Convertiamo in hypertable (partizionata per tempo)
+SELECT create_hypertable('macrozone_yearly_anomalies', 'time', if_not_exists => TRUE, chunk_time_interval => interval '1 month');
+
+-- Creazione tabella per i risultati di trend similarity
+CREATE TABLE IF NOT EXISTS macrozone_trends_similarity (
+    time          TIMESTAMPTZ       NOT NULL,
+    macrozone     TEXT              NOT NULL,
+    type          TEXT              NOT NULL,
+    correlation   DOUBLE PRECISION  NOT NULL,
+    slope_macro   DOUBLE PRECISION  NOT NULL,
+    slope_region  DOUBLE PRECISION  NOT NULL,
+    divergence    DOUBLE PRECISION  NOT NULL,
+    PRIMARY KEY (time, macrozone, type)
+);
+
+-- Convertiamo in hypertable (partizionata per tempo)
+SELECT create_hypertable('macrozone_trends_similarity', 'time', if_not_exists => TRUE, chunk_time_interval => interval '1 month');

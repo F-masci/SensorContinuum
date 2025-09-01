@@ -1,6 +1,7 @@
 package macrozone
 
 import (
+	"SensorContinuum/internal/api-backend/environment"
 	"SensorContinuum/internal/api-backend/storage"
 	"SensorContinuum/internal/api-backend/zone"
 	"SensorContinuum/pkg/types"
@@ -176,7 +177,7 @@ func GetAggregatedSensorData(ctx context.Context, regionName, macrozoneName stri
 // utilizzando l'ultimo valore aggregato per ogni tipo di sensore
 func GetAggregatedDataByLocation(ctx context.Context, lat, lon, radius float64) ([]types.AggregatedStats, error) {
 	// 1. Leggere tutte le macrozone vicine
-	nearestMacrozones, err := GetMacrozoneByLocation(ctx, lat, lon, radius)
+	nearestMacrozones, err := GetMacrozonesByLocation(ctx, lat, lon, radius)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func GetAggregatedDataByLocation(ctx context.Context, lat, lon, radius float64) 
 		regionsMap[m.RegionName] = append(regionsMap[m.RegionName], m.Name)
 	}
 
-	cutoffTime := time.Now().UTC().Add(-2 * time.Hour)
+	cutoffTime := time.Now().UTC().Add(-environment.AggregatedDataCutOff).Truncate(environment.AggregatedDataCutOff)
 
 	// 3. Per ogni regione, apri una sola connessione e prendi le aggregazioni di tutte le macrozone di quella regione
 	aggregatedMap := make(map[string]*types.AggregatedStats)
@@ -305,12 +306,74 @@ func GetAggregatedDataByLocation(ctx context.Context, lat, lon, radius float64) 
 
 }
 
-// GetMacrozonesYearlyVariation calcola la variazione YoY per tutte le macrozone di una regione
+// GetMacrozonesYearlyVariation Cerca le variazioni YoY per tutte le macrozone.
+// Se i dati non sono presenti nel DB (ultimi 2 giorni), li calcola al momento.
 // Restituisce una mappa annidata: macrozona -> tipo sensore -> VariationResult
-func GetMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macrozone) (map[string]map[string]types.VariationResult, error) {
-	// Prendo le variazioni di ieri, di cui ho tutti i dati aggregati
-	now := time.Now().UTC()
-	dateCurrent := now.Add(-24 * time.Hour)
+func GetMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macrozone, day time.Time) (map[string]map[string]types.VariationResult, error) {
+
+	// Controlla che ci siano macrozone
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, macrozones[0].RegionName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prova a leggere le variazioni dal DB
+	rows, err := sensorDb.Conn().Query(ctx, `
+		SELECT macrozone, type, current, previous, delta_perc, time
+		FROM macrozone_yearly_variation
+		WHERE DATE(time) = $1
+		  AND macrozone = ANY($2)
+	`, day.UTC().Format("2006-01-02"), func() []string {
+		names := make([]string, 0, len(macrozones))
+		for _, m := range macrozones {
+			names = append(names, m.Name)
+		}
+		return names
+	}())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make(map[string]map[string]types.VariationResult)
+	found := false
+
+	for rows.Next() {
+		found = true
+		var mzName, t string
+		var current, previous, deltaPerc float64
+		var ts time.Time
+
+		if err := rows.Scan(&mzName, &t, &current, &previous, &deltaPerc, &ts); err != nil {
+			return nil, err
+		}
+
+		if _, ok := results[mzName]; !ok {
+			results[mzName] = make(map[string]types.VariationResult)
+		}
+		results[mzName][t] = types.VariationResult{
+			Macrozone: mzName,
+			Type:      t,
+			Current:   current,
+			Previous:  previous,
+			DeltaPerc: deltaPerc,
+			Timestamp: ts.Unix(),
+		}
+	}
+
+	// Se non ci sono dati, calcola per quella data
+	if !found {
+		return ComputeMacrozonesYearlyVariation(ctx, macrozones, day)
+	}
+
+	return results, nil
+
+}
+
+// ComputeMacrozonesYearlyVariation calcola la variazione YoY per tutte le macrozone
+// Restituisce una mappa annidata: macrozona -> tipo sensore -> VariationResult
+func ComputeMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macrozone, dateCurrent time.Time) (map[string]map[string]types.VariationResult, error) {
+
 	datePrev := dateCurrent.AddDate(-1, 0, 0)
 
 	// Raggruppa macrozone per regione
@@ -326,6 +389,10 @@ func GetMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macroz
 		if err != nil {
 			return nil, err
 		}
+
+		// Aggiorna la vista materializzata se necessario
+		err = storage.CheckAndRefreshAggregateView(ctx, sensorDb, "macrozone_daily_agg", dateCurrent)
+		err = storage.CheckAndRefreshAggregateView(ctx, sensorDb, "macrozone_daily_agg", datePrev)
 
 		aggQuery := `
 		SELECT macrozone_name, type, avg_value
@@ -382,7 +449,8 @@ func GetMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macroz
 		}
 		rowsPrev.Close()
 
-		// 3. Calcola variazione percentuale per ciascun sensore
+		// 3. Calcola variazione percentuale e popola struttura risultati
+		mvBatch := make([]types.VariationResult, 0)
 		for mz, sensors := range data {
 			for t, s := range sensors {
 				if s.Prev == 0 {
@@ -392,25 +460,107 @@ func GetMacrozonesYearlyVariation(ctx context.Context, macrozones []types.Macroz
 				if _, ok := results[mz]; !ok {
 					results[mz] = make(map[string]types.VariationResult)
 				}
-				results[mz][t] = types.VariationResult{
+				r := types.VariationResult{
 					Macrozone: mz,
 					Type:      t,
 					Current:   s.Current,
 					Previous:  s.Prev,
 					DeltaPerc: perc,
-					Timestamp: now.Unix(),
+					Timestamp: dateCurrent.Unix(),
 				}
+				results[mz][t] = r
+				mvBatch = append(mvBatch, r)
 			}
 		}
+
+		// Salva i risultati nel database
+		err = storage.SaveVariationResults(ctx, sensorDb, mvBatch)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return results, nil
 }
 
-// CalculateAnomaliesPerMacrozones calcola, per ogni macrozona e per ogni tipo di sensore,
+// GetMacrozonesAnomalies restituisce le anomalie per una data specifica.
+// Se non sono presenti nel DB, le calcola al momento.
+func GetMacrozonesAnomalies(ctx context.Context, macrozones []types.Macrozone, radius float64, date time.Time) (map[string]map[string]types.MacrozoneAnomaly, error) {
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, macrozones[0].RegionName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Query unica: cerca anomalie per la data specifica
+	rows, err := sensorDb.Conn().Query(ctx, `
+		SELECT macrozone, type, current, previous, delta_perc,
+		       neighbor_mean, neighbor_std_dev, abs_error, z_score, time
+		FROM macrozone_yearly_anomalies
+		WHERE DATE(time) = $1
+		  AND macrozone = ANY($2)
+	`, date.UTC().Format("2006-01-02"), func() []string {
+		names := make([]string, 0, len(macrozones))
+		for _, m := range macrozones {
+			names = append(names, m.Name)
+		}
+		return names
+	}())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make(map[string]map[string]types.MacrozoneAnomaly)
+	found := false
+
+	for rows.Next() {
+		found = true
+		var mzName, t string
+		var current, previous, deltaPerc float64
+		var neighborMean, neighborStd, absErr, zScore float64
+		var ts time.Time
+
+		if err := rows.Scan(&mzName, &t, &current, &previous, &deltaPerc,
+			&neighborMean, &neighborStd, &absErr, &zScore, &ts); err != nil {
+			return nil, err
+		}
+
+		if _, ok := results[mzName]; !ok {
+			results[mzName] = make(map[string]types.MacrozoneAnomaly)
+		}
+
+		results[mzName][t] = types.MacrozoneAnomaly{
+			MacrozoneName: mzName,
+			Type:          t,
+			Variation: types.VariationResult{
+				Macrozone: mzName,
+				Type:      t,
+				Current:   current,
+				Previous:  previous,
+				DeltaPerc: deltaPerc,
+				Timestamp: ts.Unix(),
+			},
+			NeighborMean:   neighborMean,
+			NeighborStdDev: neighborStd,
+			AbsError:       absErr,
+			ZScore:         zScore,
+			Timestamp:      ts.Unix(),
+		}
+	}
+
+	// Se non ci sono dati, calcola al volo
+	if !found {
+		return ComputeMacrozonesAnomalies(ctx, macrozones, radius, date)
+	}
+
+	return results, nil
+}
+
+// ComputeMacrozonesAnomalies calcola, per ogni macrozona e per ogni tipo di sensore,
 // la variazione annuale e l'anomalia rispetto ai vicini
 // Restituisce una mappa: macrozona -> tipo sensore -> MacrozoneAnomaly
-func CalculateAnomaliesPerMacrozones(ctx context.Context, macrozones []types.Macrozone, neighborRadius float64) (map[string]map[string]types.MacrozoneAnomaly, error) {
+func ComputeMacrozonesAnomalies(ctx context.Context, macrozones []types.Macrozone, neighborRadius float64, date time.Time) (map[string]map[string]types.MacrozoneAnomaly, error) {
 
 	// Step 1: calcola mappa vicini
 	neighborsMap, err := GetAllMacrozoneNeighbors(ctx, macrozones, neighborRadius)
@@ -434,93 +584,185 @@ func CalculateAnomaliesPerMacrozones(ctx context.Context, macrozones []types.Mac
 		allMacrozones = append(allMacrozones, mz)
 	}
 
-	// Step 3: chiedi le variazioni per tutte
-	// FIXME: prendere i dati dal DB, piuttosto che ricalcolarli ogni volta
-	macrozoneVariations, err := GetMacrozonesYearlyVariation(ctx, allMacrozones)
+	// Step 3: chiedi le variazioni per tutte le macrozone
+	macrozoneVariations, err := GetMacrozonesYearlyVariation(ctx, allMacrozones, date)
 	if err != nil {
 		return nil, err
+	}
+
+	// Raggruppa macrozone per regione
+	regionsMap := make(map[string][]string)
+	for _, m := range macrozones {
+		regionsMap[m.RegionName] = append(regionsMap[m.RegionName], m.Name)
 	}
 
 	// Step 4: calcola anomalie per ciascun tipo sensore
 	anomalies := make(map[string]map[string]types.MacrozoneAnomaly)
 
-	for _, m := range macrozones {
-		myVars, ok := macrozoneVariations[m.Name]
-		if !ok {
-			continue
+	for region, macrozoneName := range regionsMap {
+
+		sensorDb, err := storage.GetSensorPostgresDB(ctx, region)
+		if err != nil {
+			return nil, err
 		}
 
-		neighbors := neighborsMap[m.Name]
-		if len(neighbors) == 0 {
-			continue
-		}
-
-		for sensorType, myVariation := range myVars {
-			neighbourVariation := make([]types.VariationResult, 0)
-
-			// raccolta delle variazioni dei vicini
-			neighborDeltas := make([]float64, 0)
-			for _, n := range neighbors {
-				if nv, ok := macrozoneVariations[n.Name]; ok {
-					if v, ok2 := nv[sensorType]; ok2 {
-						neighbourVariation = append(neighbourVariation, v)
-						neighborDeltas = append(neighborDeltas, v.DeltaPerc)
-					}
-				}
-			}
-
-			count := len(neighborDeltas)
-			if count == 0 {
+		maBatch := make([]types.MacrozoneAnomaly, 0)
+		for _, m := range macrozoneName {
+			macroVars, ok := macrozoneVariations[m]
+			if !ok {
 				continue
 			}
 
-			// calcola media
-			var sum float64
-			for _, d := range neighborDeltas {
-				sum += d
-			}
-			mean := sum / float64(count)
-
-			// calcola deviazione standard
-			var variance float64
-			for _, d := range neighborDeltas {
-				variance += (d - mean) * (d - mean)
-			}
-			stdDev := math.Sqrt(variance / float64(count))
-
-			// calcola z-score
-			var zScore float64
-			if stdDev != 0 {
-				zScore = (myVariation.DeltaPerc - mean) / stdDev
-			} else {
-				zScore = 0 // tutti i vicini hanno lo stesso valore
+			neighbors := neighborsMap[m]
+			if len(neighbors) == 0 {
+				continue
 			}
 
-			if _, ok := anomalies[m.Name]; !ok {
-				anomalies[m.Name] = make(map[string]types.MacrozoneAnomaly)
+			for sensorType, myVariation := range macroVars {
+				neighbourVariation := make([]types.VariationResult, 0)
+
+				// raccolta delle variazioni dei vicini
+				neighborDeltas := make([]float64, 0)
+				for _, n := range neighbors {
+					if nv, ok := macrozoneVariations[n.Name]; ok {
+						if v, ok2 := nv[sensorType]; ok2 {
+							neighbourVariation = append(neighbourVariation, v)
+							neighborDeltas = append(neighborDeltas, v.DeltaPerc)
+						}
+					}
+				}
+
+				count := len(neighborDeltas)
+				if count == 0 {
+					continue
+				}
+
+				// calcola media
+				var sum float64
+				for _, d := range neighborDeltas {
+					sum += d
+				}
+				mean := sum / float64(count)
+
+				// calcola deviazione standard
+				var variance float64
+				for _, d := range neighborDeltas {
+					variance += (d - mean) * (d - mean)
+				}
+				stdDev := math.Sqrt(variance / float64(count))
+
+				// calcola z-score
+				var zScore float64
+				if stdDev != 0 {
+					zScore = (myVariation.DeltaPerc - mean) / stdDev
+				} else {
+					zScore = 0 // tutti i vicini hanno lo stesso valore
+				}
+
+				if _, ok := anomalies[m]; !ok {
+					anomalies[m] = make(map[string]types.MacrozoneAnomaly)
+				}
+				a := types.MacrozoneAnomaly{
+					MacrozoneName:      m,
+					Type:               sensorType,
+					Variation:          myVariation,
+					NeighborMean:       mean,
+					NeighborStdDev:     stdDev,
+					NeighbourVariation: neighbourVariation,
+					AbsError:           math.Abs(myVariation.DeltaPerc - mean),
+					ZScore:             zScore,
+					Timestamp:          myVariation.Timestamp,
+				}
+				anomalies[m][sensorType] = a
+				maBatch = append(maBatch, a)
 			}
-			anomalies[m.Name][sensorType] = types.MacrozoneAnomaly{
-				MacrozoneName:      m.Name,
-				Type:               sensorType,
-				Variation:          myVariation,
-				NeighborMean:       mean,
-				NeighborStdDev:     stdDev,
-				NeighbourVariation: neighbourVariation,
-				AbsError:           math.Abs(myVariation.DeltaPerc - mean),
-				ZScore:             zScore,
-				Timestamp:          myVariation.Timestamp,
-			}
+
 		}
+
+		// Salva i risultati nel database
+		err = storage.SaveAnomaliesResults(ctx, sensorDb, maBatch)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return anomalies, nil
 }
 
-// GetTrendSimilarityPerMacrozones calcola la similarità dei trend
+// GetMacrozonesTrendsSimilarity Restituisce la similarità dei trend
+// di ciascuna macrozona rispetto alla sua regione, considerando tutti i tipi di rilevazione.
+// Se i dati non sono presenti nel DB, li calcola al momento.
+// Restituisce una mappa annidata: macrozona -> tipo di rilevazione -> TrendSimilarityResult
+func GetMacrozonesTrendsSimilarity(ctx context.Context, macrozones []types.Macrozone, days int, date time.Time) (map[string]map[string]types.TrendSimilarityResult, error) {
+	sensorDb, err := storage.GetSensorPostgresDB(ctx, macrozones[0].RegionName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prova a leggere le similarità dal DB
+	rows, err := sensorDb.Conn().Query(ctx, `
+		SELECT macrozone, type, correlation, slope_macro, slope_region, divergence, time
+		FROM macrozone_trends_similarity
+		WHERE DATE(time) = $1
+		  AND macrozone = ANY($2)
+	`, date.UTC().Format("2006-01-02"), func() []string {
+		names := make([]string, 0, len(macrozones))
+		for _, m := range macrozones {
+			names = append(names, m.Name)
+		}
+		return names
+	}())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make(map[string]map[string]types.TrendSimilarityResult)
+	found := false
+
+	for rows.Next() {
+		found = true
+		var mzName, t string
+		var correlation, slopeMacro, slopeRegion, divergence float64
+		var ts time.Time
+
+		if err := rows.Scan(&mzName, &t, &correlation, &slopeMacro, &slopeRegion, &divergence, &ts); err != nil {
+			return nil, err
+		}
+
+		if _, ok := results[mzName]; !ok {
+			results[mzName] = make(map[string]types.TrendSimilarityResult)
+		}
+		results[mzName][t] = types.TrendSimilarityResult{
+			MacrozoneName: mzName,
+			Type:          t,
+			Correlation:   correlation,
+			SlopeMacro:    slopeMacro,
+			SlopeRegion:   slopeRegion,
+			Divergence:    divergence,
+			Timestamp:     date.UTC().Unix(),
+		}
+	}
+
+	// Se non ci sono dati, calcola per quella data
+	if !found {
+		return ComputeMacrozonesTrendsSimilarity(ctx, macrozones, days, date)
+	}
+
+	return results, nil
+
+}
+
+// ComputeMacrozonesTrendsSimilarity calcola la similarità dei trend
 // di ciascuna macrozona rispetto alla sua regione, considerando tutti i tipi di rilevazione.
 // Restituisce una mappa annidata: macrozona -> tipo di rilevazione -> TrendSimilarityResult
-func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Macrozone, days int) (map[string]map[string]types.TrendSimilarityResult, error) {
+func ComputeMacrozonesTrendsSimilarity(ctx context.Context, macrozones []types.Macrozone, days int, date time.Time) (map[string]map[string]types.TrendSimilarityResult, error) {
 	results := make(map[string]map[string]types.TrendSimilarityResult) // mappa finale dei risultati
+
+	// Range di giorni
+	startDate := date.AddDate(0, 0, -(days - 1)).Truncate(24 * time.Hour) // giorno iniziale
+	endDate := date.Truncate(24 * time.Hour)                              // giorno finale
 
 	// 1. Raggruppa le macrozone per regione per ridurre query al DB
 	regionsMap := make(map[string][]types.Macrozone)
@@ -535,14 +777,27 @@ func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Mac
 			return nil, err
 		}
 
-		// --- Recupera tutti i dati della regione per tutti i tipi ---
+		tsBatch := make([]types.TrendSimilarityResult, 0)
+
+		// Aggiorna la view solo per il range specificato
+		for _, viewName := range []string{"region_daily_agg", "macrozone_daily_agg"} {
+			for d := 0; d < days; d++ {
+				aggDate := startDate.AddDate(0, 0, d)
+				err = storage.CheckAndRefreshAggregateView(ctx, sensorDb, viewName, aggDate)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		// --- Recupera dati della regione ---
 		queryRegion := `
             SELECT type, day, avg_value, min_value, max_value, total_sum, total_count
             FROM region_daily_agg
-            ORDER BY type, day DESC
-            LIMIT $1
+            WHERE day BETWEEN $1 AND $2
+            ORDER BY type, day
         `
-		rows, err := sensorDb.Conn().Query(ctx, queryRegion, days)
+		rows, err := sensorDb.Conn().Query(ctx, queryRegion, startDate, endDate)
 		if err != nil {
 			return nil, err
 		}
@@ -583,9 +838,10 @@ func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Mac
             SELECT macrozone_name, type, day, avg_value, min_value, max_value, total_sum, total_count
             FROM macrozone_daily_agg
             WHERE macrozone_name = ANY($1)
-            ORDER BY macrozone_name, type, day DESC
+              AND day BETWEEN $2 AND $3
+            ORDER BY macrozone_name, type, day
         `
-		rows, err = sensorDb.Conn().Query(ctx, queryMacro, mzNames)
+		rows, err = sensorDb.Conn().Query(ctx, queryMacro, mzNames, startDate, endDate)
 		if err != nil {
 			return nil, err
 		}
@@ -682,7 +938,7 @@ func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Mac
 				}
 
 				// Salva il risultato
-				results[mz.Name][t] = types.TrendSimilarityResult{
+				tsr := types.TrendSimilarityResult{
 					MacrozoneName:   mz.Name,
 					RegionName:      regionName,
 					Type:            t,
@@ -693,8 +949,17 @@ func GetTrendSimilarityPerMacrozones(ctx context.Context, macrozones []types.Mac
 					MacrozoneSeries: alignedMacro,
 					RegionSeries:    alignedRegion,
 				}
+				tsBatch = append(tsBatch, tsr)
+				results[mz.Name][t] = tsr
 			}
 		}
+
+		// Salva i risultati nel database
+		err = storage.SaveTrendSimilarityResults(ctx, sensorDb, tsBatch, date)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return results, nil

@@ -157,10 +157,10 @@ func AggregateSensorData(ctx context.Context) {
 			}
 			logger.Log.Debug("Aggregated region data: ", agg)
 			if err := storage.InsertRegionStatisticsData(agg); err != nil {
-				logger.Log.Error("Failed to save region aggregated data, type: ", agg.Type, ", error: ", err)
+				logger.Log.Error("Failed to save region aggregated data of ", agg.Type, ": ", err)
 				return
 			}
-			logger.Log.Info("Macrozone region data saved successfully, type: ", agg.Type)
+			logger.Log.Info("Region aggregated statistics saved successfully, type: ", agg.Type)
 		}
 	}
 

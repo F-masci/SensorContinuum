@@ -5,7 +5,10 @@ import (
 	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -18,25 +21,24 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return types.CreateErrorResponse(http.StatusBadRequest, "Parametro 'region' mancante", nil)
 	}
 
-	ctx := context.Background()
+	// Recupera la data dai query parameters (opzionale)
+	// Se non è specificata, usa la data di ieri
+	dateStr := request.QueryStringParameters["date"]
+	var date time.Time
+	var err error
+	if dateStr == "" {
+		date = time.Now().AddDate(0, 0, -1)
+	} else {
+		date, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return types.CreateErrorResponse(http.StatusBadRequest, "Parametro 'date' non valido, deve essere nel formato YYYY-MM-DD", err)
+		}
+	}
 
-	// 1. Ottieni tutte le macrozone
-	macrozones, err := macrozoneAPI.GetMacrozonesList(ctx, region)
+	body, err, statusCode, errorMsg := computeVariations(region, date)
 	if err != nil {
-		return types.CreateErrorResponse(http.StatusInternalServerError, "Errore nel recupero delle macrozone", err)
+		return types.CreateErrorResponse(statusCode, errorMsg, err)
 	}
-	if len(macrozones) == 0 {
-		return types.CreateErrorResponse(http.StatusNotFound, "Nessuna macrozona trovata per la regione specificata", nil)
-	}
-
-	// 2. Calcola variazione annuale
-	macrozoneVariations, err := macrozoneAPI.GetMacrozonesYearlyVariation(ctx, macrozones)
-	if err != nil {
-		return types.CreateErrorResponse(http.StatusInternalServerError, "Errore nel calcolo delle variazioni annuali", err)
-	}
-
-	// 3. Serializza in JSON
-	body, _ := json.MarshalIndent(macrozoneVariations, "", "  ")
 
 	return events.APIGatewayProxyResponse{
 		Body:       string(body),
@@ -45,6 +47,41 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}, nil
 }
 
+func computeVariations(region string, date time.Time) ([]byte, error, int, string) {
+
+	ctx := context.Background()
+
+	// 1. Ottieni tutte le macrozone
+	macrozones, err := macrozoneAPI.GetMacrozonesList(ctx, region)
+	if err != nil {
+		return nil, err, http.StatusInternalServerError, "Errore nel recupero delle macrozone"
+	}
+	if len(macrozones) == 0 {
+		return nil, err, http.StatusNotFound, "Nessuna macrozona trovata per la regione specificata"
+	}
+
+	// 2. Calcola variazione annuale
+	macrozoneVariations, err := macrozoneAPI.GetMacrozonesYearlyVariation(ctx, macrozones, date)
+	if err != nil {
+		return nil, err, http.StatusInternalServerError, "Errore nel calcolo delle variazioni annuali"
+	}
+
+	// 3. Serializza in JSON
+	body, err := json.MarshalIndent(macrozoneVariations, "", "  ")
+	return body, err, http.StatusOK, ""
+}
+
 func main() {
-	lambda.Start(handler)
+	_, exists := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
+	if exists {
+		// La funzione è in esecuzione in AWS Lambda
+		lambda.Start(handler)
+	} else {
+		// La funzione è in esecuzione in locale
+		body, err, _, _ := computeVariations("region-001", time.Now().AddDate(0, 0, -1))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(body))
+	}
 }

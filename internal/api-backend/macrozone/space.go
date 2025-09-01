@@ -6,9 +6,9 @@ import (
 	"context"
 )
 
-// GetMacrozoneByLocation restituisce le macrozone che contengono o sono entro un certo raggio dalla posizione specificata (lat, lon).
+// GetMacrozonesByLocation restituisce le macrozone che contengono o sono entro un certo raggio dalla posizione specificata (lat, lon).
 // La funzione utilizza PostGIS per eseguire query spaziali sul database PostgreSQL.
-func GetMacrozoneByLocation(ctx context.Context, lat, lon, radius float64) ([]types.Macrozone, error) {
+func GetMacrozonesByLocation(ctx context.Context, lat, lon, radius float64) ([]types.Macrozone, error) {
 
 	// 1. Connettersi al cloudDB per leggere tutte le macrozone vicine
 	cloudDb, err := storage.GetCloudPostgresDB(ctx)
