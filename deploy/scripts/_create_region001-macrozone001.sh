@@ -1,0 +1,2 @@
+./create_macrozone.sh --deploy=localstack --region-name region-001 --vpc-name region-001-VPC --subnet-cidr 10.0.1.0/24 --subnet-name build-0001-subnet --stack-name region-001_macrozone-001_stack
+# ./create_macrozone.sh --deploy=localstack --region-name region-001 --vpc-name region-001-VPC --subnet-cidr 10.0.1.0/24 --subnet-name build-0001-subnet --stack-name region-001_macrozone-001_stack

@@ -1,0 +1,2 @@
+./create_region.sh --deploy=localstack --region eu-east-1 --vpc-name region-001-VPC --vpc-cidr 10.0.0.0/16 --ssh-cidr 0.0.0.0/0 --stack-name region-001_stack
+# ./create_region.sh --region eu-west-1 --vpc-name region-001-VPC --vpc-cidr 10.0.0.0/16 --ssh-cidr 0.0.0.0/0

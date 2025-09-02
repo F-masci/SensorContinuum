@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Crea una Subnet e un Security Group che blocca tutto in ingresso e permette tutto in uscita
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: ID della VPC dove creare la subnet
+  SubnetCidr:
+    Type: String
+    Description: CIDR della subnet (es. 10.0.1.0/24)
+  SubnetName:
+    Type: String
+    Default: "MySubnet"
+    Description: Nome della subnet
+
+Resources:
+  MacrozoneSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref SubnetCidr
+      Tags:
+        - Key: Name
+          Value: !Ref SubnetName
+
+  MacrozoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Blocca tutto in ingresso, permette tutto in uscita
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: "LockedSG"

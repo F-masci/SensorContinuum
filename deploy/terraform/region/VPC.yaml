@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Crea una VPC e un Security Group SSH"
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR della VPC"
+  VpcName:
+    Type: String
+    Default: "MyVPC"
+    Description: "Nome della VPC"
+  SubnetCidr:
+    Type: String
+    Default: "10.0.0.0/24"
+    Description: "CIDR della Subnet"
+  SubnetName:
+    Type: String
+    Default: "MySubnet"
+    Description: "Nome della Subnet"
+  SshAllowedCidr:
+    Type: String
+    Default: "0.0.0.0/0"
+    Description: "CIDR da cui permettere l'accesso SSH"
+
+Resources:
+  RegionVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Ref VpcName
+
+  RegionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Consente solo SSH"
+      VpcId: !Ref RegionVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SshAllowedCidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ssh-sg"
+
+  RegionSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RegionVPC
+      CidrBlock: !Ref SubnetCidr
+      Tags:
+        - Key: Name
+          Value: !Ref SubnetName
+
+Outputs:
+  VpcId:
+    Description: "ID della VPC creata"
+    Value: !Ref RegionVPC
+  SshSecurityGroupId:
+    Description: "ID del Security Group SSH"
+    Value: !Ref RegionSecurityGroup
+  SubnetId:
+    Description: "ID della Subnet creata"
+    Value: !Ref RegionSubnet

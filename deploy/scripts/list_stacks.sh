@@ -1,0 +1,1 @@
+aws --endpoint-url=http://localhost:4566 cloudformation list-stacks --stack-status-filter CREATE_IN_PROGRESS CREATE_COMPLETE UPDATE_IN_PROGRESS UPDATE_COMPLETE --query "StackSummaries[].StackName" --output table
