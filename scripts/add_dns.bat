@@ -13,7 +13,7 @@ if "%~2"=="" (
 set RECORD_NAME=%~1
 set IP=%~2
 set ENDPOINT=http://localhost:4566
-set ZONE_NAME=sensorcontinuum.node
+set ZONE_NAME=sensorcontinuum.local
 set JSON_FILE=%TEMP%\dns_change_%RANDOM%.json
 set ZONE_ID=
 

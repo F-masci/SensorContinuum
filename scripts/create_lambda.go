@@ -9,7 +9,7 @@ import (
 
 const (
 	endpoint = "http://localhost:4566"
-	roleArn  = "arn:aws:iam::000000000000:role/fake-role"
+	roleArn  = "arn:terraform:iam::000000000000:role/fake-role"
 	region   = "us-east-1"
 )
 
@@ -50,7 +50,7 @@ func main() {
 
 func deleteLambda(funcName string) {
 	fmt.Printf("Eliminazione, se esiste, funzione %s...\n", funcName)
-	cmd := exec.Command("aws", "lambda", "delete-function",
+	cmd := exec.Command("terraform", "lambda", "delete-function",
 		"--endpoint-url="+endpoint,
 		"--function-name="+funcName,
 		"--region="+region,
@@ -62,7 +62,7 @@ func deleteLambda(funcName string) {
 
 func createLambda(funcName, zipPath string) {
 	fmt.Printf("Creazione funzione %s...\n", funcName)
-	cmd := exec.Command("aws", "lambda", "create-function",
+	cmd := exec.Command("terraform", "lambda", "create-function",
 		"--endpoint-url="+endpoint,
 		"--function-name="+funcName,
 		"--runtime=go1.x",

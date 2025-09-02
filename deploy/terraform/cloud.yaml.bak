@@ -1,0 +1,107 @@
+  # -----------------------------
+  # Route53 RecordSet con Failover
+  # -----------------------------
+  MetadataDbPrimaryRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref SensorContinuumHostedZone
+      Name: metadata-db.cloud.sensorcontinuum.local
+      Type: CNAME
+      SetIdentifier: primary
+      Failover: PRIMARY
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt PrimaryAuroraCluster.Endpoint.Address
+      HealthCheckId: !Ref PrimaryAuroraHealthCheck
+
+  MetadataDbSecondaryRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref SensorContinuumHostedZone
+      Name: metadata-db.cloud.sensorcontinuum.local
+      Type: CNAME
+      SetIdentifier: secondary
+      Failover: SECONDARY
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt SecondaryAuroraCluster.Endpoint.Address
+
+  # -----------------------------
+  # IAM Role per Lambda Init SQL
+  # -----------------------------
+  InitSQLLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: InitSQLLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${InitSQLBucket}/*"
+
+  # -----------------------------
+  # Lambda Python inline per inizializzazione SQL
+  # -----------------------------
+  InitSQLLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: InitMetadataDb
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Timeout: 300
+      MemorySize: 256
+      Role: !GetAtt InitSQLLambdaRole.Arn
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt PrimaryAuroraCluster.Endpoint.Address
+          DB_USER: !Ref DBMasterUsername
+          DB_PASSWORD: !Ref DBMasterPassword
+          DB_NAME: sensorcontinuum
+          S3_BUCKET: !Ref InitSQLBucket
+          S3_KEY: !Ref InitSQLKey
+      Code:
+        ZipFile: |
+          import os
+          import psycopg2
+          import boto3
+
+          def lambda_handler(event, context):
+              bucket = os.environ['S3_BUCKET']
+              key = os.environ['S3_KEY']
+              db_host = os.environ['DB_HOST']
+              db_name = os.environ['DB_NAME']
+              db_user = os.environ['DB_USER']
+              db_password = os.environ['DB_PASSWORD']
+
+              s3 = boto3.client('s3')
+              obj = s3.get_object(Bucket=bucket, Key=key)
+              sql_script = obj['Body'].read().decode('utf-8')
+
+              conn = psycopg2.connect(host=db_host, dbname=db_name, user=db_user, password=db_password)
+              cur = conn.cursor()
+              cur.execute(sql_script)
+              conn.commit()
+              cur.close()
+              conn.close()
+              return {"status": "SQL eseguito con successo"}
+
+  # -----------------------------
+  # Custom Resource per trigger Lambda dopo il deploy
+  # -----------------------------
+  InitMetadataDbCustomResource:
+    Type: Custom::InitDB
+    Properties:
+      ServiceToken: !GetAtt InitSQLLambda.Arn
