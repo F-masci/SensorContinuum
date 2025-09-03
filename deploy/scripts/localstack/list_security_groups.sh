@@ -1,0 +1,1 @@
+aws ec2 --endpoint-url=http://localhost:4566 describe-security-groups --query "SecurityGroups[].{Name:Tags[?Key=='Name'].Value|[0],GroupId:GroupId}" --output table

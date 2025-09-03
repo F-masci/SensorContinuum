@@ -1,51 +1,62 @@
 #!/bin/bash
 
-BUCKET_NAME="sensor-continuum"
-DEPLOY_MODE="aws"
+set -e
 
-# File fissi da caricare
-FIXED_FILES=(../compose/* ../compose/envs/*)
-EXTRA_FILES=()
+# Configurazioni
+AWS_REGION="${AWS_REGION:-us-east-1}"
+BUCKET_NAME="${BUCKET_NAME:-sensor-continuum-scripts}"
+DEPLOY_MODE="${DEPLOY_MODE:-aws}" # "aws" o "localstack"
+ENDPOINT_URL=""
 
-for arg in "$@"; do
-  if [[ "$arg" == "--deploy=localstack" ]]; then
-    DEPLOY_MODE="localstack"
-  elif [[ "$arg" != --* ]]; then
-    EXTRA_FILES+=("$arg")
-  fi
-done
-
+# Se deploy su localstack
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
   ENDPOINT_URL="--endpoint-url=http://localhost:4566"
   echo "Deploy su LocalStack..."
 else
-  ENDPOINT_URL=""
   echo "Deploy su AWS..."
 fi
 
-# Controlla se il bucket esiste
-aws s3api head-bucket --bucket "$BUCKET_NAME" $ENDPOINT_URL 2>/dev/null
-if [[ $? -ne 0 ]]; then
-  echo "Bucket $BUCKET_NAME non esiste, lo creo..."
-  aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" $ENDPOINT_URL
-  if [[ $? -ne 0 ]]; then
-    echo "Errore nella creazione del bucket $BUCKET_NAME."
-    exit 1
-  fi
-  echo "Bucket $BUCKET_NAME creato con successo."
+# Mapping locale -> path S3
+# Formato: ["pattern locale"]="destinazione S3"
+declare -A FILE_MAP
+FILE_MAP["inits/*install*.sh"]="init/"
+FILE_MAP["inits/*init*.sh"]="init/"
+FILE_MAP["deploy/*deploy*.sh"]="deploy/"
+FILE_MAP["../compose/*.y*ml"]="compose/"
+FILE_MAP["../compose/envs/region-001/build-0001/.env*"]="compose/envs/region-001/build-0001/"
+
+echo "Verifica bucket $BUCKET_NAME..."
+EXISTS=$(aws s3api $ENDPOINT_URL head-bucket --bucket "$BUCKET_NAME" 2>/dev/null || echo "no")
+if [[ "$EXISTS" == "no" ]]; then
+  echo "Bucket non trovato. Creazione bucket $BUCKET_NAME in $AWS_REGION..."
+  aws s3api $ENDPOINT_URL create-bucket \
+      --bucket "$BUCKET_NAME" \
+      --region "$AWS_REGION" \
+      $( [[ "$AWS_REGION" != "us-east-1" ]] && echo "--create-bucket-configuration LocationConstraint=$AWS_REGION" )
+  echo "Bucket creato."
 else
-  echo "Bucket $BUCKET_NAME già esistente, aggiorno i file..."
+  echo "Bucket già esistente."
 fi
 
-# Carica i file fissi e quelli extra
-ALL_FILES=("${FIXED_FILES[@]}" "${EXTRA_FILES[@]}")
-for file in "${ALL_FILES[@]}"; do
-  if [[ -f "$file" ]]; then
-    aws s3 cp "$file" "s3://$BUCKET_NAME/" $ENDPOINT_URL
-    echo "File $file caricato su $BUCKET_NAME."
-  else
-    echo "File $file non trovato, salto."
+# Copia file
+for pattern in "${!FILE_MAP[@]}"; do
+  dest_path="${FILE_MAP[$pattern]}"
+  echo "Copia file matching '$pattern' in s3://$BUCKET_NAME/$dest_path"
+
+  files=( $pattern )
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "Attenzione: nessun file trovato per pattern '$pattern'"
+    continue
   fi
+
+  for f in "${files[@]}"; do
+    if [[ -f "$f" ]]; then
+      aws s3 cp $ENDPOINT_URL "$f" "s3://$BUCKET_NAME/$dest_path"
+      echo "Copiato $f → s3://$BUCKET_NAME/$dest_path"
+    else
+      echo "File $f non trovato, salto."
+    fi
+  done
 done
 
-echo "Operazione completata."
+echo "Deploy dei file completato."

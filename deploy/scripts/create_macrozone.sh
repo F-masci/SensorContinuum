@@ -1,29 +1,36 @@
 #!/bin/bash
 
-# Script per creare Subnet e Security Group bloccato, con controllo VPC e subnet.
-# Esempio:
-#   ./create_macrozone.sh --region-name region001 --vpc-name MyVPC --subnet-cidr 10.0.1.0/24 --subnet-name MacrozoneSubnet
+# Importa le funzioni
+source utils.sh
 
 show_help() {
-  echo "Utilizzo: $0 [opzioni]"
-  echo "  --deploy=localstack      Deploy su LocalStack invece che AWS"
-  echo "  --stack-name NAME        Nome dello stack CloudFormation"
-  echo "  --region-name NAME       Nome logico della regione"
-  echo "  --vpc-name NAME          Nome della VPC (tag Name)"
-  echo "  --aws-region REGION      Regione AWS (default: eu-west-1)"
-  echo "  --subnet-cidr CIDR       CIDR della subnet (default: 10.0.1.0/24)"
-  echo "  --subnet-name NAME       Nome della subnet (default: MacrozoneSubnet)"
-  echo "  -h, --help               Mostra questo messaggio"
+  echo "Utilizzo: $0 region-name macrozone-name [opzioni]"
+  echo "  --deploy=localstack        Deploy su LocalStack invece che AWS"
+  echo "  --aws-region REGION        Regione AWS (default: eu-east-1)"
+  echo "  -h, --help                 Mostra questo messaggio"
+  echo "Esempio:"
+  echo "  $0 region-001 macrozone-001 --aws-region us-east-1"
 }
 
 SUBNET_TEMPLATE="../terraform/macrozone/Subnet.yaml"
-STACK_NAME="${AWS_REGION}_macrozone"
 DEPLOY_MODE="aws"
-REGION_NAME=""
-VPC_NAME=""
-AWS_REGION="eu-east-1"
-SUBNET_CIDR="10.0.1.0/24"
-SUBNET_NAME="${AWS_REGION}_subnet"
+AWS_REGION="us-east-1"
+
+REGION="$1"
+if [[ -z "$REGION" ]]; then
+  echo "Errore: il nome della regione è obbligatorio."
+  show_help
+  exit 1
+fi
+shift
+
+MACROZONE="$1"
+if [[ -z "$MACROZONE" ]]; then
+  echo "Errore: il nome della macrozona è obbligatorio."
+  show_help
+  exit 1
+fi
+shift
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,30 +42,8 @@ while [[ $# -gt 0 ]]; do
       DEPLOY_MODE="localstack"
       shift
       ;;
-    --stack-name)
-      STACK_NAME="$2"
-      shift 2
-      ;;
-    --region-name)
-      REGION_NAME="$2"
-      shift 2
-      ;;
-    --vpc-name)
-      VPC_NAME="$2"
-      shift 2
-      ;;
     --aws-region)
       AWS_REGION="$2"
-      SUBNET_NAME="${AWS_REGION}_vpc"
-      STACK_NAME="${AWS_REGION}_macrozone"
-      shift 2
-      ;;
-    --subnet-cidr)
-      SUBNET_CIDR="$2"
-      shift 2
-      ;;
-    --subnet-name)
-      SUBNET_NAME="$2"
       shift 2
       ;;
     *)
@@ -67,10 +52,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$REGION_NAME" || -z "$VPC_NAME" ]]; then
-  echo "Errore: devi specificare --region-name e --vpc-name"
-  exit 1
-fi
+STACK_NAME="$REGION-$MACROZONE-stack"
+VPC_NAME="$REGION-vpc"
+SUBNET_NAME="$REGION-$MACROZONE-subnet"
+SECURITY_GROUP_NAME="$REGION-$MACROZONE-sg"
+ROUTE_TABLE_NAME="$REGION-vpc-public-rt"
+
 
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
   ENDPOINT_URL="--endpoint-url=http://localhost:4566"
@@ -81,40 +68,134 @@ else
 fi
 
 # Cerca il VPC ID tramite il tag Name
-VPC_ID=$(aws ec2 $ENDPOINT_URL describe-vpcs --region $AWS_REGION --filters "Name=tag:Name,Values=$VPC_NAME" --query "Vpcs[0].VpcId" --output text)
-if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
-  echo "Errore: VPC con tag Name=$VPC_NAME non trovato."
+VPC_ID=$(find_vpc_id "$VPC_NAME" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+
+# Certca la Route Table ID tramite il tag Name
+ROUTE_TABLE_ID=$(find_route_table_id "$ROUTE_TABLE_NAME" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+
+
+# Calolcola CIDR della subnet in base alla regione
+REGION_CIDR=$(aws ec2 $ENDPOINT_URL describe-vpcs --region "$AWS_REGION" --vpc-ids "$VPC_ID" --query "Vpcs[0].CidrBlock" --output text)
+if [[ -z "$REGION_CIDR" || "$REGION_CIDR" == "None" ]]; then
+  echo "Errore: impossibile recuperare il CIDR della VPC $VPC_NAME."
   exit 1
 fi
-echo "Trovato VPC ID: $VPC_ID per VPC $VPC_NAME"
 
-# Deploy del template Subnet e Security Group
+# Prende tutte le sobnet create finora e calcola il prossimo CIDR disponibile
+# Per semplicità, assume che le subnet siano /24 e calcola la prossima
+# disponibile incrementando l'ultimo ottetto.
+# Esempio: se la VPC è 10.0.3.0/24 e ci sono già 3 subnet
+# (10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24), la prossima sarà
+# 10.0.4.0/24
+#!/bin/bash
+
+# Recupera tutti i CIDR delle subnet esistenti nella VPC
+SUBNETS_CIDRS_RAW=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[].CidrBlock" --output text)
+
+# Converte in array
+if [[ -z "$SUBNETS_CIDRS_RAW" ]]; then
+  SUBNETS_CIDRS=()
+else
+  read -r -a SUBNETS_CIDRS <<< "$SUBNETS_CIDRS_RAW"
+fi
+
+echo "Subnet già esistenti nella VPC $VPC_NAME:"
+for CIDR in "${SUBNETS_CIDRS[@]}"; do
+  echo "  - $CIDR"
+done
+
+# Calcola il prossimo CIDR disponibile
+# Assume che la VPC sia qualcosa come 10.0.0.0/16 e tutte le subnet /24
+IFS='.' read -r O1 O2 O3 O4 <<< "${REGION_CIDR%%/*}"
+# Per VPC /16, prendiamo O1.O2 come base
+BASE="${O1}.${O2}."
+NEXT_SUBNET=1
+
+while true; do
+  CANDIDATE_CIDR="${BASE}${NEXT_SUBNET}.0/24"
+
+  # Controlla se già esiste
+  FOUND=false
+  for EXISTING in "${SUBNETS_CIDRS[@]}"; do
+    if [[ "$EXISTING" == "$CANDIDATE_CIDR" ]]; then
+      FOUND=true
+      break
+    fi
+  done
+
+  if ! $FOUND; then
+    SUBNET_CIDR="$CANDIDATE_CIDR"
+    break
+  fi
+
+  ((NEXT_SUBNET++))
+  if [[ $NEXT_SUBNET -gt 254 ]]; then
+    echo "Errore: impossibile trovare un CIDR disponibile per la subnet."
+    exit 1
+  fi
+done
+
+echo "Calcolato CIDR per la nuova subnet $SUBNET_NAME: $SUBNET_CIDR"
+
+# Deploy del template
+echo "Deploy del template Subnet..."
+
+echo "Parametri usati:"
+echo "  Regione AWS: $AWS_REGION"
+echo "  Regione: $REGION"
+echo "  Macrozona: $MACROZONE"
+echo "  Nome Stack: $STACK_NAME"
+echo "  Nome VPC: $VPC_NAME"
+echo "  Nome Subnet: $SUBNET_NAME"
+echo "  Nome Security Group: $SECURITY_GROUP_NAME"
+echo "  Nome Route Table: $ROUTE_TABLE_NAME"
+
+echo "Parametri trovati:"
+echo "  VPC ID: $VPC_ID"
+echo "  Route Table ID: $ROUTE_TABLE_ID"
+echo "  CIDR Subnet: $SUBNET_CIDR"
+
 aws cloudformation deploy \
   --template-file "$SUBNET_TEMPLATE" \
   --stack-name "$STACK_NAME" \
   --region "$AWS_REGION" \
   --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides VpcId="$VPC_ID" SubnetCidr="$SUBNET_CIDR" SubnetName="$SUBNET_NAME" \
+  --parameter-overrides VpcId="$VPC_ID" SubnetName="$SUBNET_NAME" SubnetCidr="$SUBNET_CIDR" SecurityGroupName="$SECURITY_GROUP_NAME" RouteTableId="$ROUTE_TABLE_ID" \
   $ENDPOINT_URL
-
 if [[ $? -ne 0 ]]; then
-  echo "Errore nel deploy del template SubnetAndSG."
+  echo "Errore nel deploy del template Subnet."
+  aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$STACK_NAME"
   exit 1
 fi
+echo "Deploy del template Subnet completato con successo."
 
-# Recupera l'ID della subnet creata
+# Verifica lo stato dello stack
+echo "Verifica lo stato dello stack..."
+STACK_STATUS=$(aws cloudformation $ENDPOINT_URL describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text)
+if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
+  echo "Errore: lo stack $STACK_NAME non è in stato CREATE_COMPLETE o UPDATE_COMPLETE. Stato attuale: $STACK_STATUS"
+  aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$STACK_NAME"
+  exit 1
+fi
+echo "Lo stack $STACK_NAME è in stato $STACK_STATUS."
+
+# Verifica la creazione delle risorse
+echo "Verifica la creazione delle risorse..."
+
+echo "Verifica della Subnet..."
 SUBNET_ID=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SUBNET_NAME" --query "Subnets[0].SubnetId" --output text)
 if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" ]]; then
-  echo "Errore: subnet $SUBNET_NAME non trovata."
+  echo "Errore: subnet con nome $SUBNET_NAME non trovata."
   exit 1
 fi
+echo "Trovato Subnet ID: $SUBNET_ID per Subnet $SUBNET_NAME"
 
-# Controlla che la subnet sia nella VPC corretta
-SUBNET_VPC_ID=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --subnet-ids "$SUBNET_ID" --query "Subnets[0].VpcId" --output text)
-if [[ "$SUBNET_VPC_ID" != "$VPC_ID" ]]; then
-  echo "Errore: la subnet $SUBNET_NAME ($SUBNET_ID) non appartiene alla VPC $VPC_NAME ($VPC_ID)."
+echo "Verifica del Security Group..."
+SECURITY_GROUP_ID=$(aws ec2 $ENDPOINT_URL describe-security-groups --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SECURITY_GROUP_NAME" --query "SecurityGroups[0].GroupId" --output text)
+if [[ -z "$SECURITY_GROUP_ID" || "$SECURITY_GROUP_ID" == "None" ]]; then
+  echo "Errore: Security Group con nome $SECURITY_GROUP_NAME non trovato."
   exit 1
 fi
+echo "Trovato Security Group ID: $SECURITY_GROUP_ID per Security Group $SECURITY_GROUP_NAME"
 
-echo "Subnet $SUBNET_NAME ($SUBNET_ID) valida nella VPC $VPC_NAME ($VPC_ID)."
 echo "Deploy completato."

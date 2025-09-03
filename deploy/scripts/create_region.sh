@@ -1,36 +1,30 @@
 #!/bin/bash
 
-# Questo script crea una VPC e un Security Group SSH tramite CloudFormation.
-# Puoi scegliere dove fare il deploy (AWS o LocalStack) e personalizzare nome VPC, CIDR della rete e CIDR SSH.
-# Esempio d'uso:
-#   ./create_region.sh --region eu-west-1 --vpc-name TestVPC --vpc-cidr 10.1.0.0/16 --ssh-cidr 192.168.1.0/24
-# Per deploy su LocalStack aggiungi: --deploy=localstack
-# Puoi aggiungere altri template modificando le variabili TEMPLATE_xxx.
+# Importa le funzioni
+source utils.sh
 
 show_help() {
-  echo "Utilizzo: $0 [opzioni]"
+  echo "Utilizzo: $0 region-name [opzioni]"
   echo "  --deploy=localstack      Deploy su LocalStack invece che AWS"
-  echo "  --stack-name NAME        Nome dello stack CloudFormation"
-  echo "  --region REGION          Regione AWS (default: eu-east-1)"
-  echo "  --vpc-name NAME          Nome della VPC (default: MyVPC)"
-  echo "  --vpc-cidr CIDR          CIDR della VPC (default: 10.0.0.0/16)"
-  echo "  --ssh-cidr CIDR          CIDR per accesso SSH (default: 0.0.0.0/0)"
+  echo "  --aws-region REGION      Regione AWS (default: us-east-1)"
   echo "  -h, --help               Mostra questo messaggio"
   echo "Esempio:"
-  echo "  $0 --region eu-west-1 --vpc-name TestVPC --vpc-cidr 10.1.0.0/16 --ssh-cidr 192.168.1.0/24"
+  echo "  $0 region-001 --aws-region eu-east-1"
 }
 
 # Definizione dei template da usare
 TEMPLATE_VPC="../terraform/region/VPC.yaml"
-# Puoi aggiungere altri template qui, ad esempio:
-# TEMPLATE_SUBNET="../terraform/region/Subnet.yaml"
 
-AWS_REGION="eu-east-1"
-STACK_NAME="${AWS_REGION}_region"
+REGION="$1"
+if [[ -z "$REGION" ]]; then
+  echo "Errore: il nome della regione è obbligatorio."
+  show_help
+  exit 1
+fi
+shift
+
+AWS_REGION="us-east-1"
 DEPLOY_MODE="aws"
-VPC_NAME="${AWS_REGION}_vpc"
-VPC_CIDR="10.0.0.0/16"
-SSH_CIDR="0.0.0.0/0"
 
 # Parsing degli argomenti
 while [[ $# -gt 0 ]]; do
@@ -43,26 +37,8 @@ while [[ $# -gt 0 ]]; do
       DEPLOY_MODE="localstack"
       shift
       ;;
-    --stack-name)
-      STACK_NAME="$2"
-      shift 2
-      ;;
-    --region)
+    --aws-region)
       AWS_REGION="$2"
-      VPC_NAME="${AWS_REGION}_vpc"
-      STACK_NAME="${AWS_REGION}_region"
-      shift 2
-      ;;
-    --vpc-name)
-      VPC_NAME="$2"
-      shift 2
-      ;;
-    --vpc-cidr)
-      VPC_CIDR="$2"
-      shift 2
-      ;;
-    --ssh-cidr)
-      SSH_CIDR="$2"
       shift 2
       ;;
     *)
@@ -70,6 +46,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+STACK_NAME="$REGION-stack"
+VPC_NAME="$REGION-vpc"
+SUBNET_NAME="$REGION-subnet"
+VPC_CIDR="10.0.0.0/16"
+SUBNET_CIDR="10.0.0.0/24"
+SSH_CIDR="0.0.0.0/0"
 
 # Imposta endpoint per LocalStack se richiesto
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
@@ -80,31 +63,60 @@ else
   echo "Deploy su AWS..."
 fi
 
-# Deploy del template VPC
+# Deploy del template
 echo "Deploy del template VPC..."
-echo "Parametri: VPC Name=$VPC_NAME, VPC CIDR=$VPC_CIDR, SSH CIDR=$SSH_CIDR"
+
+echo "Parametri usati:"
+echo "  Regione AWS: $AWS_REGION"
+echo "  Regione: $REGION"
+echo "  Nome Stack: $STACK_NAME"
+echo "  Nome VPC: $VPC_NAME"
+echo "  Nome Subnet: $SUBNET_NAME"
+echo "  CIDR VPC: $VPC_CIDR"
+echo "  CIDR Subnet: $SUBNET_CIDR"
+echo "  CIDR SSH: $SSH_CIDR"
+
 aws cloudformation deploy \
   --template-file "$TEMPLATE_VPC" \
   --stack-name "$STACK_NAME" \
   --region "$AWS_REGION" \
   --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides VpcName="$VPC_NAME" VpcCidr="$VPC_CIDR" SshAllowedCidr="$SSH_CIDR" \
+  --parameter-overrides VpcName="$VPC_NAME" VpcCidr="$VPC_CIDR" SubnetName="$SUBNET_NAME" SubnetCidr="$SUBNET_CIDR" SshCidr="$SSH_CIDR" \
   $ENDPOINT_URL
 if [[ $? -ne 0 ]]; then
   echo "Errore nel deploy del template VPC."
+  aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$STACK_NAME"
   exit 1
 fi
+echo "Deploy del template VPC completato con successo."
 
-aws ec2 $ENDPOINT_URL describe-vpcs --region $AWS_REGION --filters "Name=tag:Name,Values=$VPC_NAME" --query "Vpcs[0].VpcId" --output text
+# Verifica lo stato dello stack
+echo "Verifica lo stato dello stack..."
+STACK_STATUS=$(aws cloudformation $ENDPOINT_URL describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text)
+if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
+  echo "Errore: lo stack $STACK_NAME non è in stato CREATE_COMPLETE o UPDATE_COMPLETE. Stato attuale: $STACK_STATUS"
+  aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$STACK_NAME"
+  exit 1
+fi
+echo "Lo stack $STACK_NAME è in stato $STACK_STATUS."
 
-# Esempio di deploy di un altro template (decommenta e personalizza se necessario)
-# echo "Deploy del template Subnet..."
-# aws cloudformation deploy \
-#   --template-file "$TEMPLATE_SUBNET" \
-#   --stack-name "${STACK_NAME}_subnet" \
-#   --region "$AWS_REGION" \
-#   --capabilities CAPABILITY_NAMED_IAM \
-#   --parameter-overrides ... \
-#   $ENDPOINT_URL
+# Verifica la creazione delle risorse
+echo "Verifica la creazione delle risorse..."
 
-echo "Deploy completato per tutti i template."
+echo "Verifica della VPC..."
+VPC_ID=$(aws ec2 $ENDPOINT_URL describe-vpcs --region "$AWS_REGION" --filters "Name=tag:Name,Values=$VPC_NAME" --query "Vpcs[0].VpcId" --output text)
+if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
+  echo "Errore: VPC con tag Name=$VPC_NAME non trovata."
+  exit 1
+fi
+echo "Trovato VPC ID: $VPC_ID per VPC $VPC_NAME"
+
+echo "Verifica della Subnet..."
+SUBNET_ID=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SUBNET_NAME" --query "Subnets[0].SubnetId" --output text)
+if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" ]]; then
+  echo "Errore: subnet con nome $SUBNET_NAME non trovata."
+  exit 1
+fi
+echo "Trovata Subnet ID: $SUBNET_ID per Subnet $SUBNET_NAME"
+
+echo "Deploy completato."

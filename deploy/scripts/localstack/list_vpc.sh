@@ -1,0 +1,1 @@
+aws ec2 --endpoint-url=http://localhost:4566 describe-vpcs --query "Vpcs[].{VpcId:VpcId,Name:Tags[?Key=='Name'].Value|[0]}" --output table
