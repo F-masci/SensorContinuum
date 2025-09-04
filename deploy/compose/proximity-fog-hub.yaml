@@ -42,7 +42,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - ../../configs/postgresql/init-proximity-cache.sql:/docker-entrypoint-initdb.d/init-region-sensors-db.sql:ro
+      - macrozone-hub-${EDGE_MACROZONE}-cache-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 60s

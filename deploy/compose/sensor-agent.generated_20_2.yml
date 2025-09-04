@@ -210,7 +210,7 @@ services:
       - EDGE_MACROZONE=${EDGE_MACROZONE}
       - EDGE_ZONE=${EDGE_ZONE}
       - SENSOR_ID=sensor-agent-09
-      - SENSOR_TYPE=humidity
+      - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
       - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local

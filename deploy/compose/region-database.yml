@@ -1,7 +1,7 @@
 services:
 
   region-sensors-db:
-    image: timescale/timescaledb:latest-pg17
+    image: fmasci/sc-region-sensors-db:latest
     container_name: region-${REGION}-sensors-db
     hostname: region-${REGION}-sensors-db
     environment:
@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_REGION_SENSOR_PORT}:5432"
     volumes:
-      - ../../configs/postgresql/init-region-sensors-db.sql:/docker-entrypoint-initdb.d/init-region-sensors-db.sql:ro
+      - region-${REGION}-sensors-db-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
@@ -19,7 +19,7 @@ services:
       retries: 3
 
   region-metadata-db:
-    image: postgis/postgis:latest
+    image: fmasci/sc-region-metadata-db:latest
     container_name: region-${REGION}-metadata-db
     hostname: region-${REGION}-metadata-db
     environment:
@@ -29,7 +29,7 @@ services:
     ports:
       - "${POSTGRES_REGION_METADATA_PORT}:5432"
     volumes:
-      - ../../configs/postgresql/init-region-metadata-db.sql:/docker-entrypoint-initdb.d/init-region-metadata-db.sql:ro
+      - region-${REGION}-metadata-db-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s

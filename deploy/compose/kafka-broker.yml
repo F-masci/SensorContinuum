@@ -38,13 +38,12 @@ services:
       - kafka-bridge
 
   kafka-init-topics:
-    image: bitnami/kafka:latest
+    image: fmasci/sc-kafka-init-topics:latest
+    container_name: kafka-init-topics-${REGION}
+    hostname: kafka-init-topics-${REGION}
     depends_on:
       kafka-01:
         condition: service_healthy
-    volumes:
-      - ../../configs/kafka/init-topics.sh:/init-topics.sh:ro
-    entrypoint: [ "/bin/bash", "/init-topics.sh" ]
     networks:
       - kafka-bridge
 

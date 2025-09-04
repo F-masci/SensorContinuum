@@ -1,1 +1,0 @@
-aws --endpoint-url=http://localhost:4566 ec2 describe-images --owners amazon --query 'Images[*].[ImageId,Name,CreationDate]' --output table
