@@ -13,7 +13,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -23,7 +23,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-02:
@@ -38,7 +38,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -48,7 +48,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-03:
@@ -63,7 +63,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -73,7 +73,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-04:
@@ -88,7 +88,7 @@ services:
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -98,7 +98,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-05:
@@ -113,7 +113,7 @@ services:
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -123,7 +123,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-06:
@@ -138,7 +138,7 @@ services:
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -148,7 +148,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-07:
@@ -163,7 +163,7 @@ services:
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -173,7 +173,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-08:
@@ -188,7 +188,7 @@ services:
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -198,7 +198,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-09:
@@ -213,7 +213,7 @@ services:
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -223,7 +223,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-10:
@@ -238,7 +238,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -248,7 +248,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-11:
@@ -263,7 +263,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -273,7 +273,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-12:
@@ -288,7 +288,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -298,7 +298,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-13:
@@ -313,7 +313,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -323,7 +323,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-14:
@@ -338,7 +338,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -348,7 +348,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-15:
@@ -363,7 +363,7 @@ services:
       - SENSOR_TYPE=humidity
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -373,7 +373,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-16:
@@ -388,7 +388,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=ds18b20
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -398,7 +398,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-17:
@@ -413,7 +413,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -423,7 +423,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-18:
@@ -438,7 +438,7 @@ services:
       - SENSOR_TYPE=temperature
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=dht22
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -448,7 +448,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-19:
@@ -463,7 +463,7 @@ services:
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=indoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -473,7 +473,7 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 
 
   sensor-agent-20:
@@ -488,7 +488,7 @@ services:
       - SENSOR_TYPE=pressure
       - SENSOR_LOCATION=outdoor
       - SIMULATION_SENSOR_REFERENCE=bmp280
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -498,5 +498,5 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
 

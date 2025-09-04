@@ -7,7 +7,7 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 DEPLOY_MODE="${DEPLOY_MODE:-aws}" # "aws" o "localstack"
 BUCKET_NAME="${BUCKET_NAME:-sensor-continuum-scripts}"
 COMPOSE_DIR="compose"
-COMPOSE_FILE_NAME="edge-hub.yaml"
+COMPOSE_FILE_NAME="mqtt-broker.yml"
 
 # Endpoint per LocalStack
 ENDPOINT_URL=""
@@ -24,6 +24,6 @@ aws s3 cp $ENDPOINT_URL "s3://$BUCKET_NAME/$COMPOSE_DIR/$COMPOSE_FILE_NAME" "$CO
 
 # Avvia docker-compose
 echo "Avvio docker-compose..."
-docker-compose -f "$COMPOSE_FILE_NAME" --env-file ".env" up -d
+docker-compose -f "$COMPOSE_FILE_NAME" --env-file "./.env" up -d
 
 echo "docker-compose avviato con successo."

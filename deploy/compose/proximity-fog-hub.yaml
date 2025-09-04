@@ -3,7 +3,7 @@ x-macrozone-hub-env: &macrozone-hub-env
   EDGE_MACROZONE: "${EDGE_MACROZONE}"
   KAFKA_BROKER_ADDRESS: "${REGION}.kafka-broker.local"
   KAFKA_BROKER_PORT: "9094"
-  MQTT_BROKER_ADDRESS: "${EDGE_MACROZONE}.mqtt-broker.local"
+  MQTT_BROKER_ADDRESS: "${EDGE_MACROZONE}.mqtt-broker.${REGION}.sensor-continuum.local"
   POSTGRES_HOST: "macrozone-hub-${EDGE_MACROZONE}-cache"
   POSTGRES_PORT: "5432"
   OPERATION_MODE: "loop"

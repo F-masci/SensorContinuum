@@ -23,7 +23,6 @@ FILE_MAP["inits/*install*.sh"]="init/"
 FILE_MAP["inits/*init*.sh"]="init/"
 FILE_MAP["deploy/*deploy*.sh"]="deploy/"
 FILE_MAP["../compose/*.y*ml"]="compose/"
-FILE_MAP["../compose/envs/region-001/build-0001/.env*"]="compose/envs/region-001/build-0001/"
 
 echo "Verifica bucket $BUCKET_NAME..."
 EXISTS=$(aws s3api $ENDPOINT_URL head-bucket --bucket "$BUCKET_NAME" 2>/dev/null || echo "no")

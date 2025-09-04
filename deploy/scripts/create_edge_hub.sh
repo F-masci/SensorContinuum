@@ -82,17 +82,24 @@ else
   echo "Deploy su AWS..."
 fi
 
-# Cerca il VPC ID tramite il tag Name
-VPC_ID=$(find_vpc_id "$VPC_NAME" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+VPC_ID=$(
+  { find_vpc_id "$VPC_NAME" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+) || exit 1
 
 # Cerca il Subnet ID tramite il tag Name
-SUBNET_ID=$(find_subnet_id "$SUBNET_NAME" "$VPC_ID" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+SUBNET_ID=$(
+  { find_subnet_id "$SUBNET_NAME" "$VPC_ID" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+)
 
 # Cerca il Security Group ID tramite il tag Name
-SECURITY_GROUP_ID=$(find_sg_id "$SECURITY_GROUP_NAME" "$VPC_ID" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+SECURITY_GROUP_ID=$(
+  { find_sg_id "$SECURITY_GROUP_NAME" "$VPC_ID" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+)
 
 # Cerca il Route Table ID tramite il tag Name
-ROUTE_TABLE_ID=$(find_route_table_id "$ROUTE_TABLE_NAME" "$AWS_REGION" "$ENDPOINT_URL" | tail -n 1) || exit 1
+ROUTE_TABLE_ID=$(
+  { find_route_table_id "$ROUTE_TABLE_NAME" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+) || exit 1
 
 
 # Crea la key pair solo se non esiste già il file .pem
@@ -101,11 +108,19 @@ KEY_FILE="$KEYS_DIR/$KEY_NAME.pem"
 
 mkdir -p "$KEYS_DIR"
 
-echo "Verifica presenza chiave privata SSH..."
-KEY_PAIR=$(ensure_key_pair "$KEY_NAME" "$KEY_FILE" "$ENDPOINT_URL" | tail -n 1) || exit 1
+KEY_PAIR=$(
+  { ensure_key_pair "$KEY_NAME" "$KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+)
 
 # Cerca un'AMI di Amazon Linux 2
-IMAGE_ID=$(find_amazon_linux_2_ami "$AWS_REGION" "$ENDPOINT_URL" "$DEPLOY_MODE" | tail -n 1) || exit 1
+IMAGE_ID=$(
+  { find_amazon_linux_2_ami "$AWS_REGION" "$ENDPOINT_URL" "$DEPLOY_MODE"; } | tee /dev/tty | tail -n 1
+)
+
+# Cerca il file .env per la zona
+ENV_FILE=$(
+  { find_or_create_environment "$REGION" "$MACROZONE" "$ZONE"; } | tee /dev/tty | tail -n 1
+)
 
 # Deploy del template
 echo "Deploy del template Edge Hub..."
@@ -123,12 +138,14 @@ echo "  Nome Security Group: $SECURITY_GROUP_NAME"
 echo "  Nome Route Table: $ROUTE_TABLE_NAME"
 echo "  Nome Key Pair: $KEY_NAME"
 echo "  Nome Edge Hub: $EDGE_HUB_NAME"
+echo "  Environment file: $ENV_FILE"
 
 echo "Parametri calcolati:"
 echo "  VPC ID: $VPC_ID"
 echo "  Subnet ID: $SUBNET_ID"
 echo "  Security Group ID: $SECURITY_GROUP_ID"
 echo "  Route Table ID: $ROUTE_TABLE_ID"
+echo "  AMI ID: $IMAGE_ID"
 
 aws cloudformation deploy \
   --template-file "$TEMPLATE_FILE" \
@@ -143,6 +160,7 @@ aws cloudformation deploy \
     KeyName="$KEY_NAME" \
     EdgeHubName="$EDGE_HUB_NAME" \
     RouteTableId="$ROUTE_TABLE_ID" \
+    EnvironmentFile="$ENV_FILE" \
   $ENDPOINT_URL
 if [[ $? -ne 0 ]]; then
   echo "Errore nel deploy dello stack edge-hub."

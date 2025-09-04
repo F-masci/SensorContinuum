@@ -12,7 +12,7 @@ services:
       - SENSOR_TYPE=$TYPE
       - SENSOR_LOCATION=$LOCATION
       - SIMULATION_SENSOR_REFERENCE=$REFERENCE
-      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.sensor.mqtt-broker.local
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
       - HEALTHZ_SERVER=true
       - HEALTHZ_SERVER_PORT=8080
     healthcheck:
@@ -22,4 +22,4 @@ services:
       retries: 10
     restart: unless-stopped
     #extra_hosts:
-    #  - "floor-001.sensor.mqtt-broker.local:192.168.0.10"
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"

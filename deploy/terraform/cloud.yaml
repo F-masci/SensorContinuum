@@ -132,7 +132,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref SensorContinuumHostedZone
-      Name: metadata-db.cloud.sensorcontinuum.local
+      Name: metadata-db.cloud.sensor-continuum.local
       Type: CNAME
       SetIdentifier: primary
       Failover: PRIMARY

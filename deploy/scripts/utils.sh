@@ -118,3 +118,93 @@ find_amazon_linux_2_ami() {
   fi
   echo "$image_id"
 }
+
+find_or_create_environment() {
+  local region="$1"
+  local macrozone="$2"
+  local zone="$3"
+  local base_dir="../compose/envs"
+  local dir="$base_dir/$region"
+  local env_file
+  local s3_bucket="s3://sensor-continuum-scripts/compose/envs"
+
+  if [[ -n "$macrozone" ]]; then
+    dir="$dir/$macrozone"
+    if [[ -n "$zone" ]]; then
+      env_file="$dir/.env.$zone"
+      s3_path="$s3_bucket/$region/$macrozone/.env.$zone"
+    else
+      env_file="$dir/.env.$macrozone"
+      s3_path="$s3_bucket/$region/$macrozone/.env.$macrozone"
+    fi
+  else
+    env_file="$dir/.env.$region"
+    s3_path="$s3_bucket/$region/.env.$region"
+  fi
+
+  if [[ -f "$env_file" ]]; then
+    echo "${env_file#$base_dir/}"
+    return 0
+  fi
+
+  echo "File di ambiente $env_file non trovato. Creazione da template..."
+  mkdir -p "$dir"
+  local template="../compose/envs/template.env"
+  if [[ -n "$zone" ]]; then
+    template="../compose/envs/template.env.zone"
+  elif [[ -n "$macrozone" ]]; then
+    template="../compose/envs/template.env.macrozone"
+  else
+    template="../compose/envs/template.env.region"
+  fi
+  if [[ ! -f "$template" ]]; then
+    echo "Template $template non trovato."
+    return 1
+  fi
+
+  cp "$template" "$env_file"
+
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      var="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+      if [[ "$var" == "REGION" ]]; then
+        sed -i "s/^REGION=.*/REGION=$region/" "$env_file"
+        continue
+      fi
+      if [[ "$var" == "EDGE_MACROZONE" && -n "$macrozone" ]]; then
+        sed -i "s/^EDGE_MACROZONE=.*/EDGE_MACROZONE=$macrozone/" "$env_file"
+        continue
+      fi
+      if [[ "$var" == "EDGE_ZONE" && -n "$zone" ]]; then
+        sed -i "s/^EDGE_ZONE=.*/EDGE_ZONE=$zone/" "$env_file"
+        continue
+      fi
+      if [[ -z "$val" ]]; then
+        read -rp "Inserisci valore per $var: " user_val
+        sed -i "s/^$var=$/$var=$user_val/" "$env_file"
+      fi
+    fi
+  done < "$env_file"
+
+  echo "Caricamento su S3: $s3_path"
+  aws s3 cp "$env_file" "$s3_path"
+
+  echo "${env_file#$base_dir/}"
+}
+
+find_hosted_zone_id() {
+  local zone_name="$1"
+  local region="$2"
+  local endpoint="$3"
+  echo "Recupero ID della Hosted Zone $zone_name..."
+  local zone_id
+  zone_id=$(aws route53 $endpoint list-hosted-zones --query "HostedZones[?Name=='$zone_name.'].Id | [0]" --output text)
+  if [[ -z "$zone_id" || "$zone_id" == "None" ]]; then
+    echo "Errore: Hosted Zone con nome $zone_name non trovata."
+    return 1
+  fi
+  zone_id="${zone_id##*/}"
+  echo "Trovato Hosted Zone ID: $zone_id per Hosted Zone $zone_name"
+  echo "$zone_id"
+}

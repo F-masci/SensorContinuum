@@ -1,13 +1,14 @@
 services:
 
   mqtt-broker:
-    image: eclipse-mosquitto:latest
+    image: fmasci/sc-mqtt-broker:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/mosquitto.Dockerfile
     container_name: mqtt-broker-${EDGE_MACROZONE}-01
     hostname: mqtt-broker-${EDGE_MACROZONE}-01
     ports:
       - "1883:1883"
-    volumes:
-      - ../../configs/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     healthcheck:
       test: [ "CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 2 || exit 1" ]
       interval: 10s

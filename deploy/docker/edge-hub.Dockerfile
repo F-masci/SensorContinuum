@@ -16,12 +16,12 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o edge-hub ./cmd/edge-hub
 
 # Fase 2: runtime minimale con curl
-FROM alpine:latest
+FROM alpine:3.22
 
 WORKDIR /app
 
 # Installa curl per le richieste HTTP
-RUN apk add --no-cache curl
+RUN apk update && apk add --no-cache curl
 
 # Copia il binario compilato dalla fase builder
 COPY --from=builder /app/edge-hub .

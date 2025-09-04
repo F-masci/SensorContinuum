@@ -11,3 +11,5 @@ site/.env.development
 input/test*
 .run
 *.zip
+
+deploy/scripts/keys

@@ -53,6 +53,7 @@ SUBNET_NAME="$REGION-subnet"
 VPC_CIDR="10.0.0.0/16"
 SUBNET_CIDR="10.0.0.0/24"
 SSH_CIDR="0.0.0.0/0"
+HOSTED_ZONE_NAME="$REGION.sensor-continuum.local"
 
 # Imposta endpoint per LocalStack se richiesto
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
@@ -75,13 +76,14 @@ echo "  Nome Subnet: $SUBNET_NAME"
 echo "  CIDR VPC: $VPC_CIDR"
 echo "  CIDR Subnet: $SUBNET_CIDR"
 echo "  CIDR SSH: $SSH_CIDR"
+echo "  Hosted Zone Name: $HOSTED_ZONE_NAME"
 
 aws cloudformation deploy \
   --template-file "$TEMPLATE_VPC" \
   --stack-name "$STACK_NAME" \
   --region "$AWS_REGION" \
   --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides VpcName="$VPC_NAME" VpcCidr="$VPC_CIDR" SubnetName="$SUBNET_NAME" SubnetCidr="$SUBNET_CIDR" SshCidr="$SSH_CIDR" \
+  --parameter-overrides VpcName="$VPC_NAME" VpcCidr="$VPC_CIDR" SubnetName="$SUBNET_NAME" SubnetCidr="$SUBNET_CIDR" SshCidr="$SSH_CIDR" HostedZoneName="$HOSTED_ZONE_NAME" \
   $ENDPOINT_URL
 if [[ $? -ne 0 ]]; then
   echo "Errore nel deploy del template VPC."
@@ -118,5 +120,13 @@ if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" ]]; then
   exit 1
 fi
 echo "Trovata Subnet ID: $SUBNET_ID per Subnet $SUBNET_NAME"
+
+echo "Verifica della Hosted Zone..."
+HOSTED_ZONE_ID=$(aws route53 $ENDPOINT_URL list-hosted-zones-by-name --dns-name "$HOSTED_ZONE_NAME" --query "HostedZones[0].Id" --output text | sed 's|/hostedzone/||')
+if [[ -z "$HOSTED_ZONE_ID" || "$HOSTED_ZONE_ID" == "None" ]]; then
+  echo "Errore: Hosted Zone con nome $HOSTED_ZONE_NAME non trovata."
+  exit 1
+fi
+echo "Trovata Hosted Zone ID: $HOSTED_ZONE_ID per Hosted Zone $HOSTED_ZONE_NAME"
 
 echo "Deploy completato."

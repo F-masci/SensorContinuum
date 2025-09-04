@@ -2,7 +2,7 @@
 x-zone-hub-env: &zone-hub-env
   EDGE_MACROZONE: "${EDGE_MACROZONE}"
   EDGE_ZONE: "${EDGE_ZONE}"
-  MQTT_BROKER_ADDRESS: "${EDGE_ZONE}.mqtt-broker.local"
+  MQTT_BROKER_ADDRESS: "${EDGE_ZONE}.${EDGE_MACROZONE}.mqtt-broker.${REGION}.sensor-continuum.local"
   REDIS_ADDRESS: "zone-hub-${EDGE_ZONE}-cache"
   OPERATION_MODE: "loop"
   HEALTHZ_SERVER: "true"

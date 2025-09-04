@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Crea una VPC con subnet pubblica e Security Group SSH"
+Description: "Crea una VPC con subnet pubblica, Security Group SSH e Hosted Zone privata"
 
 Parameters:
   VpcCidr:
@@ -22,6 +22,10 @@ Parameters:
     Type: String
     Default: "0.0.0.0/0"
     Description: "CIDR da cui permettere l'accesso SSH"
+  HostedZoneName:
+    Type: String
+    Default: "sensor-continuum.local"
+    Description: "Nome della Private Hosted Zone"
 
 Resources:
   # VPC
@@ -99,6 +103,17 @@ Resources:
         - Key: Name
           Value: !Sub "${VpcName}-ssh-sg"
 
+  # Private Hosted Zone
+  PrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref HostedZoneName
+      VPCs:
+        - VPCId: !Ref RegionVPC
+          VPCRegion: !Ref "AWS::Region"
+      HostedZoneConfig:
+        Comment: !Sub "Private Hosted Zone per la VPC ${VpcName}"
+
 Outputs:
   VpcId:
     Description: "ID della VPC creata"
@@ -118,3 +133,6 @@ Outputs:
   PublicRouteTableId:
     Description: "ID della Route Table pubblica"
     Value: !Ref PublicRouteTable
+  HostedZoneId:
+    Description: "ID della Hosted Zone privata creata"
+    Value: !Ref PrivateHostedZone
