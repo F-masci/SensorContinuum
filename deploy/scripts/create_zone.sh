@@ -16,7 +16,7 @@ show_help() {
 TEMPLATE_FILE="../terraform/zone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
-INSTANCE_TYPE="t2.micro"
+INSTANCE_TYPE="t2.small"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then

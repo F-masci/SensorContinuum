@@ -8,6 +8,7 @@ show_help() {
   echo "  --deploy=localstack        Deploy su LocalStack invece che AWS"
   echo "  --aws-region REGION        Regione AWS (default: eu-east-1)"
   echo "  --component COMPONENT      Componente da deployare (default: tutti)"
+  echo "  --instance-type TYPE     Tipo di istanza EC2 (default: t2.micro)"
   echo "  -h, --help                 Mostra questo messaggio"
   echo "Esempio:"
   echo "  $0 region-001 macrozone-001 --aws-region us-east-1"
@@ -18,6 +19,7 @@ SERVICES_TEMPLATE="../terraform/macrozone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"
+INSTANCE_TYPE="t2.small"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then
@@ -52,6 +54,10 @@ while [[ $# -gt 0 ]]; do
     --component)
       COMPONENT="$2"
       echo "Componente da deployare: $COMPONENT"
+      shift 2
+      ;;
+    --instance-type)
+      INSTANCE_TYPE="$2"
       shift 2
       ;;
     *)
