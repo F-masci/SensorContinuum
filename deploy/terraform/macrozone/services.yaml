@@ -4,7 +4,7 @@ Description: EC2 con Docker e Docker Compose per simulazione servizi edge, con r
 Parameters:
   InstanceType:
     Type: String
-    Default: t3.small
+    Default: t3.micro
     Description: Tipo di istanza EC2
   ImageId:
     Type: AWS::EC2::Image::Id
@@ -40,7 +40,7 @@ Parameters:
     Description: Lista di script di init separati da spazio
   DeployScripts:
     Type: String
-    Default: deploy_proximity_services.sh
+    Default: deploy_mqtt_broker.sh deploy_proximity_services.sh
     Description: Lista di script di deploy separati da spazio
   EnvironmentFile:
     Type: String

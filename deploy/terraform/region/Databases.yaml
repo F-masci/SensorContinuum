@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EC2 con Docker e Docker Compose per simulazione servizi edge
+Description: EC2 con Docker e Docker Compose per Region Databases, con record A in Route53
 
 Parameters:
   InstanceType:
@@ -19,29 +19,21 @@ Parameters:
   HostedZoneId:
     Type: String
     Description: ID della Private Hosted Zone Route53 (es. sensor-continuum.local)
-  ZoneMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.zone.sensor-continuum.local
-    Description: Hostname dell'istanza EC2 (deve essere un record CNAME nella Hosted Zone)
-  MacrozoneMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.macrozone.sensor-continuum.local
-    Description: Hostname del broker MQTT della macrozona (deve essere un record A nella Hosted Zone)
-  SensorMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.sensor-continuum.local
-    Description: Hostname del broker MQTT principale per i sensori (deve essere un record CNAME nella Hosted Zone)
-  HubMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.hub.sensor-continuum.local
-    Description: Hostname del broker MQTT dell'hub (deve essere un record CNAME nella Hosted Zone)
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Nome della chiave SSH
-  ServicesInstanceName:
+  RegionDatabasesInstanceName:
     Type: String
-    Default: ServicesInstance
-    Description: Nome dell'istanza EC2
+    Default: region-databases-ec2
+    Description: Nome dell'istanza dei servizi (EC2)
+  SensorRegionDatabaseInstanceHostname:
+    Type: String
+    Default: sensor.region-databases.sensor-continuum.local
+    Description: Hostname dell'istanza EC2 (deve essere un record A nella Hosted Zone)
+  MetadataRegionDatabaseInstanceHostname:
+    Type: String
+    Default: metadata.region-databases.sensor-continuum.local
+    Description: Hostname dell'istanza EC2 (deve essere un record A nella Hosted Zone)
   S3Bucket:
     Type: String
     Default: sensor-continuum-scripts
@@ -52,7 +44,7 @@ Parameters:
     Description: Lista di script di init separati da spazio
   DeployScripts:
     Type: String
-    Default: deploy_edge_services.sh
+    Default: deploy_region_databases.sh
     Description: Lista di script di deploy separati da spazio
   EnvironmentFile:
     Type: String
@@ -60,19 +52,19 @@ Parameters:
 
 Resources:
 
-  ServicesInstanceProfile:
+  RegionDatabasesInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
         - LabRole   # nome del ruolo, non l'ARN completo
 
-  ServicesInstance:
+  RegionDatabasesInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref ImageId
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref ServicesInstanceProfile
+      IamInstanceProfile: !Ref RegionDatabasesInstanceProfile
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -81,7 +73,7 @@ Resources:
             - !Ref SecurityGroupId
       Tags:
         - Key: Name
-          Value: !Ref ServicesInstanceName
+          Value: !Ref RegionDatabasesInstanceName
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -123,60 +115,46 @@ Resources:
               /home/ec2-user/$script
           done
 
-          echo "UserData completato $(date)
+          echo "UserData completato $(date)"
 
-  # Record CNAME Route53 per EC2
-  ZoneMqttBrokerRecord:
+  # Record A Route53 per EC2
+  SensorRegionDatabasesInstanceRecord:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref HostedZoneId
-      Name: !Ref ZoneMqttBrokerHostname
-      Type: CNAME
+      Name: !Ref SensorRegionDatabaseInstanceHostname
+      Type: A
       TTL: 60
       ResourceRecords:
-        - !Ref MacrozoneMqttBrokerHostname
+        - !GetAtt RegionDatabasesInstance.PrivateIp
 
-  # Record CNAME Route53 per EC2
-  SensorMqttBrokerRecord:
+  # Record A Route53 per EC2
+  MetadataRegionDatabasesInstanceRecord:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref HostedZoneId
-      Name: !Ref SensorMqttBrokerHostname
-      Type: CNAME
+      Name: !Ref MetadataRegionDatabaseInstanceHostname
+      Type: A
       TTL: 60
       ResourceRecords:
-        - !Ref ZoneMqttBrokerHostname
-
-  # Record CNAME Route53 per EC2
-  HubMqttBrokerRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Ref HubMqttBrokerHostname
-      Type: CNAME
-      TTL: 60
-      ResourceRecords:
-          - !Ref ZoneMqttBrokerHostname
+        - !GetAtt RegionDatabasesInstance.PrivateIp
 
 Outputs:
   InstanceId:
     Description: ID della istanza EC2
-    Value: !Ref ServicesInstance
+    Value: !Ref RegionDatabasesInstance
   InstanceKeyName:
     Description: Nome della chiave SSH per l'istanza
     Value: !Ref KeyName
   InstancePublicIp:
     Description: Indirizzo IP pubblico dell'istanza
-    Value: !GetAtt ServicesInstance.PublicIp
+    Value: !GetAtt RegionDatabasesInstance.PublicIp
   InstancePrivateIp:
     Description: Indirizzo IP privato dell'istanza
-    Value: !GetAtt ServicesInstance.PrivateIp
-  ZoneMqttBrokerHostname:
-    Description: Hostname del broker MQTT di zona
-    Value: !Ref ZoneMqttBrokerHostname
-  HubMqttBrokerHostname:
-    Description: Hostname del broker MQTT dell'hub
-    Value: !Ref HubMqttBrokerHostname
-  SensorMqttBrokerHostname:
-    Description: Hostname del broker MQTT principale per i sensori
-    Value: !Ref SensorMqttBrokerHostname
+    Value: !GetAtt RegionDatabasesInstance.PrivateIp
+  SensorRecordA:
+    Description: Record A creato nella Hosted Zone per Sensor
+    Value: !Ref SensorRegionDatabasesInstanceRecord
+  MetadataRecordA:
+    Description: Record A creato nella Hosted Zone per Metadata
+    Value: !Ref MetadataRegionDatabasesInstanceRecord

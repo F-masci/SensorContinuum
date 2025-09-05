@@ -1,7 +1,7 @@
 # --- environment base per tutti i macrozone hub ---
 x-macrozone-hub-env: &macrozone-hub-env
   EDGE_MACROZONE: "${EDGE_MACROZONE}"
-  KAFKA_BROKER_ADDRESS: "${REGION}.kafka-broker.local"
+  KAFKA_BROKER_ADDRESS: "kafka-broker.${REGION}.sensor-continuum.local"
   KAFKA_BROKER_PORT: "9094"
   MQTT_BROKER_ADDRESS: "${EDGE_MACROZONE}.mqtt-broker.${REGION}.sensor-continuum.local"
   POSTGRES_HOST: "macrozone-hub-${EDGE_MACROZONE}-cache"
@@ -32,17 +32,18 @@ services:
 
   # --- POSTGRES CACHE ---
   macrozone-hub-postgres-cache:
-    image: timescale/timescaledb:latest-pg17
+    image: fmasci/sc-proximity-postgres-cache
     container_name: macrozone-hub-${EDGE_MACROZONE}-cache
     hostname: macrozone-hub-${EDGE_MACROZONE}-cache
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
       POSTGRES_DB: sensorcontinuum
+      POSTGRES_MAX_CONNECTIONS: 100
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - macrozone-hub-${EDGE_MACROZONE}-cache-data:/var/lib/postgresql/data
+      - macrozone-cache-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 60s
@@ -157,3 +158,8 @@ networks:
   macrozone-hub-bridge:
     name: macrozone-hub-${EDGE_MACROZONE}-bridge
     driver: bridge
+
+volumes:
+  macrozone-cache-data:
+    name: macrozone-hub-${EDGE_MACROZONE}-cache-data
+    external: true

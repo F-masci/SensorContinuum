@@ -1,4 +1,4 @@
 ssh \
-  -i keys/region-001-kafka-key.pem \
+  -i keys/region-001-databases-key.pem \
   -o StrictHostKeyChecking=no \
-  ec2-user@34.207.107.112
+  ec2-user@44.199.213.73

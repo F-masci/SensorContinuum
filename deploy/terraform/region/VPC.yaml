@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Crea una VPC con subnet pubblica, Security Group SSH e Hosted Zone privata"
+Description: "Crea una VPC con subnet pubblica, Security Group e Hosted Zone privata"
 
 Parameters:
   VpcCidr:
@@ -92,17 +92,23 @@ Resources:
       SubnetId: !Ref RegionSubnet
       RouteTableId: !Ref PublicRouteTable
 
-  # Security Group SSH
+  # Security Group
   RegionSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: "Consente solo SSH"
+      GroupDescription: "Consente tutto"
       VpcId: !Ref RegionVPC
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SshAllowedCidr
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: !Ref SecurityGroupName

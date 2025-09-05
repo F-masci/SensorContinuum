@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EC2 con Docker e Docker Compose per simulazione servizi edge
+Description: EC2 con Docker e Docker Compose per simulazione servizi intermediate
 
 Parameters:
   InstanceType:
@@ -19,29 +19,13 @@ Parameters:
   HostedZoneId:
     Type: String
     Description: ID della Private Hosted Zone Route53 (es. sensor-continuum.local)
-  ZoneMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.zone.sensor-continuum.local
-    Description: Hostname dell'istanza EC2 (deve essere un record CNAME nella Hosted Zone)
-  MacrozoneMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.macrozone.sensor-continuum.local
-    Description: Hostname del broker MQTT della macrozona (deve essere un record A nella Hosted Zone)
-  SensorMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.sensor-continuum.local
-    Description: Hostname del broker MQTT principale per i sensori (deve essere un record CNAME nella Hosted Zone)
-  HubMqttBrokerHostname:
-    Type: String
-    Default: mqtt-broker.hub.sensor-continuum.local
-    Description: Hostname del broker MQTT dell'hub (deve essere un record CNAME nella Hosted Zone)
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Nome della chiave SSH
   ServicesInstanceName:
     Type: String
-    Default: ServicesInstance
-    Description: Nome dell'istanza EC2
+    Default: intermediate-fog-hub-ec2
+    Description: Nome dell'istanza dei servizi (EC2)
   S3Bucket:
     Type: String
     Default: sensor-continuum-scripts
@@ -52,7 +36,7 @@ Parameters:
     Description: Lista di script di init separati da spazio
   DeployScripts:
     Type: String
-    Default: deploy_edge_services.sh
+    Default: deploy_intermediate_services.sh
     Description: Lista di script di deploy separati da spazio
   EnvironmentFile:
     Type: String
@@ -123,40 +107,7 @@ Resources:
               /home/ec2-user/$script
           done
 
-          echo "UserData completato $(date)
-
-  # Record CNAME Route53 per EC2
-  ZoneMqttBrokerRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Ref ZoneMqttBrokerHostname
-      Type: CNAME
-      TTL: 60
-      ResourceRecords:
-        - !Ref MacrozoneMqttBrokerHostname
-
-  # Record CNAME Route53 per EC2
-  SensorMqttBrokerRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Ref SensorMqttBrokerHostname
-      Type: CNAME
-      TTL: 60
-      ResourceRecords:
-        - !Ref ZoneMqttBrokerHostname
-
-  # Record CNAME Route53 per EC2
-  HubMqttBrokerRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Ref HubMqttBrokerHostname
-      Type: CNAME
-      TTL: 60
-      ResourceRecords:
-          - !Ref ZoneMqttBrokerHostname
+          echo "UserData completato $(date)"
 
 Outputs:
   InstanceId:
@@ -171,12 +122,3 @@ Outputs:
   InstancePrivateIp:
     Description: Indirizzo IP privato dell'istanza
     Value: !GetAtt ServicesInstance.PrivateIp
-  ZoneMqttBrokerHostname:
-    Description: Hostname del broker MQTT di zona
-    Value: !Ref ZoneMqttBrokerHostname
-  HubMqttBrokerHostname:
-    Description: Hostname del broker MQTT dell'hub
-    Value: !Ref HubMqttBrokerHostname
-  SensorMqttBrokerHostname:
-    Description: Hostname del broker MQTT principale per i sensori
-    Value: !Ref SensorMqttBrokerHostname

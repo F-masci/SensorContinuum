@@ -49,6 +49,10 @@ else
   echo "Volume kafka-data-${REGION} già esistente."
 fi
 
+# Recupera IP pubblico dell'istanza
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+sed -i "s/^KAFKA_PUBLIC_IP=.*/KAFKA_PUBLIC_IP=${PUBLIC_IP}/" .env
+
 echo "Avvio kafka-broker..."
 docker-compose -f "/home/ec2-user/kafka-broker.yml" --env-file ".env" -p kafka-broker up -d
 

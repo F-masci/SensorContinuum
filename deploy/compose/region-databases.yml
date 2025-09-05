@@ -1,9 +1,9 @@
 services:
 
-  region-sensors-db:
-    image: fmasci/sc-region-sensors-db:latest
-    container_name: region-${REGION}-sensors-db
-    hostname: region-${REGION}-sensors-db
+  region-sensor-db:
+    image: fmasci/sc-region-sensor-db:latest
+    container_name: region-${REGION}-sensor-db
+    hostname: region-${REGION}-sensor-db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_REGION_SENSOR_PORT}:5432"
     volumes:
-      - region-${REGION}-sensors-db-data:/var/lib/postgresql/data
+      - sensor-db-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
@@ -29,9 +29,18 @@ services:
     ports:
       - "${POSTGRES_REGION_METADATA_PORT}:5432"
     volumes:
-      - region-${REGION}-metadata-db-data:/var/lib/postgresql/data
+      - metadata-db-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "admin", "-d", "sensorcontinuum" ]
       interval: 10s
       timeout: 5s
       retries: 3
+
+volumes:
+  sensor-db-data:
+    name: sensor-db-data-${REGION}
+    external: true
+
+  metadata-db-data:
+    name: metadata-db-data-${REGION}
+    external: true

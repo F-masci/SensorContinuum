@@ -19,7 +19,7 @@ SERVICES_TEMPLATE="../terraform/macrozone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"
-INSTANCE_TYPE="t3.small"
+INSTANCE_TYPE="t3.micro"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then
