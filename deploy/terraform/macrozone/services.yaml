@@ -4,7 +4,7 @@ Description: EC2 con Docker e Docker Compose per simulazione servizi edge, con r
 Parameters:
   InstanceType:
     Type: String
-    Default: t2.small
+    Default: t3.small
     Description: Tipo di istanza EC2
   ImageId:
     Type: AWS::EC2::Image::Id
@@ -48,19 +48,19 @@ Parameters:
 
 Resources:
 
-  ServicesInstanceInstanceProfile:
+  ServicesInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
         - LabRole   # nome del ruolo, non l'ARN completo
 
-  ServicesInstanceInstance:
+  ServicesInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref ImageId
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref ServicesInstanceInstanceProfile
+      IamInstanceProfile: !Ref ServicesInstanceProfile
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -122,21 +122,21 @@ Resources:
       Type: A
       TTL: 60
       ResourceRecords:
-        - !GetAtt ServicesInstanceInstance.PrivateIp
+        - !GetAtt ServicesInstance.PrivateIp
 
 Outputs:
   InstanceId:
     Description: ID della istanza EC2
-    Value: !Ref ServicesInstanceInstance
+    Value: !Ref ServicesInstance
   InstanceKeyName:
     Description: Nome della chiave SSH per l'istanza
     Value: !Ref KeyName
   InstancePublicIp:
     Description: Indirizzo IP pubblico dell'istanza
-    Value: !GetAtt ServicesInstanceInstance.PublicIp
+    Value: !GetAtt ServicesInstance.PublicIp
   InstancePrivateIp:
     Description: Indirizzo IP privato dell'istanza
-    Value: !GetAtt ServicesInstanceInstance.PrivateIp
+    Value: !GetAtt ServicesInstance.PrivateIp
   RecordA:
     Description: Record A creato nella Hosted Zone
     Value: !Ref ServicesInstanceRecord

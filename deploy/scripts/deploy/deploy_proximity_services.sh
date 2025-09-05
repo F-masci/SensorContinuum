@@ -8,6 +8,7 @@ DEPLOY_MODE="${DEPLOY_MODE:-aws}" # "aws" o "localstack"
 BUCKET_NAME="${BUCKET_NAME:-sensor-continuum-scripts}"
 COMPOSE_DIR="compose"
 COMPOSE_MQTT_BROKER_FILE_NAME="mqtt-broker.yml"
+COMPOSE_PROXIMITY_HUB_FILE_NAME="proximity-fog-hub.yaml"
 
 # Endpoint per LocalStack
 ENDPOINT_URL=""
@@ -35,6 +36,13 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "Scarico $COMPOSE_PROXIMITY_HUB_FILE_NAME da s3://$BUCKET_NAME/$COMPOSE_DIR/$COMPOSE_PROXIMITY_HUB_FILE_NAME..."
+aws s3 cp $ENDPOINT_URL "s3://$BUCKET_NAME/$COMPOSE_DIR/$COMPOSE_PROXIMITY_HUB_FILE_NAME" "$COMPOSE_PROXIMITY_HUB_FILE_NAME"
+if [ $? -ne 0 ]; then
+  echo "Errore nel download di $COMPOSE_PROXIMITY_HUB_FILE_NAME"
+  exit 1
+fi
+
 # Avvia mqtt-broker
 if [ ! -f "$COMPOSE_MQTT_BROKER_FILE_NAME" ]; then
   echo "File $COMPOSE_MQTT_BROKER_FILE_NAME non trovato, esco."
@@ -44,5 +52,13 @@ else
   docker-compose -f "$COMPOSE_MQTT_BROKER_FILE_NAME" --env-file ".env" -p mqtt-broker up -d
 fi
 
+# Avvia proximity-fog-hub
+if [ ! -f "$COMPOSE_PROXIMITY_HUB_FILE_NAME" ]; then
+  echo "File $COMPOSE_PROXIMITY_HUB_FILE_NAME non trovato, esco."
+  exit 1
+else
+  echo "Avvio proximity-fog-hub..."
+  docker-compose -f "$COMPOSE_PROXIMITY_HUB_FILE_NAME" --env-file ".env" -p proximity-fog-hub up -d
+fi
 
 echo "docker-compose avviato con successo."

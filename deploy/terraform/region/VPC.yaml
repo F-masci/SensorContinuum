@@ -22,6 +22,10 @@ Parameters:
     Type: String
     Default: "0.0.0.0/0"
     Description: "CIDR da cui permettere l'accesso SSH"
+  SecurityGroupName:
+    Type: String
+    Default: "region-sg"
+    Description: "Nome del Security Group SSH"
   HostedZoneName:
     Type: String
     Default: "sensor-continuum.local"
@@ -101,7 +105,7 @@ Resources:
           CidrIp: !Ref SshAllowedCidr
       Tags:
         - Key: Name
-          Value: !Sub "${VpcName}-ssh-sg"
+          Value: !Ref SecurityGroupName
 
   # Private Hosted Zone
   PrivateHostedZone:

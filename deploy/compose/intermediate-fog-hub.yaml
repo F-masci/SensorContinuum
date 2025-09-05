@@ -1,6 +1,6 @@
 # --- environment base ---
 x-region-hub-env: &region-hub-env
-  KAFKA_BROKER_ADDRESS: "${REGION}.kafka-broker.local"
+  KAFKA_BROKER_ADDRESS: "kafka-broker.${REGION}.sensor-continuum.local"
   KAFKA_BROKER_PORT: "${KAFKA_PORT}"
   POSTGRES_CLOUD_HOST: "metadata-db.cloud.sensor-continuum.local"
   POSTGRES_CLOUD_PORT: "${POSTGRES_CLOUD_METADATA_PORT}"

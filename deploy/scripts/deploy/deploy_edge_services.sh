@@ -61,8 +61,8 @@ else
   exit 1
 fi
 
-# Riga cron che vuoi aggiungere
-CRON_JOB="0 3 * * * /usr/bin/docker docker-compose -p sensors restart >> /var/log/sensors-restart.log 2>&1"
+# Riga cron per riavviare i sensori ogni giorno alle 3:00 AM
+CRON_JOB="0 3 * * * docker-compose -p sensors restart >> /var/log/sensors-restart.log 2>&1"
 
 # Controlla se esiste già, se no lo aggiunge
 ( crontab -l 2>/dev/null | grep -F "$CRON_JOB" ) || \

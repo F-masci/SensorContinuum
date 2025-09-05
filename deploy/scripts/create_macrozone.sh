@@ -8,7 +8,7 @@ show_help() {
   echo "  --deploy=localstack        Deploy su LocalStack invece che AWS"
   echo "  --aws-region REGION        Regione AWS (default: eu-east-1)"
   echo "  --component COMPONENT      Componente da deployare (default: tutti)"
-  echo "  --instance-type TYPE     Tipo di istanza EC2 (default: t2.micro)"
+  echo "  --instance-type TYPE     Tipo di istanza EC2 (default: t3.micro)"
   echo "  -h, --help                 Mostra questo messaggio"
   echo "Esempio:"
   echo "  $0 region-001 macrozone-001 --aws-region us-east-1"
@@ -19,7 +19,7 @@ SERVICES_TEMPLATE="../terraform/macrozone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"
-INSTANCE_TYPE="t2.small"
+INSTANCE_TYPE="t3.small"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then
@@ -287,9 +287,9 @@ IMAGE_ID=$(
   { find_amazon_linux_2_ami "$AWS_REGION" "$ENDPOINT_URL" "$DEPLOY_MODE"; } | tee /dev/tty | tail -n 1
 )
 
-# Cerca il file .env per la zona
+# Cerca il file .env per la macrozona
 ENV_FILE=$(
-  { find_or_create_environment "$REGION" "$MACROZONE" "$ZONE"; } | tee /dev/tty | tail -n 1
+  { find_or_create_environment "$REGION" "$MACROZONE"; } | tee /dev/tty | tail -n 1
 )
 
 if [[ "$COMPONENT" == "all" || "$COMPONENT" == "services" ]]; then

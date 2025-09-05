@@ -7,16 +7,16 @@ show_help() {
   echo "Utilizzo: $0 region-name macrozone-name zone-name [opzioni]"
   echo "  --deploy=localstack      Deploy su LocalStack invece che AWS"
   echo "  --aws-region REGION      Regione AWS (default: us-east-1)"
-  echo "  --instance-type TYPE     Tipo di istanza EC2 (default: t2.micro)"
+  echo "  --instance-type TYPE     Tipo di istanza EC2 (default: t3.micro)"
   echo "  -h, --help               Mostra questo messaggio"
   echo "Esempio:"
-  echo "  $0 region-001 macrozone-001 zone-001 --aws-region us-east-1 --instance-type t2.micro"
+  echo "  $0 region-001 macrozone-001 zone-001 --aws-region us-east-1 --instance-type t3.micro"
 }
 
 TEMPLATE_FILE="../terraform/zone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
-INSTANCE_TYPE="t2.small"
+INSTANCE_TYPE="t3.small"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then
