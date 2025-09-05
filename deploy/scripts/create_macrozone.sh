@@ -14,7 +14,7 @@ show_help() {
 }
 
 SUBNET_TEMPLATE="../terraform/macrozone/Subnet.yaml"
-MQTT_BROKER_TEMPLATE="../terraform/macrozone/mqtt-broker.yaml"
+SERVICES_TEMPLATE="../terraform/macrozone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"
@@ -60,8 +60,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$COMPONENT" != "all" && "$COMPONENT" != "subnet" && "$COMPONENT" != "mqtt-broker" ]]; then
-  echo "Errore: componente '$COMPONENT' non valido. Valori accettati: all, subnet, mqtt-broker."
+if [[ "$COMPONENT" != "all" && "$COMPONENT" != "subnet" && "$COMPONENT" != "services" ]]; then
+  echo "Errore: componente '$COMPONENT' non valido. Valori accettati: all, subnet, services."
   exit 1
 fi
 
@@ -102,61 +102,72 @@ fi
 
 if [[ "$COMPONENT" == "all" || "$COMPONENT" == "subnet" ]]; then
 
-  # Prende tutte le sobnet create finora e calcola il prossimo CIDR disponibile
-  # Per semplicità, assume che le subnet siano /24 e calcola la prossima
-  # disponibile incrementando l'ultimo ottetto.
-  # Esempio: se la VPC è 10.0.3.0/24 e ci sono già 3 subnet
-  # (10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24), la prossima sarà
-  # 10.0.4.0/24
-  #!/bin/bash
-
-  # Recupera tutti i CIDR delle subnet esistenti nella VPC
-  SUBNETS_CIDRS_RAW=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[].CidrBlock" --output text)
-
-  # Converte in array
-  if [[ -z "$SUBNETS_CIDRS_RAW" ]]; then
-    SUBNETS_CIDRS=()
+  # Controllo se la subnet esiste già
+  EXISTING_SUBNET_ID=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SUBNET_NAME" "Name=vpc-id,Values=$VPC_ID" --query "Subnets[0].SubnetId" --output text)
+  if [[ -n "$EXISTING_SUBNET_ID" && "$EXISTING_SUBNET_ID" != "None" ]]; then
+    echo "Subnet con nome $SUBNET_NAME già esistente con ID: $EXISTING_SUBNET_ID. Salto la creazione."
+    SUBNET_CIDR=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --subnet-ids "$EXISTING_SUBNET_ID" --query "Subnets[0].CidrBlock" --output text)
+    echo "CIDR della subnet esistente: $SUBNET_CIDR"
   else
-    read -r -a SUBNETS_CIDRS <<< "$SUBNETS_CIDRS_RAW"
-  fi
 
-  echo "Subnet già esistenti nella VPC $VPC_NAME:"
-  for CIDR in "${SUBNETS_CIDRS[@]}"; do
-    echo "  - $CIDR"
-  done
+    echo "Subnet con nome $SUBNET_NAME non trovata. Procedo con il calcolo del CIDR."
 
-  # Calcola il prossimo CIDR disponibile
-  # Assume che la VPC sia qualcosa come 10.0.0.0/16 e tutte le subnet /24
-  IFS='.' read -r O1 O2 O3 O4 <<< "${REGION_CIDR%%/*}"
-  # Per VPC /16, prendiamo O1.O2 come base
-  BASE="${O1}.${O2}."
-  NEXT_SUBNET=1
+    # Prende tutte le sobnet create finora e calcola il prossimo CIDR disponibile
+    # Per semplicità, assume che le subnet siano /24 e calcola la prossima
+    # disponibile incrementando l'ultimo ottetto.
+    # Esempio: se la VPC è 10.0.3.0/24 e ci sono già 3 subnet
+    # (10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24), la prossima sarà
+    # 10.0.4.0/24
+    #!/bin/bash
 
-  while true; do
-    CANDIDATE_CIDR="${BASE}${NEXT_SUBNET}.0/24"
+    # Recupera tutti i CIDR delle subnet esistenti nella VPC
+    SUBNETS_CIDRS_RAW=$(aws ec2 $ENDPOINT_URL describe-subnets --region "$AWS_REGION" --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[].CidrBlock" --output text)
 
-    # Controlla se già esiste
-    FOUND=false
-    for EXISTING in "${SUBNETS_CIDRS[@]}"; do
-      if [[ "$EXISTING" == "$CANDIDATE_CIDR" ]]; then
-        FOUND=true
+    # Converte in array
+    if [[ -z "$SUBNETS_CIDRS_RAW" ]]; then
+      SUBNETS_CIDRS=()
+    else
+      read -r -a SUBNETS_CIDRS <<< "$SUBNETS_CIDRS_RAW"
+    fi
+
+    echo "Subnet già esistenti nella VPC $VPC_NAME:"
+    for CIDR in "${SUBNETS_CIDRS[@]}"; do
+      echo "  - $CIDR"
+    done
+
+    # Calcola il prossimo CIDR disponibile
+    # Assume che la VPC sia qualcosa come 10.0.0.0/16 e tutte le subnet /24
+    IFS='.' read -r O1 O2 O3 O4 <<< "${REGION_CIDR%%/*}"
+    # Per VPC /16, prendiamo O1.O2 come base
+    BASE="${O1}.${O2}."
+    NEXT_SUBNET=1
+
+    while true; do
+      CANDIDATE_CIDR="${BASE}${NEXT_SUBNET}.0/24"
+
+      # Controlla se già esiste
+      FOUND=false
+      for EXISTING in "${SUBNETS_CIDRS[@]}"; do
+        if [[ "$EXISTING" == "$CANDIDATE_CIDR" ]]; then
+          FOUND=true
+          break
+        fi
+      done
+
+      if ! $FOUND; then
+        SUBNET_CIDR="$CANDIDATE_CIDR"
         break
+      fi
+
+      ((NEXT_SUBNET++))
+      if [[ $NEXT_SUBNET -gt 254 ]]; then
+        echo "Errore: impossibile trovare un CIDR disponibile per la subnet."
+        exit 1
       fi
     done
 
-    if ! $FOUND; then
-      SUBNET_CIDR="$CANDIDATE_CIDR"
-      break
-    fi
-
-    ((NEXT_SUBNET++))
-    if [[ $NEXT_SUBNET -gt 254 ]]; then
-      echo "Errore: impossibile trovare un CIDR disponibile per la subnet."
-      exit 1
-    fi
-  done
-
-  echo "Calcolato CIDR per la nuova subnet $SUBNET_NAME: $SUBNET_CIDR"
+    echo "Calcolato CIDR per la nuova subnet $SUBNET_NAME: $SUBNET_CIDR"
+  fi
 
   echo "Componente specificato: $COMPONENT. Eseguo il deploy del template Subnet."
 
@@ -223,12 +234,12 @@ if [[ "$COMPONENT" == "all" || "$COMPONENT" == "subnet" ]]; then
 fi
 
 # -----------------------------
-# Deploy del template MQTT Broker
+# Deploy del template Services
 # -----------------------------
 
-MQTT_BROKER_STACK_NAME="$REGION-$MACROZONE-mqtt-broker-stack"
-MQTT_BROKER_NAME="$REGION-$MACROZONE-mqtt-broker"
-MQTT_BROKER_HOSTNAME="$MACROZONE.mqtt-broker.${REGION}.sensor-continuum.local"
+SERVICES_STACK_NAME="$REGION-$MACROZONE-services-stack"
+SERVICES_NAME="$REGION-$MACROZONE-services"
+SERVICES_HOSTNAME="$MACROZONE.mqtt-broker.${REGION}.sensor-continuum.local"
 HOSTED_ZONE_NAME="$REGION.sensor-continuum.local"
 
 VPC_ID=$(
@@ -250,15 +261,15 @@ ROUTE_TABLE_ID=$(
   { find_route_table_id "$ROUTE_TABLE_NAME" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 ) || exit 1
 
-# Creazione KeyPair per MQTT Broker se necessario
+# Creazione KeyPair per proximity services se necessario
 KEYS_DIR="./keys"
-MQTT_KEY_NAME="$REGION-$MACROZONE-mqtt-broker-key"
-MQTT_KEY_FILE="$KEYS_DIR/$MQTT_KEY_NAME.pem"
+SERVICES_KEY_NAME="$REGION-$MACROZONE-services-key"
+SERVICES_KEY_FILE="$KEYS_DIR/$SERVICES_KEY_NAME.pem"
 
 mkdir -p "$KEYS_DIR"
 
-MQTT_KEY_PAIR=$(
-  { ensure_key_pair "$MQTT_KEY_NAME" "$MQTT_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+SERVICES_KEY_PAIR=$(
+  { ensure_key_pair "$SERVICES_KEY_NAME" "$SERVICES_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 HOSTED_ZONE_ID=$(
@@ -275,24 +286,23 @@ ENV_FILE=$(
   { find_or_create_environment "$REGION" "$MACROZONE" "$ZONE"; } | tee /dev/tty | tail -n 1
 )
 
-if [[ "$COMPONENT" == "all" || "$COMPONENT" == "mqtt-broker" ]]; then
-  echo "Componente specificato: $COMPONENT. Eseguo il deploy del template MQTT Broker."
+if [[ "$COMPONENT" == "all" || "$COMPONENT" == "services" ]]; then
+  echo "Componente specificato: $COMPONENT. Eseguo il deploy del template proximity services."
 
   # Deploy stack CloudFormation
-  echo "Deploy del template MQTT Broker..."
+  echo "Deploy del template proximity services..."
   echo "Parametri usati:"
   echo "  Regione AWS: $AWS_REGION"
   echo "  Regione: $REGION"
   echo "  Macrozona: $MACROZONE"
-  echo "  Nome Stack: $MQTT_BROKER_STACK_NAME"
+  echo "  Nome Stack: $SERVICES_STACK_NAME"
   echo "  Tipo di istanza: $INSTANCE_TYPE"
   echo "  Subnet ID: $SUBNET_ID"
   echo "  Security Group ID: $SECURITY_GROUP_ID"
-  echo "  Nome Key Name: $MQTT_KEY_NAME"
-  echo "  Nome Broker MQTT: $MQTT_BROKER_NAME"
+  echo "  Nome Key Name: $SERVICES_KEY_NAME"
+  echo "  Nome istanza EC2: $SERVICES_NAME"
   echo "  Hosted Zone Name: $HOSTED_ZONE_NAME"
-  echo "  Hostname Broker: $MQTT_BROKER_HOSTNAME"
-  echo "  Bucket S3: $S3_BUCKET"
+  echo "  Hostname Broker: $SERVICES_HOSTNAME"
   echo "  Environment file: $ENV_FILE"
 
   echo "Parametri calcolati:"
@@ -303,8 +313,8 @@ if [[ "$COMPONENT" == "all" || "$COMPONENT" == "mqtt-broker" ]]; then
   echo "  Hosted Zone ID: $HOSTED_ZONE_ID"
 
   aws cloudformation deploy \
-    --template-file "$MQTT_BROKER_TEMPLATE" \
-    --stack-name "$MQTT_BROKER_STACK_NAME" \
+    --template-file "$SERVICES_TEMPLATE" \
+    --stack-name "$SERVICES_STACK_NAME" \
     --region "$AWS_REGION" \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides \
@@ -312,45 +322,45 @@ if [[ "$COMPONENT" == "all" || "$COMPONENT" == "mqtt-broker" ]]; then
       ImageId="$IMAGE_ID" \
       SubnetId="$SUBNET_ID" \
       SecurityGroupId="$SECURITY_GROUP_ID" \
-      KeyName="$MQTT_KEY_NAME" \
-      MqttBrokerName="$MQTT_BROKER_NAME" \
-      MqttBrokerHostname="$MQTT_BROKER_HOSTNAME" \
+      KeyName="$SERVICES_KEY_NAME" \
+      ServicesInstanceName="$SERVICES_NAME" \
+      ServicesInstanceHostname="$SERVICES_HOSTNAME" \
       HostedZoneId="$HOSTED_ZONE_ID" \
       EnvironmentFile="$ENV_FILE" \
     $ENDPOINT_URL
 
   if [[ $? -ne 0 ]]; then
-    echo "Errore nel deploy dello stack MQTT Broker."
-    aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$MQTT_BROKER_STACK_NAME"
+    echo "Errore nel deploy dello stack proximity services."
+    aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$SERVICES_STACK_NAME"
     exit 1
   fi
-  echo "Deploy del template MQTT Broker completato con successo."
+  echo "Deploy del template proximity services completato con successo."
 
   # Verifica lo stato dello stack
-  STACK_STATUS=$(aws cloudformation $ENDPOINT_URL describe-stacks --region "$AWS_REGION" --stack-name "$MQTT_BROKER_STACK_NAME" --query "Stacks[0].StackStatus" --output text)
+  STACK_STATUS=$(aws cloudformation $ENDPOINT_URL describe-stacks --region "$AWS_REGION" --stack-name "$SERVICES_STACK_NAME" --query "Stacks[0].StackStatus" --output text)
   if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
-    echo "Errore: lo stack $MQTT_BROKER_STACK_NAME non è in stato CREATE_COMPLETE o UPDATE_COMPLETE. Stato attuale: $STACK_STATUS"
-    aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$MQTT_BROKER_STACK_NAME"
+    echo "Errore: lo stack $SERVICES_STACK_NAME non è in stato CREATE_COMPLETE o UPDATE_COMPLETE. Stato attuale: $STACK_STATUS"
+    aws $ENDPOINT_URL cloudformation describe-stack-events --stack-name "$SERVICES_STACK_NAME"
     exit 1
   fi
-  echo "Lo stack $MQTT_BROKER_STACK_NAME è in stato $STACK_STATUS."
+  echo "Lo stack $SERVICES_STACK_NAME è in stato $STACK_STATUS."
 
-  # Recupera informazioni sull'istanza MQTT Broker
-  MQTT_INSTANCE_ID=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --filters "Name=tag:Name,Values=$MQTT_BROKER_NAME" "Name=subnet-id,Values=$SUBNET_ID" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
-  if [[ -z "$MQTT_INSTANCE_ID" || "$MQTT_INSTANCE_ID" == "None" ]]; then
-    echo "Errore: istanza EC2 con tag Name=$MQTT_BROKER_NAME non trovata nella Subnet $SUBNET_ID."
+  # Recupera informazioni sull'istanza proximity services
+  SERVICES_INSTANCE_ID=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SERVICES_NAME" "Name=subnet-id,Values=$SUBNET_ID" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
+  if [[ -z "$SERVICES_INSTANCE_ID" || "$SERVICES_INSTANCE_ID" == "None" ]]; then
+    echo "Errore: istanza EC2 con tag Name=$SERVICES_NAME non trovata nella Subnet $SUBNET_ID."
     exit 1
   fi
-  echo "Trovata istanza EC2 ID: $MQTT_INSTANCE_ID per MQTT Broker $MQTT_BROKER_NAME"
+  echo "Trovata istanza EC2 ID: $SERVICES_INSTANCE_ID per proximity services $SERVICES_NAME"
 
   # Recupera IP privato e pubblico
-  MQTT_INSTANCE_PRIVATE_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$MQTT_INSTANCE_ID" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
-  MQTT_INSTANCE_PUBLIC_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$MQTT_INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+  SERVICES_INSTANCE_PRIVATE_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$SERVICES_INSTANCE_ID" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+  SERVICES_INSTANCE_PUBLIC_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$SERVICES_INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
 
-  echo "MQTT Broker info:"
-  echo "  Private IP: $MQTT_INSTANCE_PRIVATE_IP"
-  echo "  Public IP: $MQTT_INSTANCE_PUBLIC_IP"
-  echo "  Hostname: $MQTT_BROKER_HOSTNAME"
+  echo "Proximity services info:"
+  echo "  Private IP: $SERVICES_INSTANCE_PRIVATE_IP"
+  echo "  Public IP: $SERVICES_INSTANCE_PUBLIC_IP"
+  echo "  Hostname: $SERVICES_HOSTNAME"
 fi
 
 echo "Deploy completato."

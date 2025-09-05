@@ -13,7 +13,7 @@ show_help() {
   echo "  $0 region-001 macrozone-001 zone-001 --aws-region us-east-1 --instance-type t2.micro"
 }
 
-TEMPLATE_FILE="../terraform/zone/edge-hub.yaml"
+TEMPLATE_FILE="../terraform/zone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 INSTANCE_TYPE="t2.micro"
@@ -66,13 +66,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-STACK_NAME="$REGION-$MACROZONE-$ZONE-edge-hub-stack"
+STACK_NAME="$REGION-$MACROZONE-$ZONE-services-stack"
 VPC_NAME="$REGION-vpc"
 SUBNET_NAME="$REGION-$MACROZONE-subnet"
 SECURITY_GROUP_NAME="$REGION-$MACROZONE-sg"
+HOSTED_ZONE_NAME="$REGION.sensor-continuum.local"
+ZONE_MQTT_BROKER_HOSTNAME="$ZONE.$MACROZONE.mqtt-broker.$HOSTED_ZONE_NAME"
+MACROZONE_MQTT_BROKER_HOSTNAME="$MACROZONE.mqtt-broker.$HOSTED_ZONE_NAME"
+SENSOR_MQTT_BROKER_HOSTNAME="$ZONE.$MACROZONE.sensor.mqtt-broker.$HOSTED_ZONE_NAME"
+HUB_MQTT_BROKER_HOSTNAME="$ZONE.$MACROZONE.hub.mqtt-broker.$HOSTED_ZONE_NAME"
 ROUTE_TABLE_NAME="$REGION-vpc-public-rt"
-KEY_NAME="$REGION-$MACROZONE-$ZONE-edge-hub-key"
-EDGE_HUB_NAME="$REGION-$MACROZONE-$ZONE-edge-hub"
+KEY_NAME="$REGION-$MACROZONE-$ZONE-edge-key"
+SERVICES_INSTANCE_NAME="$REGION-$MACROZONE-$ZONE-services"
 
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
   ENDPOINT_URL="--endpoint-url=http://localhost:4566"
@@ -112,6 +117,10 @@ KEY_PAIR=$(
   { ensure_key_pair "$KEY_NAME" "$KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
+HOSTED_ZONE_ID=$(
+  { find_hosted_zone_id "$HOSTED_ZONE_NAME" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+)
+
 # Cerca un'AMI di Amazon Linux 2
 IMAGE_ID=$(
   { find_amazon_linux_2_ami "$AWS_REGION" "$ENDPOINT_URL" "$DEPLOY_MODE"; } | tee /dev/tty | tail -n 1
@@ -135,15 +144,21 @@ echo "  Tipo di istanza: $INSTANCE_TYPE"
 echo "  Nome VPC: $VPC_NAME"
 echo "  Nome Subnet: $SUBNET_NAME"
 echo "  Nome Security Group: $SECURITY_GROUP_NAME"
+echo "  Nome Hosted Zone: $HOSTED_ZONE_NAME"
+echo "  Nome DNS Broker MQTT di zona: $ZONE_MQTT_BROKER_HOSTNAME"
+echo "  Nome DNS Broker MQTT di macrozona: $MACROZONE_MQTT_BROKER_HOSTNAME"
+echo "  Nome DNS Broker MQTT di sensore: $SENSOR_MQTT_BROKER_HOSTNAME"
+echo "  Nome DNS Broker MQTT di hub: $HUB_MQTT_BROKER_HOSTNAME"
 echo "  Nome Route Table: $ROUTE_TABLE_NAME"
 echo "  Nome Key Pair: $KEY_NAME"
-echo "  Nome Edge Hub: $EDGE_HUB_NAME"
+echo "  Nome istanza servizi: $SERVICES_INSTANCE_NAME"
 echo "  Environment file: $ENV_FILE"
 
 echo "Parametri calcolati:"
 echo "  VPC ID: $VPC_ID"
 echo "  Subnet ID: $SUBNET_ID"
 echo "  Security Group ID: $SECURITY_GROUP_ID"
+echo "  Hosted Zone ID: $HOSTED_ZONE_ID"
 echo "  Route Table ID: $ROUTE_TABLE_ID"
 echo "  AMI ID: $IMAGE_ID"
 
@@ -157,8 +172,13 @@ aws cloudformation deploy \
     ImageId="$IMAGE_ID" \
     SubnetId="$SUBNET_ID" \
     SecurityGroupId="$SECURITY_GROUP_ID" \
+    HostedZoneId="$HOSTED_ZONE_ID" \
+    ZoneMqttBrokerHostname="$ZONE_MQTT_BROKER_HOSTNAME" \
+    MacrozoneMqttBrokerHostname="$MACROZONE_MQTT_BROKER_HOSTNAME" \
+    SensorMqttBrokerHostname="$SENSOR_MQTT_BROKER_HOSTNAME" \
+    HubMqttBrokerHostname="$HUB_MQTT_BROKER_HOSTNAME" \
     KeyName="$KEY_NAME" \
-    EdgeHubName="$EDGE_HUB_NAME" \
+    ServicesInstanceName="$SERVICES_INSTANCE_NAME" \
     RouteTableId="$ROUTE_TABLE_ID" \
     EnvironmentFile="$ENV_FILE" \
   $ENDPOINT_URL
@@ -181,11 +201,19 @@ echo "Lo stack $STACK_NAME è in stato $STACK_STATUS."
 
 # Verifica la creazione delle risorse
 echo "Verifica la creazione delle risorse..."
-INSTANCE_ID=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --filters "Name=tag:Name,Values=$EDGE_HUB_NAME" "Name=subnet-id,Values=$SUBNET_ID" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
+INSTANCE_ID=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --filters "Name=tag:Name,Values=$SERVICES_INSTANCE_NAME" "Name=subnet-id,Values=$SUBNET_ID" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
 if [[ -z "$INSTANCE_ID" || "$INSTANCE_ID" == "None" ]]; then
-  echo "Errore: istanza EC2 con tag Name=$EDGE_HUB_NAME non trovata nella Subnet $SUBNET_ID."
+  echo "Errore: istanza EC2 con tag Name=$SERVICES_INSTANCE_NAME non trovata nella Subnet $SUBNET_ID."
   exit 1
 fi
-echo "Trovata istanza EC2 ID: $INSTANCE_ID per Edge Hub $EDGE_HUB_NAME"
+echo "Trovata istanza EC2 ID: $INSTANCE_ID per i servizi $SERVICES_INSTANCE_NAME"
+
+# Recupera IP privato e pubblico
+SERVICES_INSTANCE_PRIVATE_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$INSTANCE_ID" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+SERVICES_INSTANCE_PUBLIC_IP=$(aws ec2 $ENDPOINT_URL describe-instances --region "$AWS_REGION" --instance-ids "$INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+
+echo "Proximity services info:"
+echo "  Private IP: $SERVICES_INSTANCE_PRIVATE_IP"
+echo "  Public IP: $SERVICES_INSTANCE_PUBLIC_IP"
 
 echo "Deploy completato."

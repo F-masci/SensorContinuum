@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EC2 con Docker e Docker Compose per simulazione servizi edge
+Description: EC2 con Docker e Docker Compose per simulazione servizi edge, con record A in Route53
 
 Parameters:
   InstanceType:
     Type: String
-    Default: t2.micro
+    Default: t2.small
     Description: Tipo di istanza EC2
   ImageId:
     Type: AWS::EC2::Image::Id
@@ -16,13 +16,20 @@ Parameters:
   SecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: ID del Security Group da associare
+  HostedZoneId:
+    Type: String
+    Description: ID della Private Hosted Zone Route53 (es. sensor-continuum.local)
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Nome della chiave SSH
-  EdgeHubName:
+  ServicesInstanceName:
     Type: String
-    Default: edge-hub-ec2
-    Description: Nome dell'istanza edge-hub
+    Default: mqtt-broker-ec2
+    Description: Nome dell'istanza dei servizi (EC2)
+  ServicesInstanceHostname:
+    Type: String
+    Default: mqtt-broker.${REGION}.sensor-continuum.local
+    Description: Hostname dell'istanza EC2 (deve essere un record A nella Hosted Zone)
   S3Bucket:
     Type: String
     Default: sensor-continuum-scripts
@@ -33,7 +40,7 @@ Parameters:
     Description: Lista di script di init separati da spazio
   DeployScripts:
     Type: String
-    Default: deploy_edge_services.sh
+    Default: deploy_proximity_services.sh
     Description: Lista di script di deploy separati da spazio
   EnvironmentFile:
     Type: String
@@ -41,19 +48,19 @@ Parameters:
 
 Resources:
 
-  EdgeHubInstanceProfile:
+  ServicesInstanceInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
         - LabRole   # nome del ruolo, non l'ARN completo
 
-  EdgeHubInstance:
+  ServicesInstanceInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref ImageId
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref EdgeHubInstanceProfile
+      IamInstanceProfile: !Ref ServicesInstanceInstanceProfile
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -62,7 +69,7 @@ Resources:
             - !Ref SecurityGroupId
       Tags:
         - Key: Name
-          Value: !Ref EdgeHubName
+          Value: !Ref ServicesInstanceName
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -104,18 +111,32 @@ Resources:
               /home/ec2-user/$script
           done
 
-          echo "UserData completato $(date)
+          echo "UserData completato $(date)"
+
+  # Record A Route53 per EC2
+  ServicesInstanceRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref ServicesInstanceHostname
+      Type: A
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt ServicesInstanceInstance.PrivateIp
 
 Outputs:
   InstanceId:
     Description: ID della istanza EC2
-    Value: !Ref EdgeHubInstance
+    Value: !Ref ServicesInstanceInstance
   InstanceKeyName:
     Description: Nome della chiave SSH per l'istanza
     Value: !Ref KeyName
   InstancePublicIp:
     Description: Indirizzo IP pubblico dell'istanza
-    Value: !GetAtt EdgeHubInstance.PublicIp
+    Value: !GetAtt ServicesInstanceInstance.PublicIp
   InstancePrivateIp:
     Description: Indirizzo IP privato dell'istanza
-    Value: !GetAtt EdgeHubInstance.PrivateIp
+    Value: !GetAtt ServicesInstanceInstance.PrivateIp
+  RecordA:
+    Description: Record A creato nella Hosted Zone
+    Value: !Ref ServicesInstanceRecord
