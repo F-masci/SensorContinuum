@@ -6,6 +6,7 @@ import (
 	"SensorContinuum/internal/proximity-fog-hub/storage"
 	"SensorContinuum/pkg/logger"
 	"context"
+	"os"
 	"time"
 )
 
@@ -40,8 +41,8 @@ func ProcessPendingMessages(ctx context.Context) {
 	// Prova a diventare il leader per il dispatching
 	isLeader, err := storage.TryAcquireDispatcherLock(ctx)
 	if err != nil {
-		logger.Log.Error("Failed to acquire dispatcher lock: ", err)
-		return
+		logger.Log.Error("Failed to * dispatcher lock: ", err)
+		os.Exit(1)
 	} else if !isLeader {
 		// Se non è il leader, esce
 		logger.Log.Info("Another instance is the leader for dispatching, skipping this run.")

@@ -51,7 +51,7 @@ func AggregateSensorData(ctx context.Context) {
 	isLeader, err := storage.TryAcquireAggregationLock(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to acquire aggregation lock: ", err)
-		return
+		os.Exit(1)
 	} else if !isLeader {
 		// Se non è il leader, esce
 		logger.Log.Info("Another instance is the leader for aggregation, skipping this run.")
