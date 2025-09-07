@@ -17,6 +17,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
 
   region-metadata-db:
     image: fmasci/sc-region-metadata-db:latest
@@ -35,6 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
 
 volumes:
   sensor-db-data:

@@ -16,9 +16,9 @@ func main() {
 	// Costruisci l'immagine Docker
 	var buildCmd *exec.Cmd
 	if lambdaName == "" {
-		buildCmd = exec.Command("docker", "build", "-t", "golambda", ".", "-f", "deploy/docker/lambda.Dockerfile")
+		buildCmd = exec.Command("docker", "build", "--network=host", "-t", "golambda", ".", "-f", "deploy/docker/lambda.Dockerfile")
 	} else {
-		buildCmd = exec.Command("docker", "build", "-t", "golambda", ".", "-f", "deploy/docker/lambda.Dockerfile", "--build-arg", "LAMBDA_PATH="+lambdaName)
+		buildCmd = exec.Command("docker", "build", "--network=host", "-t", "golambda", ".", "-f", "deploy/docker/lambda.Dockerfile", "--build-arg", "LAMBDA_PATH="+lambdaName)
 	}
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr

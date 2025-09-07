@@ -13,7 +13,7 @@ show_help() {
   echo "  $0 region-001 macrozone-001 zone-001 --aws-region us-east-1 --instance-type t3.micro"
 }
 
-TEMPLATE_FILE="../terraform/zone/services.yaml"
+TEMPLATE_FILE="../cloudformation/zone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 INSTANCE_TYPE="t3.micro"

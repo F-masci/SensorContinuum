@@ -14,8 +14,8 @@ show_help() {
   echo "  $0 region-001 macrozone-001 --aws-region us-east-1"
 }
 
-SUBNET_TEMPLATE="../terraform/macrozone/Subnet.yaml"
-SERVICES_TEMPLATE="../terraform/macrozone/services.yaml"
+SUBNET_TEMPLATE="../cloudformation/macrozone/Subnet.yaml"
+SERVICES_TEMPLATE="../cloudformation/macrozone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"

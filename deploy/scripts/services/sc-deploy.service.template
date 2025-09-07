@@ -1,0 +1,12 @@
+[Unit]
+Description=Deploy del servizio di Sensor Continuum
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/ec2-user/$SCRIPT
+RemainAfterExit=no
+User=ec2-user
+
+[Install]
+WantedBy=multi-user.target

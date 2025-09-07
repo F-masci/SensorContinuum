@@ -204,7 +204,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		lambdaArn := fmt.Sprintf("arn:terraform:lambda:us-east-1:000000000000:function:%s", lambda.Name)
+		lambdaArn := fmt.Sprintf("arn:cloudformation:lambda:us-east-1:000000000000:function:%s", lambda.Name)
 		logger.Log.Info("Creo integrazione Lambda per: ", lambda.Name)
 		_, err = apiClient.PutIntegration(ctx, &apigateway.PutIntegrationInput{
 			RestApiId:             aws.String(apiID),
@@ -212,7 +212,7 @@ func main() {
 			HttpMethod:            aws.String("GET"),
 			Type:                  "AWS_PROXY",
 			IntegrationHttpMethod: aws.String("POST"),
-			Uri:                   aws.String(fmt.Sprintf("arn:terraform:apigateway:us-east-1:lambda:path/2015-03-31/functions/%s/invocations", lambdaArn)),
+			Uri:                   aws.String(fmt.Sprintf("arn:cloudformation:apigateway:us-east-1:lambda:path/2015-03-31/functions/%s/invocations", lambdaArn)),
 		})
 		if err != nil {
 			logger.Log.Error("Errore PutIntegration: ", err)

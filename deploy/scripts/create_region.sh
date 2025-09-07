@@ -15,10 +15,10 @@ show_help() {
 }
 
 # Definizione dei template da usare
-VPC_TEMPLATE="../terraform/region/VPC.yaml"
-KAFKA_TEMPLATE="../terraform/region/Kafka.yaml"
-DATABASES_TEMPLATE="../terraform/region/Databases.yaml"
-SERVICES_TEMPLATE="../terraform/region/services.yaml"
+VPC_TEMPLATE="../cloudformation/region/VPC.yaml"
+KAFKA_TEMPLATE="../cloudformation/region/Kafka.yaml"
+DATABASES_TEMPLATE="../cloudformation/region/Databases.yaml"
+SERVICES_TEMPLATE="../cloudformation/region/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
 COMPONENT="all"

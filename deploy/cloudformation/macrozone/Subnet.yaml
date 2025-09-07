@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Crea una Subnet pubblica e un Security Group che permette tutto in ingresso e in uscita
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: ID della VPC dove creare la subnet
+  SubnetCidr:
+    Type: String
+    Description: CIDR della subnet (es. 10.1.0.0/24)
+  SubnetName:
+    Type: String
+    Default: "MySubnet"
+    Description: Nome della subnet
+  SecurityGroupName:
+    Type: String
+    Default: "MySecurityGroup"
+    Description: Nome del Security Group
+  RouteTableId:
+    Type: String
+    Description: ID della Route Table pubblica della VPC (con default route verso IGW)
+
+Resources:
+  # Subnet pubblica
+  MacrozoneSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref SubnetCidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref SubnetName
+
+  # Associazione della subnet alla route table pubblica
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MacrozoneSubnet
+      RouteTableId: !Ref RouteTableId
+
+  # Security Group che permette tutto in ingresso e uscita
+  MacrozoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permette tutto in ingresso e in uscita
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SubnetId:
+    Description: ID della subnet creata
+    Value: !Ref MacrozoneSubnet
+  SecurityGroupId:
+    Description: ID del Security Group creato
+    Value: !Ref MacrozoneSecurityGroup

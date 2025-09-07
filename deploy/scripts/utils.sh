@@ -143,6 +143,9 @@ find_or_create_environment() {
   fi
 
   if [[ -f "$env_file" ]]; then
+    echo "File di ambiente trovato: $env_file"
+    echo "Caricamento su S3: $s3_path"
+    aws s3 cp "$env_file" "$s3_path"
     echo "${env_file#$base_dir/}"
     return 0
   fi

@@ -33,7 +33,7 @@ var (
 // GetCloudPostgresDB Funzione per DB Cloud
 func GetCloudPostgresDB(ctx context.Context) (*PostgresDB, error) {
 	cloudOnce.Do(func() {
-		dbURL := "postgres://admin:adminpass@metadata-db.cloud.sensor-continuum.local:5433/sensorcontinuum"
+		dbURL := "postgres://sc_master:adminpass@metadata-db.cloud.sensor-continuum.local:5433/sensorcontinuum"
 		logger.Log.Info("Connecting to Cloud Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {
@@ -52,7 +52,7 @@ func GetRegionPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 		regionOnce[region] = &sync.Once{}
 	}
 	regionOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://admin:adminpass@metadata-db.%s.sensor-continuum.local:5434/sensorcontinuum", region)
+		dbURL := fmt.Sprintf("postgres://admin:adminpass@metadata-db.%s.cloud.sensor-continuum.local:5434/sensorcontinuum", region)
 		logger.Log.Info("Connecting to Region Metadata Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {
@@ -71,7 +71,7 @@ func GetSensorPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 		sensorOnce[region] = &sync.Once{}
 	}
 	sensorOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://admin:adminpass@mesurament-db.%s.sensor-continuum.local:5432/sensorcontinuum", region)
+		dbURL := fmt.Sprintf("postgres://admin:adminpass@mesurament-db.%s.cloud.sensor-continuum.local:5432/sensorcontinuum", region)
 		logger.Log.Info("Connecting to Region Sensor Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {

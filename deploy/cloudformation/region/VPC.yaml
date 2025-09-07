@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Crea una VPC con subnet pubblica, Security Group e Hosted Zone privata"
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR della VPC"
+  VpcName:
+    Type: String
+    Default: "RegionVPC"
+    Description: "Nome della VPC"
+  SubnetCidr:
+    Type: String
+    Default: "10.0.0.0/24"
+    Description: "CIDR della Subnet"
+  SubnetName:
+    Type: String
+    Default: "RegionSubnet"
+    Description: "Nome della Subnet"
+  SshAllowedCidr:
+    Type: String
+    Default: "0.0.0.0/0"
+    Description: "CIDR da cui permettere l'accesso SSH"
+  SecurityGroupName:
+    Type: String
+    Default: "region-sg"
+    Description: "Nome del Security Group SSH"
+  HostedZoneName:
+    Type: String
+    Default: "sensor-continuum.local"
+    Description: "Nome della Private Hosted Zone"
+
+Resources:
+  # VPC
+  RegionVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref VpcName
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-igw"
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref RegionVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RegionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Subnet (resa pubblica con MapPublicIpOnLaunch)
+  RegionSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RegionVPC
+      CidrBlock: !Ref SubnetCidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref SubnetName
+
+  # Associazione Subnet alla Route Table pubblica
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RegionSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Group
+  RegionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Consente tutto"
+      VpcId: !Ref RegionVPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+  # Private Hosted Zone
+  PrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref HostedZoneName
+      VPCs:
+        - VPCId: !Ref RegionVPC
+          VPCRegion: !Ref "AWS::Region"
+      HostedZoneConfig:
+        Comment: !Sub "Private Hosted Zone per la VPC ${VpcName}"
+
+Outputs:
+  VpcId:
+    Description: "ID della VPC creata"
+    Value: !Ref RegionVPC
+  InternetGatewayId:
+    Description: "ID dell'Internet Gateway"
+    Value: !Ref InternetGateway
+  RouteTableId:
+    Description: "ID della Route Table"
+    Value: !Ref PublicRouteTable
+  SecurityGroupId:
+    Description: "ID del Security Group SSH"
+    Value: !Ref RegionSecurityGroup
+  SubnetId:
+    Description: "ID della Subnet pubblica"
+    Value: !Ref RegionSubnet
+  PublicRouteTableId:
+    Description: "ID della Route Table pubblica"
+    Value: !Ref PublicRouteTable
+  HostedZoneId:
+    Description: "ID della Hosted Zone privata creata"
+    Value: !Ref PrivateHostedZone

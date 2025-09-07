@@ -16,12 +16,12 @@ x-macrozone-hub-base: &macrozone-hub-base
   build:
     context: ../..
     dockerfile: deploy/docker/proximity-fog-hub.Dockerfile
-  restart: unless-stopped
   healthcheck:
     test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
     interval: 60s
     timeout: 30s
     retries: 10
+  restart: unless-stopped
   networks:
     - macrozone-hub-bridge
   depends_on:
@@ -49,6 +49,7 @@ services:
       interval: 60s
       timeout: 10s
       retries: 10
+    restart: unless-stopped
     networks:
       - macrozone-hub-bridge
 

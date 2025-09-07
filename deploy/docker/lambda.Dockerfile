@@ -23,9 +23,9 @@ RUN if [ -n "$LAMBDA_PATH" ]; then \
         done' sh {} +; \
     fi
 
-FROM alpine:latest AS packager
+FROM alpine:3.19 AS packager
 
-RUN apk --no-cache add zip
+RUN apk update && apk add --no-cache zip unzip bash
 
 WORKDIR /lambda
 

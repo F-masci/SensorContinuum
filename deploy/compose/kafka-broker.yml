@@ -26,6 +26,7 @@ services:
       test: [ "CMD", "kafka-topics.sh", "--bootstrap-server=kafka-01:9092", "--list" ]
       start_period: 15s
       interval: 10s
+    restart: unless-stopped
     networks:
       - kafka-bridge
 

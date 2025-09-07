@@ -1,6 +1,11 @@
 #!/bin/bash
 
-# ./create_bucket.sh
+./create_bucket.sh
+if [ $? -ne 0 ]; then
+  echo "Errore nella creazione del bucket."
+  exit 1
+fi
+
 ./create_region.sh region-001 --aws-region us-east-1
 if [ $? -ne 0 ]; then
   echo "Errore nella creazione della regione."

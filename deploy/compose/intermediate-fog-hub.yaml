@@ -18,12 +18,12 @@ x-region-hub-base: &region-hub-base
   build:
     context: ../..
     dockerfile: deploy/docker/intermediate-fog-hub.Dockerfile
-  restart: unless-stopped
   healthcheck:
     test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
     interval: 60s
     timeout: 30s
     retries: 10
+  restart: unless-stopped
   networks:
     - region-hub-bridge
 
