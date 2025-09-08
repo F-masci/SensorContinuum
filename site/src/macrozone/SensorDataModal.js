@@ -1,7 +1,7 @@
-// site/src/macrozone/SensorDataModal.js
 import React from "react";
 import { Modal } from "react-bootstrap";
 import DataTable from "react-data-table-component";
+import Loader from "../shared/Loader";
 
 function formatTimestamp(ts) {
     if (!ts) return "-";
@@ -22,22 +22,26 @@ const columns = [
     { name: "Valore", selector: row => row.data, sortable: true }
 ];
 
-function SensorDataModal({ show, onHide, sensor, data }) {
+function SensorDataModal({ show, onHide, sensor, data, loading }) {
     return (
         <Modal show={show} onHide={onHide} size="lg" centered>
             <Modal.Header closeButton>
                 <Modal.Title>Rilevazioni sensore {sensor?.id}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    pagination
-                    striped
-                    highlightOnHover
-                    dense
-                    noDataComponent="Nessuna rilevazione"
-                />
+                {loading ? (
+                    <Loader text="Caricamento dati sensore..." />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        pagination
+                        striped
+                        highlightOnHover
+                        dense
+                        noDataComponent="Nessuna rilevazione"
+                    />
+                )}
             </Modal.Body>
         </Modal>
     );

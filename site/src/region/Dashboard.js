@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MacrozoneCard from "./MacrozoneCard";
 import HubCard from "../shared/HubCard";
+import Loader from '../shared/Loader'
 
 import './Region.css';
 
@@ -23,7 +24,7 @@ function RegionDashboard() {
     }, [name]);
 
     if (loading) {
-        return <div className="dashboard"><p>Caricamento...</p></div>;
+        return <Loader text="Caricamento dati macrozone..." />
     }
 
     if (!region) {
@@ -57,8 +58,8 @@ function RegionDashboard() {
                     ))}
                 </div>
                 <div className="region-hubs-container">
-                    <h2>Hubs</h2>
-                    <div className="region-hubs-list">
+                    <h2 className="text-align-center" >Hubs</h2>
+                    <div className="region-hubs-list grid-hubs">
                         {region.hubs.map((hub) => (
                             <HubCard
                                 key={hub.id}

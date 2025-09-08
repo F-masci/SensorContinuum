@@ -47,6 +47,7 @@
     gap: 32px;
     justify-content: center;
     margin-top: 16px;
+    margin-bottom: 32px;
 }
 
 .region-card {
@@ -94,4 +95,103 @@
     box-shadow: 0 2px 8px rgba(33,150,243,0.15);
     align-items: center;
     justify-content: center;
+}
+
+.search-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f7faff;
+    padding: 24px 32px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(25, 118, 210, 0.10);
+    margin: 0 auto 32px auto;
+    max-width: 900px;
+    gap: 16px;
+}
+
+.search-fields {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    justify-content: center;
+}
+
+.search-form label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    color: #1976d2;
+}
+
+.search-form input {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #b0c4de;
+    font-size: 1em;
+    background: #fff;
+}
+
+.search-form button {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.12);
+    transition: background 0.2s;
+}
+
+.search-form button:disabled {
+    background: #b0c4de;
+    cursor: not-allowed;
+}
+
+.search-loading {
+    text-align: center;
+    color: #1976d2;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+/* Card dei risultati */
+.search-results-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(40,44,52,0.13);
+    padding: 24px 32px;
+    max-width: 600px;
+    margin: 0 auto 32px auto;
+}
+
+.search-results-card h2 {
+    margin-top: 0;
+    color: #1976d2;
+    font-size: 1.2em;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.search-results-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.search-results-card li {
+    background: #f7faff;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.07);
+    font-size: 1em;
+}
+
+.search-results-card li strong {
+    color: #1976d2;
+    font-weight: 600;
 }

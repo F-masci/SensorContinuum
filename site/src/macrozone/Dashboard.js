@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
-import { Card, Badge, Button, Modal, Table } from "react-bootstrap";
+import { Card, Badge, Button } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
@@ -10,6 +10,7 @@ import "./Macrozone.css";
 import SensorDataModal from "./SensorDataModal";
 import ZoneAggregateDataModal from "./ZoneAggregateDataModal";
 import MacrozoneAggregateDataModal from "./MacrozoneAggregateDataModal";
+import Loader from "../shared/Loader";
 
 function isActive(lastSeen) {
     if (!lastSeen) return false;
@@ -53,6 +54,9 @@ function Dashboard() {
     const [selectedZone, setSelectedZone] = useState(null);
     const [showMacrozoneModal, setShowMacrozoneModal] = useState(false);
     const [macrozoneData, setMacrozoneData] = useState([]);
+    const [sensorDataLoading, setSensorDataLoading] = useState(false);
+    const [zoneDataLoading, setZoneDataLoading] = useState(false);
+    const [macrozoneDataLoading, setMacrozoneDataLoading] = useState(false);
 
     const navigate = useNavigate();
 
@@ -72,7 +76,7 @@ function Dashboard() {
     const handleShowSensorData = (sensor) => {
         setSelectedSensor(sensor);
         setShowModal(true);
-        // Chiamata API per le rilevazioni del sensore
+        setSensorDataLoading(true);
         const url = process.env.REACT_APP_ZONE_SENSOR_DATA_RAW_URL
             .replace("{region}", encodeURIComponent(regionName))
             .replace("{macrozone}", encodeURIComponent(macrozoneName))
@@ -81,7 +85,8 @@ function Dashboard() {
         fetch(url)
             .then(res => res.json())
             .then(data => setSensorData(data))
-            .catch(() => setSensorData([]));
+            .catch(() => setSensorData([]))
+            .finally(() => setSensorDataLoading(false));
     };
 
     const handleCloseModal = () => {
@@ -93,6 +98,7 @@ function Dashboard() {
     const handleShowZoneData = (zone) => {
         setSelectedZone(zone);
         setShowZoneModal(true);
+        setZoneDataLoading(true);
         const url = process.env.REACT_APP_ZONE_DATA_AGGREGATED_URL
             .replace("{region}", encodeURIComponent(regionName))
             .replace("{macrozone}", encodeURIComponent(macrozoneName))
@@ -100,7 +106,8 @@ function Dashboard() {
         fetch(url)
             .then(res => res.json())
             .then(data => setZoneData(data))
-            .catch(() => setZoneData([]));
+            .catch(() => setZoneData([]))
+            .finally(() => setZoneDataLoading(false));
     };
 
     const handleCloseZoneModal = () => {
@@ -111,13 +118,15 @@ function Dashboard() {
 
     const handleShowMacrozoneData = () => {
         setShowMacrozoneModal(true);
+        setMacrozoneDataLoading(true);
         const url = process.env.REACT_APP_MACROZONE_DATA_AGGREGATED_NAME_URL
             .replace("{region}", encodeURIComponent(regionName))
             .replace("{macrozone}", encodeURIComponent(macrozoneName));
         fetch(url)
             .then(res => res.json())
             .then(data => setMacrozoneData(data))
-            .catch(() => setMacrozoneData([]));
+            .catch(() => setMacrozoneData([]))
+            .finally(() => setMacrozoneDataLoading(false));
     };
 
     const handleCloseMacrozoneModal = () => {
@@ -126,7 +135,7 @@ function Dashboard() {
     };
 
     if (loading) {
-        return <div className="dashboard"><p>Caricamento...</p></div>;
+        return <Loader text="Caricamento dati zone..." />
     }
 
     if (!macrozone) {
@@ -327,19 +336,24 @@ function Dashboard() {
                 onHide={handleCloseMacrozoneModal}
                 macrozone={macrozone}
                 data={macrozoneData}
-            />
+                loading={macrozoneDataLoading}
+            ></MacrozoneAggregateDataModal>
+
             <ZoneAggregateDataModal
                 show={showZoneModal}
                 onHide={handleCloseZoneModal}
                 zone={selectedZone}
                 data={zoneData}
-            />
+                loading={zoneDataLoading}
+            ></ZoneAggregateDataModal>
+
             <SensorDataModal
                 show={showModal}
                 onHide={handleCloseModal}
                 sensor={selectedSensor}
                 data={sensorData}
-            />
+                loading={sensorDataLoading}
+            ></SensorDataModal>
         </div>
     );
 }

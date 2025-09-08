@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal } from "react-bootstrap";
 import DataTable from "react-data-table-component";
+import Loader from "../shared/Loader";
 
 function formatTimestamp(ts) {
     if (!ts) return "-";
@@ -23,22 +24,26 @@ const columns = [
     { name: "Media", selector: row => row.avg, sortable: true }
 ];
 
-function ZoneAggregateDataModal({ show, onHide, zone, data }) {
+function ZoneAggregateDataModal({ show, onHide, zone, data, loading }) {
     return (
         <Modal show={show} onHide={onHide} size="lg" centered>
             <Modal.Header closeButton>
                 <Modal.Title>Dati aggregati zona {zone?.name}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    pagination
-                    striped
-                    highlightOnHover
-                    dense
-                    noDataComponent="Nessun dato aggregato"
-                />
+                {loading ? (
+                    <Loader text="Caricamento dati zona..." />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        pagination
+                        striped
+                        highlightOnHover
+                        dense
+                        noDataComponent="Nessun dato aggregato"
+                    />
+                )}
             </Modal.Body>
         </Modal>
     );
