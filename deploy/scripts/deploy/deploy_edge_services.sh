@@ -41,7 +41,17 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "[DEBUG] Controllo se esiste il volume zone-hub-${EDGE_ZONE}-cache-data"
+if [ ! "$(docker volume ls -q -f name=zone-hub-${EDGE_ZONE}-cache-data)" ]; then
+  echo "[INFO] Volume zone-hub-${EDGE_ZONE}-cache-data non trovato. Creo il volume..."
+  docker volume create zone-hub-${EDGE_ZONE}-cache-data || { echo "[ERROR] Errore nella creazione del volume"; exit 1; }
+else
+  echo "[INFO] Volume zone-hub-${EDGE_ZONE}-cache-data già esistente."
+fi
+
 if [ -f "$COMPOSE_EDGE_HUB_FILE_NAME" ]; then
+  echo "[INFO] Elimino eventuali container edge-hub esistenti..."
+  docker-compose -f "$COMPOSE_EDGE_HUB_FILE_NAME" --env-file ".env" -p edge-hub down
   echo "[INFO] Avvio edge-hub..."
   docker-compose -f "$COMPOSE_EDGE_HUB_FILE_NAME" --env-file ".env" -p edge-hub up -d
 else
@@ -50,6 +60,8 @@ else
 fi
 
 if [ -f "$COMPOSE_SENSORS_FILE_NAME" ]; then
+  echo "[INFO] Elimino eventuali container sensors esistenti..."
+  docker-compose -f "$COMPOSE_SENSORS_FILE_NAME" --env-file ".env" -p sensors down
   echo "[INFO] Avvio sensori..."
   docker-compose -f "$COMPOSE_SENSORS_FILE_NAME" --env-file ".env" -p sensors up -d
 else
@@ -109,7 +121,7 @@ SCRIPT="$(basename "$0")"
 echo "Creo il file di servizio /etc/systemd/system/$SERVICE_FILE_NAME..."
 # Sostituisci il placeholder nel template e crea il file di servizio
 echo "Sostituisco il placeholder \$SCRIPT con $SCRIPT..."
-sudo sed "s|$SCRIPT|${SCRIPT}|g" \
+sudo sed "s|\$SCRIPT|${SCRIPT}|g" \
   "$TEMPLATE_SERVICE_FILE_NAME" | sudo tee "/etc/systemd/system/$SERVICE_FILE_NAME" > /dev/null
 echo "File di servizio creato in /etc/systemd/system/$SERVICE_FILE_NAME"
 

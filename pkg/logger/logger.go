@@ -188,3 +188,7 @@ func GetProximityHubContext(macrozone, hub string) Context {
 func GetIntermediateHubContext(hub string) Context {
 	return GetContext("intermediate-fog-hub", "", "", hub, "")
 }
+
+func GetCloudContext() Context {
+	return GetContext("cloud", "", "", "", "")
+}

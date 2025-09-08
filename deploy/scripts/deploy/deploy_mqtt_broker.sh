@@ -40,6 +40,8 @@ if [ ! -f "$COMPOSE_MQTT_BROKER_FILE_NAME" ]; then
   echo "File $COMPOSE_MQTT_BROKER_FILE_NAME non trovato, esco."
   exit 1
 else
+  echo "Elimino eventuali container mqtt-broker esistenti..."
+  docker-compose -f "$COMPOSE_MQTT_BROKER_FILE_NAME" --env-file ".env" -p mqtt-broker down
   echo "Avvio mqtt-broker..."
   docker-compose -f "$COMPOSE_MQTT_BROKER_FILE_NAME" --env-file ".env" -p mqtt-broker up -d
 fi
@@ -48,8 +50,8 @@ echo "docker-compose avviato con successo."
 
 # Scarica il template del servizio
 SERVICES_DIR="services"
-SERVICE_FILE_NAME="sc-deploy.service"
-TEMPLATE_SERVICE_FILE_NAME="$SERVICE_FILE_NAME.template"
+SERVICE_FILE_NAME="sc-deploy-mqtt.service"
+TEMPLATE_SERVICE_FILE_NAME="sc-deploy.service.template"
 
 # Controlla se il file di servizio esiste già
 if [ -f "/etc/systemd/system/$SERVICE_FILE_NAME" ]; then
@@ -77,7 +79,7 @@ SCRIPT="$(basename "$0")"
 echo "Creo il file di servizio /etc/systemd/system/$SERVICE_FILE_NAME..."
 # Sostituisci il placeholder nel template e crea il file di servizio
 echo "Sostituisco il placeholder \$SCRIPT con $SCRIPT..."
-sudo sed "s|$SCRIPT|${SCRIPT}|g" \
+sudo sed "s|\$SCRIPT|${SCRIPT}|g" \
   "$TEMPLATE_SERVICE_FILE_NAME" | sudo tee "/etc/systemd/system/$SERVICE_FILE_NAME" > /dev/null
 echo "File di servizio creato in /etc/systemd/system/$SERVICE_FILE_NAME"
 

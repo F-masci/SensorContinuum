@@ -2,6 +2,7 @@ package main
 
 import (
 	"SensorContinuum/internal/api-backend/macrozone"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
@@ -41,5 +42,6 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func main() {
+	logger.CreateLogger(logger.GetCloudContext())
 	lambda.Start(handler)
 }

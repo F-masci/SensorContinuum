@@ -52,7 +52,8 @@ fi
 # Recupera IP pubblico dell'istanza
 PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 sed -i "s/^KAFKA_PUBLIC_IP=.*/KAFKA_PUBLIC_IP=${PUBLIC_IP}/" .env
-
+echo "Elimino eventuali container kafka-broker esistenti..."
+docker-compose -f "/home/ec2-user/kafka-broker.yml" --env-file ".env" -p kafka-broker down
 echo "Avvio kafka-broker..."
 docker-compose -f "/home/ec2-user/kafka-broker.yml" --env-file ".env" -p kafka-broker up -d
 
@@ -89,7 +90,7 @@ SCRIPT="$(basename "$0")"
 echo "Creo il file di servizio /etc/systemd/system/$SERVICE_FILE_NAME..."
 # Sostituisci il placeholder nel template e crea il file di servizio
 echo "Sostituisco il placeholder \$SCRIPT con $SCRIPT..."
-sudo sed "s|$SCRIPT|${SCRIPT}|g" \
+sudo sed "s|\$SCRIPT|${SCRIPT}|g" \
   "$TEMPLATE_SERVICE_FILE_NAME" | sudo tee "/etc/systemd/system/$SERVICE_FILE_NAME" > /dev/null
 echo "File di servizio creato in /etc/systemd/system/$SERVICE_FILE_NAME"
 

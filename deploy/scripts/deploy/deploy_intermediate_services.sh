@@ -37,6 +37,8 @@ if [ ! -f "$COMPOSE_INTERMEDIATE_HUB_FILE_NAME" ]; then
   echo "[ERROR] File $COMPOSE_INTERMEDIATE_HUB_FILE_NAME non trovato, esco."
   exit 1
 else
+  echo "[INFO] Elimino eventuali container intermediate-fog-hub esistenti..."
+  docker-compose -f "$COMPOSE_INTERMEDIATE_HUB_FILE_NAME" --env-file ".env" -p intermediate-fog-hub down
   echo "[INFO] Avvio intermediate-fog-hub..."
   docker-compose -f "$COMPOSE_INTERMEDIATE_HUB_FILE_NAME" --env-file ".env" -p intermediate-fog-hub up -d
 fi
@@ -87,7 +89,7 @@ SCRIPT="$(basename "$0")"
 echo "Creo il file di servizio /etc/systemd/system/$SERVICE_FILE_NAME..."
 # Sostituisci il placeholder nel template e crea il file di servizio
 echo "Sostituisco il placeholder \$SCRIPT con $SCRIPT..."
-sudo sed "s|$SCRIPT|${SCRIPT}|g" \
+sudo sed "s|\$SCRIPT|${SCRIPT}|g" \
   "$TEMPLATE_SERVICE_FILE_NAME" | sudo tee "/etc/systemd/system/$SERVICE_FILE_NAME" > /dev/null
 echo "File di servizio creato in /etc/systemd/system/$SERVICE_FILE_NAME"
 

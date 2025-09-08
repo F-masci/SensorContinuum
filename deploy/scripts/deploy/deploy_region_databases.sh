@@ -57,27 +57,39 @@ else
   echo "Volume metadata-db-data-${REGION} già esistente."
 fi
 
+echo "Elimino eventuali container region-databases esistenti..."
+docker-compose -f "/home/ec2-user/region-databases.yml" --env-file ".env" -p region-databases down
 echo "Avvio region-databases..."
 docker-compose -f "/home/ec2-user/region-databases.yml" --env-file ".env" -p region-databases up -d
 
 echo "[DEBUG] Attendo che Postgres sia pronto..."
-for i in {1..20}; do
-  docker exec -it region-${REGION}-sensor-db pg_isready -U admin -d sensorcontinuum && \
-    docker exec -it region-${REGION}-metadata-db pg_isready -U admin -d sensorcontinuum && \
-    break
+while ! docker exec region-${REGION}-sensor-db pg_isready -U admin -d sensorcontinuum; do
+  echo "[DEBUG] Postgres sensor-db non è ancora pronto, attendo..."
   sleep 2
 done
 
 # Aumenta il numero massimo di connessioni di postgres
 echo "Aumento il numero massimo di connessioni di postgres a 500..."
-docker exec -it region-${REGION}-sensor-db psql -U admin -d sensorcontinuum -c "ALTER SYSTEM SET max_connections = 500;"
+while ! docker exec region-${REGION}-sensor-db psql -U admin -d sensorcontinuum -c "ALTER SYSTEM SET max_connections = 500;"; do
+  echo "Comando non riuscito, riprovo..."
+  sleep 1
+done
 # Riavvia il container per applicare la modifica
 echo "Riavvio il container region-${REGION}-sensor-db per applicare la modifica..."
 docker restart region-${REGION}-sensor-db
 
+echo "[DEBUG] Attendo che Postgres sia pronto..."
+while ! docker exec region-${REGION}-metadata-db pg_isready -U admin -d sensorcontinuum; do
+  echo "[DEBUG] Postgres metadata-db non è ancora pronto, attendo..."
+  sleep 2
+done
+
 # Aumenta il numero massimo di connessioni di postgres
 echo "Aumento il numero massimo di connessioni di postgres a 500..."
-docker exec -it region-${REGION}-metadata-db psql -U admin -d sensorcontinuum -c "ALTER SYSTEM SET max_connections = 500;"
+while ! docker exec region-${REGION}-metadata-db psql -U admin -d sensorcontinuum -c "ALTER SYSTEM SET max_connections = 500;"; do
+  echo "Comando non riuscito, riprovo..."
+  sleep 1
+done
 # Riavvia il container per applicare la modifica
 echo "Riavvio il container region-${REGION}-metadata-db per applicare la modifica..."
 docker restart region-${REGION}-metadata-db
@@ -115,7 +127,7 @@ SCRIPT="$(basename "$0")"
 echo "Creo il file di servizio /etc/systemd/system/$SERVICE_FILE_NAME..."
 # Sostituisci il placeholder nel template e crea il file di servizio
 echo "Sostituisco il placeholder \$SCRIPT con $SCRIPT..."
-sudo sed "s|$SCRIPT|${SCRIPT}|g" \
+sudo sed "s|\$SCRIPT|${SCRIPT}|g" \
   "$TEMPLATE_SERVICE_FILE_NAME" | sudo tee "/etc/systemd/system/$SERVICE_FILE_NAME" > /dev/null
 echo "File di servizio creato in /etc/systemd/system/$SERVICE_FILE_NAME"
 

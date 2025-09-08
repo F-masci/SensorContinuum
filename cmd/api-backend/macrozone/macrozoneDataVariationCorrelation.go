@@ -4,12 +4,12 @@ import (
 	"SensorContinuum/internal/api-backend/environment"
 	macrozoneAPI "SensorContinuum/internal/api-backend/macrozone"
 	"SensorContinuum/internal/api-backend/storage"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -92,16 +92,6 @@ func computeVariationCorrelations(region string, radius float64, date time.Time)
 }
 
 func main() {
-	_, exists := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
-	if exists {
-		// La funzione è in esecuzione in AWS Lambda
-		lambda.Start(handler)
-	} else {
-		// La funzione è in esecuzione in locale
-		body, err, _, _ := computeVariationCorrelations("region-001", 15_000.0, time.Now().AddDate(0, 0, -1))
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(string(body))
-	}
+	logger.CreateLogger(logger.GetCloudContext())
+	lambda.Start(handler)
 }

@@ -316,7 +316,7 @@ fi
 
 DATABASES_STACK_NAME="$REGION-databases-stack"
 DATABASES_NAME="$REGION-databases"
-SENSOR_DATABASE_HOSTNAME="mesurament-db.$HOSTED_ZONE_NAME"
+SENSOR_DATABASE_HOSTNAME="measurement-db.$HOSTED_ZONE_NAME"
 METADATA_DATABASE_HOSTNAME="metadata-db.$HOSTED_ZONE_NAME"
 
 # Creazione KeyPair per proximity services se necessario

@@ -3,12 +3,12 @@ package main
 import (
 	"SensorContinuum/internal/api-backend/environment"
 	macrozoneAPI "SensorContinuum/internal/api-backend/macrozone"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -92,16 +92,6 @@ func computeTrends(region string, days int, date time.Time) ([]byte, error, int,
 }
 
 func main() {
-	_, exists := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
-	if exists {
-		// La funzione è in esecuzione in AWS Lambda
-		lambda.Start(handler)
-	} else {
-		// La funzione è in esecuzione in locale
-		body, err, _, _ := computeTrends("region-001", 60, time.Now().AddDate(0, 0, -1))
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(string(body))
-	}
+	logger.CreateLogger(logger.GetCloudContext())
+	lambda.Start(handler)
 }

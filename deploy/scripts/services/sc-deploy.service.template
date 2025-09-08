@@ -1,12 +1,15 @@
 [Unit]
 Description=Deploy del servizio di Sensor Continuum
-After=network.target
+After=network.target docker.service
+Wants=docker.service
 
 [Service]
-Type=oneshot
+Type=simple
+WorkingDirectory=/home/ec2-user
 ExecStart=/bin/bash /home/ec2-user/$SCRIPT
-RemainAfterExit=no
-User=ec2-user
+User=root
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

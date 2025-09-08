@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SensorContinuum Lambda Function
+
+
+Resources:
+
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: zoneSensorDataRaw
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ../../../../lambda/zone/zoneSensorDataRaw.zip
+      Role: arn:aws:iam::975050105348:role/LabRole
+      Architectures:
+        - x86_64
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0aa8b87cbc4221747
+        SubnetIds:
+          - subnet-0834227dc6f29cb45
+          - subnet-05be34f065fbb111e

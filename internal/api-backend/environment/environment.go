@@ -61,7 +61,7 @@ const (
 func SetupEnvironment() error {
 
 	err := godotenv.Load(filepath.Join("internal", "client", "environment", ".env"))
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.New("Error loading .env file: " + err.Error())
 	}
 

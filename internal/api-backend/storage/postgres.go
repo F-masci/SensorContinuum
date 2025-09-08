@@ -32,10 +32,17 @@ var (
 	sensorInitErr   = make(map[string]error)
 )
 
+const dbURLTemplate = "postgres://%s:%s@%s:%s/%s"
+
 // GetCloudPostgresDB Funzione per DB Cloud
 func GetCloudPostgresDB(ctx context.Context) (*PostgresDB, error) {
 	cloudOnce.Do(func() {
-		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		err := environment.SetupEnvironment()
+		if err != nil {
+			logger.Log.Error("Failed to setup environment: ", err)
+			os.Exit(1)
+		}
+		dbURL := fmt.Sprintf(dbURLTemplate,
 			environment.CloudDatabaseUser,
 			environment.CloudDatabasePassword,
 			environment.CloudDatabaseHost,
@@ -60,7 +67,12 @@ func GetRegionPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 		regionOnce[region] = &sync.Once{}
 	}
 	regionOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		err := environment.SetupEnvironment()
+		if err != nil {
+			logger.Log.Error("Failed to setup environment: ", err)
+			os.Exit(1)
+		}
+		dbURL := fmt.Sprintf(dbURLTemplate,
 			environment.RegionMetadataDatabaseUser,
 			environment.RegionMetadataDatabasePassword,
 			fmt.Sprintf(environment.RegionMetadataDatabaseHostTemplate, region),
@@ -85,7 +97,12 @@ func GetSensorPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 		sensorOnce[region] = &sync.Once{}
 	}
 	sensorOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		err := environment.SetupEnvironment()
+		if err != nil {
+			logger.Log.Error("Failed to setup environment: ", err)
+			os.Exit(1)
+		}
+		dbURL := fmt.Sprintf(dbURLTemplate,
 			environment.RegionMeasurementDatabaseUser,
 			environment.RegionMeasurementDatabasePassword,
 			fmt.Sprintf(environment.RegionMeasurementDatabaseHostTemplate, region),
