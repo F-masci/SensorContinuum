@@ -16,7 +16,7 @@ import (
 
 // downloadRandomCSV scarica un file CSV random della data attuale meno 2 giorni e lo salva nella cartella "csv"
 func downloadRandomCSV() (string, error) {
-	date := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
+	date := time.Now().AddDate(0, 0, -environment.SimulationOffsetDay).Format("2006-01-02")
 
 	files, err := os.ReadDir(simulation.CSV_DIR)
 	if err == nil {

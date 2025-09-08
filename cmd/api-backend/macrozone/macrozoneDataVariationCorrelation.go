@@ -1,6 +1,7 @@
 package main
 
 import (
+	"SensorContinuum/internal/api-backend/environment"
 	macrozoneAPI "SensorContinuum/internal/api-backend/macrozone"
 	"SensorContinuum/internal/api-backend/storage"
 	"SensorContinuum/pkg/types"
@@ -31,15 +32,22 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// Recupera la data dai query parameters (opzionale)
-	// Se non è specificata, usa la data di ieri
+	// Se non è specificata, usa la data di 2 giorni fa
 	dateStr := request.QueryStringParameters["date"]
 	var date time.Time
 	if dateStr == "" {
-		date = time.Now().AddDate(0, 0, -1)
+		date = time.Now().AddDate(0, 0, -2)
 	} else {
 		date, err = time.Parse("2006-01-02", dateStr)
 		if err != nil {
 			return types.CreateErrorResponse(http.StatusBadRequest, "Parametro 'date' non valido, deve essere nel formato YYYY-MM-DD", err)
+		}
+		today := time.Now().Truncate(24 * time.Hour)
+		maxDate := today.Add(-environment.YearlyVariationMinimum)
+		// La data non può essere successiva a due giorni fa
+		// (perché i dati di ieri potrebbero non essere ancora completi)
+		if date.Truncate(24 * time.Hour).After(maxDate) {
+			return types.CreateErrorResponse(http.StatusBadRequest, "Parametro 'date' non valido, deve essere antecedente a ieri", fmt.Errorf("data futura"))
 		}
 	}
 

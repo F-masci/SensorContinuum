@@ -1,9 +1,11 @@
 package storage
 
 import (
+	"SensorContinuum/internal/api-backend/environment"
 	"SensorContinuum/pkg/types"
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -33,7 +35,13 @@ var (
 // GetCloudPostgresDB Funzione per DB Cloud
 func GetCloudPostgresDB(ctx context.Context) (*PostgresDB, error) {
 	cloudOnce.Do(func() {
-		dbURL := "postgres://sc_master:adminpass@metadata-db.cloud.sensor-continuum.local:5433/sensorcontinuum"
+		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			environment.CloudDatabaseUser,
+			environment.CloudDatabasePassword,
+			environment.CloudDatabaseHost,
+			environment.CloudDatabasePort,
+			environment.CloudDatabaseName,
+		)
 		logger.Log.Info("Connecting to Cloud Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {
@@ -52,7 +60,13 @@ func GetRegionPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 		regionOnce[region] = &sync.Once{}
 	}
 	regionOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://admin:adminpass@metadata-db.%s.cloud.sensor-continuum.local:5434/sensorcontinuum", region)
+		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			environment.RegionMetadataDatabaseUser,
+			environment.RegionMetadataDatabasePassword,
+			fmt.Sprintf(environment.RegionMetadataDatabaseHostTemplate, region),
+			environment.RegionMetadataDatabasePort,
+			environment.RegionMetadataDatabaseName,
+		)
 		logger.Log.Info("Connecting to Region Metadata Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {
@@ -65,13 +79,19 @@ func GetRegionPostgresDB(ctx context.Context, region string) (*PostgresDB, error
 	return regionInstances[region], regionInitErr[region]
 }
 
-// Funzione per DB Misurazioni Regione
+// GetSensorPostgresDB Funzione per DB Misurazioni Regione
 func GetSensorPostgresDB(ctx context.Context, region string) (*PostgresDB, error) {
 	if sensorOnce[region] == nil {
 		sensorOnce[region] = &sync.Once{}
 	}
 	sensorOnce[region].Do(func() {
-		dbURL := fmt.Sprintf("postgres://admin:adminpass@mesurament-db.%s.cloud.sensor-continuum.local:5432/sensorcontinuum", region)
+		dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			environment.RegionMeasurementDatabaseUser,
+			environment.RegionMeasurementDatabasePassword,
+			fmt.Sprintf(environment.RegionMeasurementDatabaseHostTemplate, region),
+			environment.RegionMeasurementDatabasePort,
+			environment.RegionMeasurementDatabaseName,
+		)
 		logger.Log.Info("Connecting to Region Sensor Postgres at ", dbURL)
 		conn, err := pgx.Connect(ctx, dbURL)
 		if err != nil {
@@ -93,6 +113,11 @@ func (db *PostgresDB) Close(ctx context.Context) error {
 }
 
 func (db *PostgresDB) Conn() *pgx.Conn {
+	err := environment.SetupEnvironment()
+	if err != nil {
+		logger.Log.Error("Failed to setup environment: ", err)
+		os.Exit(1)
+	}
 	return db.conn
 }
 

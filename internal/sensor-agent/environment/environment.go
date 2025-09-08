@@ -4,9 +4,10 @@ import (
 	"SensorContinuum/configs/mosquitto"
 	"SensorContinuum/pkg/logger"
 	"errors"
-	"github.com/google/uuid"
 	"os"
 	"strconv"
+
+	"github.com/google/uuid"
 )
 
 type Location string
@@ -68,6 +69,10 @@ var SimulationSensorReference Reference
 
 // SimulationTimestampFormat è il formato del timestamp utilizzato per la simulazione.
 var SimulationTimestampFormat string
+
+// SimulationOffsetDay è il numero di giorni da sottrarre alla data corrente per ottenere la data di simulazione.
+// Ad esempio, se oggi è 2024-06-15 e SimulationOffsetDay è 2, la data di simulazione sarà 2024-06-13.
+var SimulationOffsetDay int = 2
 
 type IdGenerator string
 
@@ -196,6 +201,16 @@ func SetupEnvironment() error {
 	SimulationTimestampFormat, exists = os.LookupEnv("SIMULATION_TIMESTAMP_FORMAT")
 	if !exists {
 		SimulationTimestampFormat = "2006-01-02T15:04:05"
+	}
+
+	var SimulationOffsetDayStr string
+	SimulationOffsetDayStr, exists = os.LookupEnv("SIMULATION_OFFSET_DAY")
+	if exists {
+		var err error
+		SimulationOffsetDay, err = strconv.Atoi(SimulationOffsetDayStr)
+		if err != nil || SimulationOffsetDay < 0 {
+			return errors.New("invalid value for SIMULATION_OFFSET_DAY: " + SimulationOffsetDayStr + ". Must be a non-negative integer")
+		}
 	}
 
 	/* ----- ENVIRONMENT SETTINGS ----- */

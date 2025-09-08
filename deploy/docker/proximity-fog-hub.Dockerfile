@@ -16,7 +16,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o proximity-fog-hub ./cmd/proximity-fog-hub
 
 # Fase 2: runtime minimale con curl
-FROM alpine:latest
+FROM alpine:3.22
 
 WORKDIR /app
 
