@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const timeFormat = "2006-01-02 15:04:05"
+
 func listZones(regionName, macrozoneName string) {
 	zones, err := api.GetZones(regionName, macrozoneName)
 	if err != nil {
@@ -21,7 +23,7 @@ func listZones(regionName, macrozoneName string) {
 		fmt.Println("  🚫 Nessuna zona trovata.")
 	} else {
 		for _, z := range zones {
-			fmt.Printf("%s- 🟢 %s%s %s(Creato il: %s)%s\n", green, z.Name, reset, yellow, z.CreationTime.Format("2006-01-02 15:04:05"), reset)
+			fmt.Printf("%s- 🟢 %s%s %s(Creato il: %s)%s\n", green, z.Name, reset, yellow, z.CreationTime.Format(timeFormat), reset)
 		}
 	}
 	fmt.Printf("%s\n", line)
@@ -43,7 +45,7 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 	fmt.Printf("  🆔️  Zona:        %s\n", zone.Name)
 	fmt.Printf("  🏢  Macrozona:   %s\n", zone.MacrozoneName)
 	fmt.Printf("  🌍  Regione:     %s\n", zone.RegionName)
-	fmt.Printf("  📅  Creata il:   %s\n", zone.CreationTime.Format("2006-01-02 15:04:05"))
+	fmt.Printf("  📅  Creata il:   %s\n", zone.CreationTime.Format(timeFormat))
 	fmt.Printf("%s\n", line)
 
 	// Hub di zona
@@ -63,8 +65,8 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 				color,
 				hub.Id,
 				hub.Service,
-				hub.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
-				hub.LastSeen.Local().Format("2006-01-02 15:04:05"),
+				hub.RegistrationTime.Local().Format(timeFormat),
+				hub.LastSeen.Local().Format(timeFormat),
 				reset,
 			)
 		}
@@ -93,8 +95,8 @@ func getZoneByName(regionName, macrozoneName, zoneName string) {
 				sensor.MacrozoneName,
 				sensor.ZoneName,
 				sensor.Type,
-				sensor.RegistrationTime.Local().Format("2006-01-02 15:04:05"),
-				sensor.LastSeen.Local().Format("2006-01-02 15:04:05"),
+				sensor.RegistrationTime.Local().Format(timeFormat),
+				sensor.LastSeen.Local().Format(timeFormat),
 				reset,
 			)
 		}
@@ -124,7 +126,7 @@ func getRawSensorData(regionName, macrozoneName, zoneName, sensorID string) {
 		fmt.Printf("%-22s │ %-14s │ %-10s\n", "Timestamp", "Tipo", "Valore")
 		fmt.Println(strings.Repeat("─", 52))
 		for _, d := range data {
-			t := time.Unix(d.Timestamp, 0).Format("2006-01-02 15:04:05")
+			t := time.Unix(d.Timestamp, 0).Format(timeFormat)
 			fmt.Printf("%s%-22s │ %-14s │ %-10.2f%s\n", green, t, d.Type, d.Data, reset)
 		}
 	}

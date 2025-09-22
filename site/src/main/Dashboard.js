@@ -61,31 +61,28 @@ function MainDashboard() {
             <form className="search-form" onSubmit={handleSearch}>
                 <div className="search-fields">
                     <label>
-                        Latitudine:
-                        <input
-                            type="text"
-                            value={searchLat}
-                            onChange={(e) => setSearchLat(e.target.value)}
-                            required
-                        />
+                        Latitudine: <input
+                                        type="text"
+                                        value={searchLat}
+                                        onChange={(e) => setSearchLat(e.target.value)}
+                                        required
+                                    />
                     </label>
                     <label>
-                        Longitudine:
-                        <input
-                            type="text"
-                            value={searchLon}
-                            onChange={(e) => setSearchLon(e.target.value)}
-                            required
-                        />
+                        Longitudine: <input
+                                        type="text"
+                                        value={searchLon}
+                                        onChange={(e) => setSearchLon(e.target.value)}
+                                        required
+                                    />
                     </label>
                     <label>
-                        Raggio (m):
-                        <input
-                            type="text"
-                            value={searchRadius}
-                            onChange={(e) => setSearchRadius(e.target.value)}
-                            required
-                        />
+                        Raggio (m): <input
+                                        type="text"
+                                        value={searchRadius}
+                                        onChange={(e) => setSearchRadius(e.target.value)}
+                                        required
+                                    />
                     </label>
                 </div>
                 <button type="submit" disabled={searchLoading}>Cerca valori</button>
@@ -98,8 +95,8 @@ function MainDashboard() {
                     <ul>
                         {[...searchResults]
                             .sort((a, b) => a.type.localeCompare(b.type))
-                            .map((val, idx) => (
-                                <li key={idx}>
+                            .map(val => (
+                                <li key={val.type}>
                                     <div>
                                         <strong>Tipo:</strong> {val.type} <br />
                                         <strong>Min:</strong> {val.min?.toFixed(2)} &nbsp;

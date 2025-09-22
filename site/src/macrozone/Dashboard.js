@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { Card, Badge, Button } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -153,6 +152,17 @@ function Dashboard() {
         }
     ];
 
+    const sensorDataBtn = (row) => (
+        <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={() => handleShowSensorData(row)}
+            title="Visualizza rilevazioni"
+        >
+            <i className="bi bi-eye"></i>
+        </Button>
+    );
+
     // Colonne Sensori con pulsante occhio
     const sensorColumns = [
         { name: "ID", selector: row => row.id, sortable: true },
@@ -166,16 +176,7 @@ function Dashboard() {
         },
         {
             name: "",
-            cell: row => (
-                <Button
-                    variant="outline-primary"
-                    size="sm"
-                    onClick={() => handleShowSensorData(row)}
-                    title="Visualizza rilevazioni"
-                >
-                    <i className="bi bi-eye"></i>
-                </Button>
-            ),
+            cell: sensorDataBtn,
             ignoreRowClick: true,
             allowOverflow: true,
             button: true
