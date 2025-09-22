@@ -17,7 +17,9 @@ func GetMacrozonesByLocation(ctx context.Context, lat, lon, radius float64) ([]t
 	}
 
 	queryMacrozones := `
-		SELECT region_name, name
+		SELECT region_name, name,
+			ST_Y(ST_Centroid(location)) AS lat,
+    		ST_X(ST_Centroid(location)) AS lon
 		FROM macrozones
 		WHERE ST_Contains(
 				location,

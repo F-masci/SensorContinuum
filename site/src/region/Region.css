@@ -150,3 +150,82 @@
 .text-align-center {
     text-align: center;
 }
+
+.trend-macrozone-container,
+.variation-macrozone-container {
+    display: flex;
+    flex-wrap: wrap;       /* permette di andare su più righe */
+    gap: 24px;             /* distanza tra le card */
+    justify-content: center; /* centra le card orizzontalmente */
+}
+
+/* Card di ciascuna macrozona */
+.trend-macrozone-card,
+.variation-macrozone-card {
+    border: 1px solid #b0c4de;
+    border-radius: 12px;
+    padding: 16px;
+    background-color: #f7faff;
+    box-shadow: 0 4px 16px rgba(25, 118, 210, 0.08);
+}
+
+/* Titolo macrozona */
+.trend-macrozone-title,
+.variation-macrozone-title {
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    color: #1976d2;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Griglia interna per le card dei tipi */
+.trend-macrozone-types,
+.variation-macrozone-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+/* Card singolo tipo */
+.trend-type-card {
+    border: 1px solid #b0c4de;
+    border-radius: 12px;
+    padding: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.trend-type-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+}
+
+/* Titolo del tipo */
+.trend-type-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #1976d2;
+    margin-bottom: 8px;
+}
+
+/* Testo dei valori */
+.trend-type-card p {
+    margin: 4px 0;
+    font-size: 0.95em;
+    color: #333;
+}
+
+/* Icone slope/divergence/delta */
+.trend-type-card i {
+    font-size: 0.9em;
+}
+
+/* Colori coerenti con tema */
+.slope-up { color: #43a047; }      /* verde */
+.slope-down { color: #b71c1c; }    /* rosso */
+.divergence-high { color: #ffc107; } /* giallo */
+.divergence-low { color: #43a047; }  /* verde */
+
+

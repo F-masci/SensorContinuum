@@ -4,6 +4,7 @@ import (
 	"SensorContinuum/internal/api-backend/environment"
 	"SensorContinuum/internal/api-backend/storage"
 	"SensorContinuum/internal/api-backend/zone"
+	"SensorContinuum/pkg/logger"
 	"SensorContinuum/pkg/types"
 	"SensorContinuum/pkg/utils"
 	"context"
@@ -180,6 +181,14 @@ func GetAggregatedDataByLocation(ctx context.Context, lat, lon, radius float64) 
 	nearestMacrozones, err := GetMacrozonesByLocation(ctx, lat, lon, radius)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, macrozone := range nearestMacrozones {
+		logger.Log.Info("Found macrozone:", macrozone.Name, " at ", macrozone.Lat, macrozone.Lon, " in region ", macrozone.RegionName, " distance ", math.Round(utils.Haversine(lat, lon, macrozone.Lat, macrozone.Lon)))
+	}
+
+	if len(nearestMacrozones) == 0 {
+		return nil, nil
 	}
 
 	// 2. Raggruppa le macrozone per regione

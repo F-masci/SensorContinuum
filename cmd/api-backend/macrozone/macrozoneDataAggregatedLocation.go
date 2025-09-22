@@ -33,21 +33,31 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return types.CreateErrorResponse(http.StatusBadRequest, "Parametro 'radius' non valido", err)
 	}
 
-	// Esegue la logica applicativa
-	ctx := context.Background()
-	aggregatedStats, err := macrozone.GetAggregatedDataByLocation(ctx, lat, lon, radius)
+	body, err, statusCode, errorMsg := computeAggregatedDataByLocation(lat, lon, radius)
 	if err != nil {
-		return types.CreateErrorResponse(http.StatusInternalServerError, "Errore nel recupero dei dati aggregati", err)
+		return types.CreateErrorResponse(statusCode, errorMsg, err)
 	}
-
-	// Serializza in JSON
-	body, _ := json.MarshalIndent(aggregatedStats, "", "  ")
 
 	return events.APIGatewayProxyResponse{
 		Body:       string(body),
 		StatusCode: http.StatusOK,
 		Headers:    map[string]string{"Content-Type": "application/json"},
 	}, nil
+}
+
+func computeAggregatedDataByLocation(lat, lon, radius float64) ([]byte, error, int, string) {
+	ctx := context.Background()
+	aggregatedStats, err := macrozone.GetAggregatedDataByLocation(ctx, lat, lon, radius)
+	if err != nil {
+		return nil, err, http.StatusInternalServerError, "Errore nel recupero dei dati aggregati"
+	}
+
+	body, err := json.MarshalIndent(aggregatedStats, "", "  ")
+	if err != nil {
+		return nil, err, http.StatusInternalServerError, "Errore nella serializzazione dei dati"
+	}
+
+	return body, nil, http.StatusOK, ""
 }
 
 func main() {
