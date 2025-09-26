@@ -54,7 +54,7 @@ echo "[DEBUG] Rendo eseguibile $DELAY_FILENAME"
 chmod +x "$DELAY_FILENAME"
 
 echo "[INFO] Applico latenza di rete all'istanza..."
-sudo ./"$DELAY_FILENAME" apply --delay "${NETWORK_DELAY:-20ms}" --jitter "${NETWORK_JITTER:-5ms}"
+sudo ./"$DELAY_FILENAME" apply --delay "${NETWORK_DELAY:-20ms}" --jitter "${NETWORK_JITTER:-5ms}" --loss "${NETWORK_LOSS:-1%}"
 
 echo "[INFO] docker-compose avviato con successo."
 

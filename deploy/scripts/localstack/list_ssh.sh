@@ -1,1 +1,0 @@
-aws ec2 --endpoint-url=http://localhost:4566 describe-instances --query "Reservations[].Instances[].{InstanceId:InstanceId,KeyName:KeyName}" --output table

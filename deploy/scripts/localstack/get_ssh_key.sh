@@ -1,1 +1,0 @@
-aws ec2 --endpoint-url=http://localhost:4566 describe-key-pairs --key-names $1 --query "KeyPairs[].{KeyName:KeyName,KeyFingerprint:KeyFingerprint}" --output table

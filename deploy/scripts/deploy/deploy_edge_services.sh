@@ -86,7 +86,7 @@ echo "[DEBUG] Rendo eseguibile $DELAY_FILENAME"
 chmod +x "$DELAY_FILENAME"
 
 echo "[INFO] Applico latenza di rete all'istanza..."
-sudo ./"$DELAY_FILENAME" apply --delay "${NETWORK_DELAY:-200ms}" --jitter "${NETWORK_JITTER:-50ms}"
+sudo ./"$DELAY_FILENAME" apply --delay "${NETWORK_DELAY:-200ms}" --jitter "${NETWORK_JITTER:-50ms}" --loss "${NETWORK_LOSS:-5%}"
 
 echo "[INFO] Zona avviata con successo."
 

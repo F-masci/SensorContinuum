@@ -20,6 +20,7 @@ FILE_MAP["inits/*init*.sh"]="init/"
 FILE_MAP["deploy/*deploy*.sh"]="deploy/"
 FILE_MAP["../compose/*.y*ml"]="compose/"
 FILE_MAP["services/*.service.template"]="services/"
+FILE_MAP["performance/analyze_*.sh"]="performance/"
 
 # Gestione flag --no-create
 NO_CREATE=0

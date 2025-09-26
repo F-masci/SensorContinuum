@@ -1,1 +1,0 @@
-aws ec2 --endpoint-url=http://localhost:4566 describe-subnets --query "Subnets[].{SubnetId:SubnetId,Name:Tags[?Key=='Name'].Value|[0]}" --output table
