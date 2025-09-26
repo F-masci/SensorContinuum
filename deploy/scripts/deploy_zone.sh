@@ -16,7 +16,7 @@ show_help() {
 TEMPLATE_FILE="../cloudformation/zone/services.yaml"
 DEPLOY_MODE="aws"
 AWS_REGION="us-east-1"
-INSTANCE_TYPE="t3.micro"
+INSTANCE_TYPE="t3.small"
 
 REGION="$1"
 if [[ -z "$REGION" ]]; then

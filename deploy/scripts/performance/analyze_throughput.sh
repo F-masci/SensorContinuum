@@ -4,34 +4,31 @@
 #
 # Analizza i log Docker dei container hub per calcolare:
 #  - numero totale di messaggi ricevuti
-#  - throughput totale (msg/min)
+#  - throughput totale (msg/min e msg/sec)
 #  - latenza end-to-end tra generazione e processamento dei messaggi (s e min)
-
-#
-# Lo script assume che nei log dei container hub sia presente un pattern
-# di tipo "Real-time sensor data received" e, opzionalmente, un timestamp di
-# generazione del messaggio (campo 'generated_at=YYYY-MM-DDTHH:MM:SS.sss')
 
 # -----------------------------
 # Parametri di default
 # -----------------------------
-WINDOW_MIN="5"
+WINDOW_MIN="10"
 CONTAINERS_STR="region-hub-realtime-region-001-01 region-hub-realtime-region-001-02"
 PATTERN_MAIN="Real-time sensor data received"
+CSV_ENABLED=false
 
 # -----------------------------
 # Funzione di help / usage
 # -----------------------------
 usage() {
   cat <<EOF
-Uso: $0 [--window-min <min>] [--containers "<c1 c2 ...>"]
+Uso: $0 [--window-min <min>] [--containers "<c1 c2 ...>"] [--csv]
 
 Parametri:
   --window-min  : durata finestra osservazione in minuti (default: 5)
   --containers  : lista container Docker da analizzare (default: "hub1 hub2")
+  --csv         : abilita salvataggio dei risultati in CSV (default: disabilitato)
 
 Esempio:
-  $0 --window-min 5 --containers "hub1 hub2"
+  $0 --window-min 5 --containers "hub1 hub2" --csv
 EOF
   exit 1
 }
@@ -43,6 +40,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --window-min) WINDOW_MIN="$2"; shift 2 ;;
     --containers) CONTAINERS_STR="$2"; shift 2 ;;
+    --csv) CSV_ENABLED=true; shift ;;
     -*) echo "[ERRORE] parametro sconosciuto: $1"; usage ;;
     *) echo "[ERRORE] parametro posizionale non riconosciuto: $1"; usage ;;
   esac
@@ -92,10 +90,11 @@ RECEIVED=$(grep -c -F "$PATTERN_MAIN" "$TMP_MAIN" || true)
 echo ">>> Messaggi totali ricevuti: $RECEIVED"
 
 # -----------------------------
-# Calcolo throughput (msg/min)
+# Calcolo throughput (msg/min e msg/sec)
 # -----------------------------
-THROUGHPUT=$(awk -v rec="$RECEIVED" -v win="$WINDOW_INT_MIN" 'BEGIN{ printf("%.2f", rec/win) }')
-echo ">>> Throughput totale stimato : $THROUGHPUT msg/min"
+echo ">>> Analisi throughput dai log"
+THROUGHPUT_MIN=$(awk -v rec="$RECEIVED" -v win="$WINDOW_INT_MIN" 'BEGIN{ printf("%.2f", rec/win) }')
+THROUGHPUT_SEC=$(awk -v rec="$RECEIVED" -v win_sec="$WINDOW_SEC" 'BEGIN{ printf("%.2f", rec/win_sec) }')
 
 # -----------------------------
 # Estrazione latenza end-to-end
@@ -133,6 +132,19 @@ else
 fi
 
 # -----------------------------
+# Conteggio sensori unici (macrozone + zone + sensor-id)
+# -----------------------------
+SENSOR_KEY_LIST=$(grep "$PATTERN_MAIN" "$TMP_MAIN" | \
+  grep -oP '{\K[^}]+' | \
+  awk -F' ' '{print $1 "_" $2 "_" $3}' | sort -u || true)
+
+if [[ -z "$SENSOR_KEY_LIST" ]]; then
+  UNIQUE_SENSORS=0
+else
+  UNIQUE_SENSORS=$(printf "%s\n" "$SENSOR_KEY_LIST" | wc -l)
+fi
+
+# -----------------------------
 # Output dettagliato
 # -----------------------------
 echo
@@ -140,18 +152,23 @@ echo "=================== Risultati Analisi Hub ==================="
 echo "Finestra osservata          : $WINDOW_INT_MIN min"
 echo "Containers analizzati       : ${CONTAINERS_ARRAY[*]}"
 echo "Messaggi ricevuti           : $RECEIVED"
-echo "Throughput totale           : $THROUGHPUT msg/min"
+echo "Sensori unici osservati     : $UNIQUE_SENSORS"
+echo "Throughput totale           : $THROUGHPUT_MIN msg/min ($THROUGHPUT_SEC msg/sec)"
 echo "Messaggi con latenza nota   : $LAT_COUNT"
 echo "Latenza media end-to-end    : $LAT_AVG_SEC s ($LAT_AVG_MIN min)"
 echo "Latenza massima end-to-end  : $LAT_MAX_SEC s ($LAT_MAX_MIN min)"
 echo "============================================================"
+echo
 
 # -----------------------------
-# Salvataggio dati in CSV
+# Salvataggio dati in CSV (solo se abilitato)
 # -----------------------------
-CSV_FILE="analyze_throughput.csv"
-if [[ ! -f "$CSV_FILE" ]]; then
-  echo "timestamp,window_min,received,throughput_msg_per_min,lat_count,lat_avg_s,lat_max_s,lat_avg_min,lat_max_min" > "$CSV_FILE"
+if $CSV_ENABLED; then
+  CSV_FILE="analyze_throughput.csv"
+  if [[ ! -f "$CSV_FILE" ]]; then
+    echo "timestamp,window_min,received,unique_sensors,throughput_msg_per_min,throughput_msg_per_sec,lat_count,lat_avg_s,lat_max_s,lat_avg_min,lat_max_min" > "$CSV_FILE"
+  fi
+  echo "$(date +'%Y-%m-%d %H:%M:%S'),$WINDOW_INT_MIN,$RECEIVED,$UNIQUE_SENSORS,$THROUGHPUT_MIN,$THROUGHPUT_SEC,$LAT_COUNT,$LAT_AVG_SEC,$LAT_MAX_SEC,$LAT_AVG_MIN,$LAT_MAX_MIN" >> "$CSV_FILE"
+
+  echo ">>> Dati salvati in CSV: $CSV_FILE"
 fi
-echo "$(date +'%Y-%m-%d %H:%M:%S'),$WINDOW_INT_MIN,$RECEIVED,$THROUGHPUT,$LAT_COUNT,$LAT_AVG_SEC,$LAT_MAX_SEC,$LAT_AVG_MIN,$LAT_MAX_MIN" >> "$CSV_FILE"
-echo ">>> Dati salvati in CSV: $CSV_FILE"

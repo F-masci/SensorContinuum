@@ -10,7 +10,7 @@
 #
 # Caratteristiche principali:
 #  - legge i log di più container Docker passati in una singola stringa (es. "hub1 hub2")
-#  - conta i messaggi basandosi su pattern robusti trovati nei tuoi log Go
+#  - conta i messaggi basandosi su pattern robusti trovati
 #  - estrae sensori unici con regex (es. sensor-agent-05)
 #  - calcola expected = sensors * floor(window/interval)
 #  - calcola expected_adjusted = round(expected * (1 - miss_prob))
@@ -30,25 +30,36 @@ INTERVAL="5"
 CONTAINERS_STR="zone-hub-filter-floor-001-01 zone-hub-filter-floor-001-02"
 TYPE="all"
 MISS_PROB="0.15"
-SIMULATOR_CONTAINER_STR="sensors-sensor-agent-01-1 sensors-sensor-agent-02-1 sensors-sensor-agent-03-1 sensors-sensor-agent-04-1 sensors-sensor-agent-05-1 sensors-sensor-agent-06-1 sensors-sensor-agent-07-1 sensors-sensor-agent-08-1 sensors-sensor-agent-09-1 sensors-sensor-agent-10-1 sensors-sensor-agent-11-1 sensors-sensor-agent-12-1 sensors-sensor-agent-13-1 sensors-sensor-agent-14-1 sensors-sensor-agent-15-1 sensors-sensor-agent-16-1 sensors-sensor-agent-17-1 sensors-sensor-agent-18-1 sensors-sensor-agent-19-1 sensors-sensor-agent-20-1"
+ENABLE_CSV=false
+
+NUM_SENSORS=50
+SIMULATOR_CONTAINER_STR=""
+
+for i in $(seq -w 1 $NUM_SENSORS); do
+  SIMULATOR_CONTAINER_STR+="sensors-sensor-agent-${i}-1 "
+done
+
+# Rimuove spazi finali usando parameter expansion
+SIMULATOR_CONTAINER_STR="${SIMULATOR_CONTAINER_STR%%[[:space:]]}"
 
 # -----------------------------
 # Funzione di help / usage
 # -----------------------------
 usage() {
   cat <<EOF
-Uso: $0 [--window <sec>] [--interval <sec>] [--containers "<c1 c2 ...>"] [--type all|valid|outlier] [--miss <prob>] [--simulators "<s1 s2 ...>"]
+Uso: $0 [--window <sec>] [--interval <sec>] [--containers "<c1 c2 ...>"] [--type all|valid|outlier] [--miss <prob>] [--simulators "<s1 s2 ...>"] [--csv]
 
 Parametri:
-  --window   : durata finestra osservazione in secondi (default: 120)
-  --interval : intervallo atteso tra messaggi dallo stesso sensore (default: 5)
-  --containers: lista container Docker da analizzare (default: "hub1 hub2")
-  --type     : tipo di messaggi da contare (all|valid|outlier) (default: all)
-  --miss     : probabilità (0..1) che in simulazione il sensore non generi il dato (default: 0.0)
-  --simulators: container dei simulatori per contare messaggi reali inviati
+  --window     : durata finestra osservazione in secondi (default: 180)
+  --interval   : intervallo atteso tra messaggi dallo stesso sensore (default: 5)
+  --containers : lista container Docker da analizzare (default: "hub1 hub2")
+  --type       : tipo di messaggi da contare (all|valid|outlier) (default: all)
+  --miss       : probabilità (0..1) che in simulazione il sensore non generi il dato (default: 0.15)
+  --simulators : container dei simulatori per contare messaggi reali inviati
+  --csv        : abilita salvataggio dei risultati in CSV
 
 Esempio:
-  $0 --window 120 --interval 5 --containers "hub1 hub2" --type all --miss 0.1 --simulators "sim1 sim2"
+  $0 --window 120 --interval 5 --containers "hub1 hub2" --type all --miss 0.1 --simulators "sim1 sim2" --csv
 EOF
   exit 1
 }
@@ -64,10 +75,9 @@ while [[ $# -gt 0 ]]; do
     --type) TYPE="$2"; shift 2 ;;
     --miss) MISS_PROB="$2"; shift 2 ;;
     --simulators) SIMULATOR_CONTAINER_STR="$2"; shift 2 ;;
-    -*)
-      echo "Parametro sconosciuto: $1"; usage ;;
-    *)
-      echo "Parametro posizionale non riconosciuto: $1"; usage ;;
+    --csv) ENABLE_CSV=true; shift ;;
+    -*) echo "[ERRORE] parametro sconosciuto: $1"; usage ;;
+    *) echo "[ERRORE] parametro posizionale non riconosciuto: $1"; usage ;;
   esac
 done
 
@@ -75,46 +85,46 @@ done
 # Validazioni di base
 # -----------------------------
 if [[ -z "$WINDOW" || -z "$INTERVAL" || -z "$CONTAINERS_STR" ]]; then
-  echo "Errore: --window, --interval e --containers sono obbligatori."
+  echo "[ERRORE] --window, --interval e --containers sono obbligatori."
   usage
 fi
 
 if ! [[ "$WINDOW" =~ ^[0-9]+$ ]] || ! [[ "$INTERVAL" =~ ^[0-9]+$ ]]; then
-  echo "Errore: --window e --interval devono essere interi positivi."
+  echo "[ERRORE] --window e --interval devono essere interi positivi."
   exit 1
 fi
 WINDOW_INT=$((WINDOW))
 INTERVAL_INT=$((INTERVAL))
 
 if (( INTERVAL_INT <= 0 )); then
-  echo "Errore: --interval deve essere > 0"; exit 1
+  echo "[ERRORE] --interval deve essere > 0"; exit 1
 fi
 if (( WINDOW_INT <= 0 )); then
-  echo "Errore: --window deve essere > 0"; exit 1
+  echo "[ERRORE] --window deve essere > 0"; exit 1
 fi
 if (( INTERVAL_INT > WINDOW_INT )); then
-  echo "Attenzione: --interval ($INTERVAL_INT s) > --window ($WINDOW_INT s). Attesi 0 o 1 messaggi per sensore."
+  echo "[WARN] --interval ($INTERVAL_INT s) > --window ($WINDOW_INT s). Attesi 0 o 1 messaggi per sensore."
 fi
 
 if ! awk "BEGIN{ if ($MISS_PROB+0 >= 0 && $MISS_PROB+0 <= 1) exit 0; exit 1 }"; then
-  echo "Errore: --miss deve essere compreso tra 0 e 1."; exit 1
+  echo "[ERRORE] --miss deve essere compreso tra 0 e 1."; exit 1
 fi
 
 case "$TYPE" in
   all) PATTERN="Processing data for sensor" ;;
   valid) PATTERN="Data is valid for sensor" ;;
   outlier) PATTERN="Outlier detected and discarded for sensor" ;;
-  *) echo "Tipo non valido: $TYPE"; exit 1 ;;
+  *) echo "[ERRORE] Tipo non valido: $TYPE"; exit 1 ;;
 esac
 
 read -r -a CONTAINERS_ARRAY <<< "$CONTAINERS_STR"
 read -r -a SIMULATOR_ARRAY <<< "$SIMULATOR_CONTAINER_STR"
 
 if (( ${#CONTAINERS_ARRAY[@]} == 0 )); then
-  echo "Errore: lista containers vuota."; exit 1
+  echo "[ERRORE] lista containers vuota."; exit 1
 fi
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Errore: 'docker' non trovato."; exit 1
+  echo "[ERRORE] 'docker' non trovato."; exit 1
 fi
 
 # -----------------------------
@@ -124,8 +134,11 @@ TMPFILE="$(mktemp /tmp/analyze_failure.XXXXXX)"
 trap 'rm -f "$TMPFILE"' EXIT
 
 echo ">>> Analisi logs Docker principali"
-echo "Finestra: $WINDOW_INT s, intervallo: $INTERVAL_INT s, tipo: $TYPE, miss_prob: $MISS_PROB"
-echo "Containers: ${CONTAINERS_ARRAY[*]}"
+echo "Finestra osservazione            : $WINDOW_INT s"
+echo "Intervallo atteso per sensore    : $INTERVAL_INT s"
+echo "Tipo conteggio (pattern)         : $TYPE -> '$PATTERN'"
+echo "Probabilità miss (simulazione)   : $MISS_PROB"
+echo "Containers                       : ${CONTAINERS_ARRAY[*]}"
 echo
 
 for c in "${CONTAINERS_ARRAY[@]}"; do
@@ -165,8 +178,8 @@ TMP_SIM="$(mktemp /tmp/analyze_failure_sim.XXXXXX)"
 trap 'rm -f "$TMP_SIM"' EXIT
 
 if (( ${#SIMULATOR_ARRAY[@]} > 0 )); then
-  echo
-  echo ">>> Analisi log simulatori container: ${SIMULATOR_ARRAY[*]}"
+  echo ">>> Analisi log simulatori"
+  echo "Containers simulatori            : ${SIMULATOR_ARRAY[*]}"
   for s in "${SIMULATOR_ARRAY[@]}"; do
     echo ">> Recupero log simulator: $s"
     if ! docker logs --since "${WINDOW}s" "$s" >> "$TMP_SIM" 2>/dev/null; then
@@ -179,7 +192,6 @@ if (( ${#SIMULATOR_ARRAY[@]} > 0 )); then
   SIM_OUTLIER=$(grep -c "Generating outlier" "$TMP_SIM" || true)
 fi
 
-# Calcoli dettagliati integrati
 MISSED=$(( SIM_SENT - RECEIVED )); (( MISSED < 0 )) && MISSED=0
 
 MISSING_RATE_G_SIM=$(awk -v sent="$SIM_SENT" -v miss="$MISSED" 'BEGIN { if(sent>0) { rate=miss/sent*100; if(rate<0) rate=0; printf("%.2f", rate) } else { printf("N/A") } }')
@@ -192,64 +204,53 @@ else
   OUTLIER_ERROR_PERCENT="N/A"
 fi
 
-
 # -----------------------------
-#     Output dettagliato
+# Output dettagliato
 # -----------------------------
 echo
-echo "=================== Risultati Analisi Dettagliata ==================="
-echo "Finestra osservata                   : $WINDOW_INT s"
-echo "Intervallo atteso per sensore        : $INTERVAL_INT s"
-echo "Messaggi per sensore stimati         : $SAMPLES_PER_SENSOR"
-echo "Tipologia conteggio (pattern)        : $TYPE -> '$PATTERN'"
-echo "Probabilità di miss (simulazione)    : $MISS_PROB"
-echo
-echo "Containers principali: ${CONTAINERS_ARRAY[*]}"
-echo "Sensori unici osservati               : $UNIQUE_SENSORS"
+echo "=================== Risultati Analisi Failure ==================="
+echo "Sensori unici osservati           : $UNIQUE_SENSORS"
 if (( UNIQUE_SENSORS > 0 )); then
   echo "Elenco sensori unici:"
   printf "  %s\n" $SENSOR_ID_LIST | sed 's/^/    - /'
 fi
 echo
-echo "Messaggi attesi teorici               : $EXPECTED"
-echo "Messaggi attesi con miss              : $EXPECTED_ADJ"
-echo "Messaggi effettivi (pattern)          : $RECEIVED"
-echo "  - validi                            : $VALID"
-echo "  - miss rilevati (teorici)           : $EXPECTED_MISSED"
-echo "  - outlier scartati                  : $OUTLIERS"
-echo "  - error log                         : $ERRS"
+echo "Messaggi attesi teorici           : $EXPECTED"
+echo "Messaggi attesi con miss          : $EXPECTED_ADJ"
+echo "Messaggi effettivi (pattern)      : $RECEIVED"
+echo "  - validi                        : $VALID"
+echo "  - outlier scartati              : $OUTLIERS"
+echo "  - error log                     : $ERRS"
+echo "  - miss stimati (teorici)        : $EXPECTED_MISSED"
 echo
-echo "Missing rate (grezzo)                 : $MISSING_RATE_G %"
-echo "Missing rate (aggiustato per miss)    : $MISSING_RATE_ADJ %"
+echo "Missing rate (grezzo)             : $MISSING_RATE_G %"
+echo "Missing rate (aggiustato miss)    : $MISSING_RATE_ADJ %"
 echo
 if (( ${#SIMULATOR_ARRAY[@]} > 0 )); then
   echo ">>> Dati dai simulatori"
-  echo "Messaggi reali dai simulatori             : $SIM_SENT"
-  echo "Valori mancanti generati dai simulatori   : $SIM_MISSING"
-  echo "Valori mancanti rilevati dagli hub        : $MISSED "
-  echo "Missing rate osservato                    : $MISSING_RATE_G_SIM %"
-  echo "Missing rate con miss                     : $MISSING_RATE_ADJ_SIM %"
+  echo "Messaggi reali inviati            : $SIM_SENT"
+  echo "Valori mancanti generati          : $SIM_MISSING"
+  echo "Valori mancanti osservati         : $MISSED"
+  echo "Missing rate osservato            : $MISSING_RATE_G_SIM %"
+  echo "Missing rate con miss             : $MISSING_RATE_ADJ_SIM %"
   echo
-  echo "Outlier generati dai simulatori           : $SIM_OUTLIER"
-  echo "Outlier rilevati dagli hub                : $OUTLIERS"
-  echo "Percentuale errore rilevamento outlier    : $OUTLIER_ERROR_PERCENT %"
+  echo "Outlier generati dai simulatori   : $SIM_OUTLIER"
+  echo "Outlier rilevati dagli hub        : $OUTLIERS"
+  echo "Percentuale errore outlier        : $OUTLIER_ERROR_PERCENT %"
 fi
-echo "======================================================================"
+echo "================================================================="
 echo
 
 # -----------------------------
 # Salvataggio dei dati in CSV
 # -----------------------------
-CSV_FILE="analyze_failure.csv"
+if $ENABLE_CSV; then
+  CSV_FILE="analyze_failure.csv"
+  if [[ ! -f "$CSV_FILE" ]]; then
+    echo "timestamp,window,interval,type,miss_prob,unique_sensors,expected,expected_adj,received,valid,expected_missed,errs,sim_sent,sim_missing,sim_missed,missing_rate_g,missing_rate_adj,missing_rate_g_sim,missing_rate_adj_sim,sim_outlier,outliers,outlier_error_percent" > "$CSV_FILE"
+  fi
 
-# Se il file non esiste, aggiungi intestazione
-if [[ ! -f "$CSV_FILE" ]]; then
-  echo "timestamp,window,interval,type,miss_prob,unique_sensors,expected,expected_adj,received,valid,expected_missed,errs,sim_sent,sim_missing,sim_missed,missing_rate_g,missing_rate_adj,missing_rate_g_sim,missing_rate_adj_sim,sim_outlier,outliers,outlier_error_percent" > "$CSV_FILE"
+  echo "$(date +'%Y-%m-%d %H:%M:%S'),$WINDOW_INT,$INTERVAL_INT,$TYPE,$MISS_PROB,$UNIQUE_SENSORS,$EXPECTED,$EXPECTED_ADJ,$RECEIVED,$VALID,$EXPECTED_MISSED,$ERRS,$SIM_SENT,$SIM_MISSING,$MISSED,$MISSING_RATE_G,$MISSING_RATE_ADJ,$MISSING_RATE_G_SIM,$MISSING_RATE_ADJ_SIM,$SIM_OUTLIER,$OUTLIERS,$OUTLIER_ERROR_PERCENT" >> "$CSV_FILE"
+
+  echo ">>> Dati salvati in CSV: $CSV_FILE"
 fi
-
-# Scrivi i dati
-echo "$(date +'%Y-%m-%d %H:%M:%S'),$WINDOW_INT,$INTERVAL_INT,$TYPE,$MISS_PROB,$UNIQUE_SENSORS,$EXPECTED,$EXPECTED_ADJ,$RECEIVED,$VALID,$EXPECTED_MISSED,$ERRS,$SIM_SENT,$SIM_MISSING,$MISSED,$MISSING_RATE_G,$MISSING_RATE_ADJ,$MISSING_RATE_G_SIM,$MISSING_RATE_ADJ_SIM,$SIM_OUTLIER,$OUTLIERS,$OUTLIER_ERROR_PERCENT" >> "$CSV_FILE"
-
-echo ">>> Dati salvati in CSV: $CSV_FILE"
-
-# aws s3 cp "$CSV_FILE" "s3://sensor-continuum-scripts/performance/$CSV_FILE"

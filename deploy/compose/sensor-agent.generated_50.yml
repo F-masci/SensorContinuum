@@ -1,0 +1,1252 @@
+services:
+
+
+  sensor-agent-01:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-01
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-02:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-02
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-03:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-03
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-04:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-04
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-05:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-05
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-06:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-06
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-07:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-07
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-08:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-08
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-09:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-09
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-10:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-10
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-11:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-11
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-12:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-12
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-13:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-13
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-14:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-14
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-15:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-15
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-16:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-16
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-17:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-17
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-18:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-18
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-19:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-19
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-20:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-20
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-21:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-21
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-22:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-22
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-23:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-23
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-24:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-24
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-25:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-25
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-26:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-26
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-27:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-27
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-28:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-28
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-29:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-29
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-30:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-30
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-31:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-31
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-32:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-32
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-33:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-33
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-34:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-34
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-35:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-35
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-36:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-36
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-37:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-37
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-38:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-38
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-39:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-39
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-40:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-40
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-41:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-41
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-42:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-42
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-43:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-43
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-44:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-44
+      - SENSOR_TYPE=humidity
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-45:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-45
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-46:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-46
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-47:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-47
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=ds18b20
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-48:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-48
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-49:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-49
+      - SENSOR_TYPE=temperature
+      - SENSOR_LOCATION=outdoor
+      - SIMULATION_SENSOR_REFERENCE=dht22
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+
+
+  sensor-agent-50:
+    image: fmasci/sc-sensor-agent:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sensor-agent.Dockerfile
+    environment:
+      - EDGE_MACROZONE=${EDGE_MACROZONE}
+      - EDGE_ZONE=${EDGE_ZONE}
+      - SENSOR_ID=sensor-agent-50
+      - SENSOR_TYPE=pressure
+      - SENSOR_LOCATION=indoor
+      - SIMULATION_SENSOR_REFERENCE=bmp280
+      - MQTT_BROKER_ADDRESS=${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local
+      - HEALTHZ_SERVER=true
+      - HEALTHZ_SERVER_PORT=8080
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+    restart: unless-stopped
+    #extra_hosts:
+    #  - "floor-001.sensor.mqtt-broker.${REGION}.sensor-continuum.local:192.168.0.10"
+

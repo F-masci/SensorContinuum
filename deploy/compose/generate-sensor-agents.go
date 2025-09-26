@@ -20,7 +20,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	types := []string{"temperature", "humidity", "pressure"}
 	locations := []string{"indoor", "outdoor"}
 	references := []string{
 		"bmp280", "dht22", "ds18b20",
@@ -49,9 +48,11 @@ func main() {
 		var sensorType string
 		switch sensorReference {
 		case "bmp280":
-			sensorType = types[rand.Intn(len(types))]
+			allowed := []string{"temperature", "pressure"}
+			sensorType = allowed[rand.Intn(len(allowed))]
 		case "dht22":
-			sensorType = types[rand.Intn(2)] // temperature o humidity
+			allowed := []string{"temperature", "humidity"}
+			sensorType = allowed[rand.Intn(len(allowed))]
 		case "ds18b20":
 			sensorType = "temperature"
 		}
