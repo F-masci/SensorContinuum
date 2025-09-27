@@ -79,6 +79,7 @@ SUBNET_CIDR="10.0.0.0/24"
 SSH_CIDR="0.0.0.0/0"
 SECURITY_GROUP_NAME="$REGION-sg"
 HOSTED_ZONE_NAME="$REGION.sensor-continuum.local"
+PUBLIC_HOSTED_ZONE_NAME="sensor-continuum.it"
 
 # Imposta endpoint per LocalStack se richiesto
 if [[ "$DEPLOY_MODE" == "localstack" ]]; then
@@ -330,6 +331,18 @@ DATABASES_KEY_PAIR=$(
   { ensure_key_pair "$DATABASES_KEY_NAME" "$DATABASES_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
+echo "Recupero ID della Hosted Zone $PUBLIC_HOSTED_ZONE_NAME..."
+PUBLIC_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "$PUBLIC_HOSTED_ZONE_NAME" --query "HostedZones[0].Id" --output text | sed 's|/hostedzone/||')
+if [[ -z "$PUBLIC_HOSTED_ZONE_ID" || "$PUBLIC_HOSTED_ZONE_ID" == "None" ]]; then
+  echo "Errore: Hosted Zone con nome $PUBLIC_HOSTED_ZONE_NAME non trovata."
+  exit 1
+fi
+echo "Trovata Hosted Zone ID: $PUBLIC_HOSTED_ZONE_ID per Hosted Zone $PUBLIC_HOSTED_ZONE_NAME"
+
+PUBLIC_REGION_DATABASES_HOSTNAME="${REGION}.databases.sensor-continuum.it"
+PUBLIC_REGION_METADATA_DATABASES_HOSTNAME="${REGION}.metadata-db.sensor-continuum.it"
+PUBLIC_REGION_SENSOR_DATABASES_HOSTNAME="${REGION}.measurement-db.sensor-continuum.it"
+
 if [[ "$COMPONENT" == "all" || "$COMPONENT" == "databases" ]]; then
   echo "Componente specificato: $COMPONENT. Eseguo il deploy del template databases."
 
@@ -343,10 +356,13 @@ if [[ "$COMPONENT" == "all" || "$COMPONENT" == "databases" ]]; then
   echo "  Nome Subnet: $SUBNET_NAME"
   echo "  Nome Security Group: $SECURITY_GROUP_NAME"
   echo "  Nome Hosted Zone: $HOSTED_ZONE_NAME"
+  echo "  Nome Hosted Zone Pubblica: $PUBLIC_HOSTED_ZONE_NAME"
   echo "  Nome Key Pair: $DATABASES_KEY_NAME"
   echo "  Nome istanza Databases: $DATABASES_NAME"
   echo "  Hostname Sensor Database: $SENSOR_DATABASE_HOSTNAME"
   echo "  Hostname Metadata Database: $METADATA_DATABASE_HOSTNAME"
+  echo "  Public Hostname Sensor Database: $PUBLIC_REGION_SENSOR_DATABASES_HOSTNAME"
+  echo "  Public Hostname Metadata Database: $PUBLIC_REGION_METADATA_DATABASES_HOSTNAME"
   echo "  Environment File: $ENV_FILE"
 
   echo "Parametri calcolati:"
@@ -367,10 +383,14 @@ if [[ "$COMPONENT" == "all" || "$COMPONENT" == "databases" ]]; then
       SubnetId="$SUBNET_ID" \
       SecurityGroupId="$SECURITY_GROUP_ID" \
       HostedZoneId="$HOSTED_ZONE_ID" \
+      PublicHostedZoneId="$PUBLIC_HOSTED_ZONE_ID" \
       KeyName="$DATABASES_KEY_NAME" \
       RegionDatabasesInstanceName="$DATABASES_NAME" \
       SensorRegionDatabaseInstanceHostname="$SENSOR_DATABASE_HOSTNAME" \
       MetadataRegionDatabaseInstanceHostname="$METADATA_DATABASE_HOSTNAME" \
+      PublicRegionDatabasesHostname="$PUBLIC_REGION_DATABASES_HOSTNAME" \
+      PublicRegionMetadataDatabasesHostname="$PUBLIC_REGION_METADATA_DATABASES_HOSTNAME" \
+      PublicRegionSensorDatabasesHostname="$PUBLIC_REGION_SENSOR_DATABASES_HOSTNAME" \
       EnvironmentFile="$ENV_FILE" \
     $ENDPOINT_URL
 

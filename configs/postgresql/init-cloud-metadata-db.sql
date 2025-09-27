@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 -- 1. Tabella regioni con name come chiave primaria
 CREATE TABLE IF NOT EXISTS regions (
     name                TEXT PRIMARY KEY,

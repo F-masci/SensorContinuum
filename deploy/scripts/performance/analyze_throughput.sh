@@ -7,11 +7,19 @@
 #  - throughput totale (msg/min e msg/sec)
 #  - latenza end-to-end tra generazione e processamento dei messaggi (s e min)
 
+echo ">>> Carico variabili d'ambiente da .env"
+if [ -f ".env" ]; then
+  source .env
+else
+  echo "[ERRORE] File .env non trovato!"
+  exit 1
+fi
+
 # -----------------------------
 # Parametri di default
 # -----------------------------
 WINDOW_MIN="10"
-CONTAINERS_STR="region-hub-realtime-region-001-01 region-hub-realtime-region-001-02"
+CONTAINERS_STR="region-hub-realtime-${REGION}-01 region-hub-realtime-${REGION}-02"
 PATTERN_MAIN="Real-time sensor data received"
 CSV_ENABLED=false
 

@@ -22,12 +22,20 @@
 # Uso:
 #   ./analyze_failure.sh [--window 120] [--interval 5] [--containers "hub1 hub2"] [--type all|valid|outlier] [--miss 0.1]
 
+echo ">>> Carico variabili d'ambiente da .env"
+if [ -f ".env" ]; then
+  source .env
+else
+  echo "[ERRORE] File .env non trovato!"
+  exit 1
+fi
+
 # -----------------------------
 # Parametri di default
 # -----------------------------
 WINDOW="180"
 INTERVAL="5"
-CONTAINERS_STR="zone-hub-filter-floor-001-01 zone-hub-filter-floor-001-02"
+CONTAINERS_STR="zone-hub-filter-${EDGE_ZONE}-01 zone-hub-filter-${EDGE_ZONE}-02"
 TYPE="all"
 MISS_PROB="0.15"
 ENABLE_CSV=false

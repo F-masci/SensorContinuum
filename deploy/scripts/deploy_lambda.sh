@@ -54,10 +54,11 @@ sam deploy \
   --s3-bucket "$BUCKET_NAME"
 
 # --- Recupera API ID ---
+API_NAME="Sensor Continuum API"
 echo "[INFO] Recupero API ID"
-API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='sensor-continuum'].ApiId" --output text)
+API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_NAME'].ApiId" --output text)
 if [ -z "$API_ID" ]; then
-  echo "[ERROR] API ID non trovato. Assicurati che l'API 'sensor-continuum' esista."
+  echo "[ERROR] API ID non trovato. Assicurati che l'API '$API_NAME' esista."
   exit 1
 fi
 echo "[INFO] API ID trovato: $API_ID"

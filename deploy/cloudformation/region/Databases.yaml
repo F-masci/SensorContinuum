@@ -34,6 +34,21 @@ Parameters:
     Type: String
     Default: metadata.region-databases.sensor-continuum.local
     Description: Hostname dell'istanza EC2 (deve essere un record A nella Hosted Zone)
+  PublicHostedZoneId:
+    Type: String
+    Description: ID della Hosted Zone Route53 pubblica
+  PublicRegionDatabasesHostname:
+    Type: String
+    Default: region-databases.sensor-continuum.it.
+    Description: Nome del record A pubblico
+  PublicRegionSensorDatabasesHostname:
+    Type: String
+    Default: db1.region-databases.sensor-continuum.it.
+    Description: Primo CNAME pubblico (database misurazioni)
+  PublicRegionMetadataDatabasesHostname:
+    Type: String
+    Default: db2.region-databases.sensor-continuum.it.
+    Description: Secondo CNAME pubblico (database metadati)
   S3Bucket:
     Type: String
     Default: sensor-continuum-scripts
@@ -139,6 +154,47 @@ Resources:
       ResourceRecords:
         - !GetAtt RegionDatabasesInstance.PrivateIp
 
+  RegionDatabasesEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  RegionDatabasesEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref RegionDatabasesInstance
+      EIP: !Ref RegionDatabasesEIP
+
+  PublicRegionDatabasesRecordA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PublicHostedZoneId
+      Name: !Ref PublicRegionDatabasesHostname
+      Type: A
+      TTL: 300
+      ResourceRecords:
+        - !Ref RegionDatabasesEIP
+
+  PublicRegionDatabasesCNAME1:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PublicHostedZoneId
+      Name: !Ref PublicRegionSensorDatabasesHostname
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !Ref PublicRegionDatabasesRecordA
+
+  PublicRegionDatabasesCNAME2:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PublicHostedZoneId
+      Name: !Ref PublicRegionMetadataDatabasesHostname
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !Ref PublicRegionDatabasesRecordA
+
 Outputs:
   InstanceId:
     Description: ID della istanza EC2
@@ -158,3 +214,12 @@ Outputs:
   MetadataRecordA:
     Description: Record A creato nella Hosted Zone per Metadata
     Value: !Ref MetadataRegionDatabasesInstanceRecord
+  PublicRegionDatabasesARecord:
+    Description: Record A pubblico creato nella Hosted Zone pubblica
+    Value: !Ref PublicRegionDatabasesRecordA
+  PublicRegionSensorDatabasesCNAMERecord:
+    Description: Primo CNAME pubblico creato nella Hosted Zone pubblica per Sensor
+    Value: !Ref PublicRegionDatabasesCNAME1
+  PublicRegionMetadataDatabasesCNAMERecord:
+    Description: Secondo CNAME pubblico creato nella Hosted Zone pubblica per Metadata
+    Value: !Ref PublicRegionDatabasesCNAME2

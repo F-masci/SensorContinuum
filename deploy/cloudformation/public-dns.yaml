@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Zona DNS pubblica per sensor-continuum.it
+
+Resources:
+  SensorContinuumHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: sensor-continuum.it
+
+Outputs:
+  HostedZoneId:
+    Description: ID della Hosted Zone
+    Value: !Ref SensorContinuumHostedZone
+    Export:
+      Name: sensor-continuum-hosted-zone-id
+
+  NameServers:
+    Description: Name server da configurare nel registrar
+    Value: !Join [",", !GetAtt SensorContinuumHostedZone.NameServers]
+    Export:
+      Name: sensor-continuum-ns

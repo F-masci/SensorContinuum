@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./deploy_bucket.sh
+./setup_bucket.sh
 if [ $? -ne 0 ]; then
   echo "Errore nella creazione del bucket."
   exit 1

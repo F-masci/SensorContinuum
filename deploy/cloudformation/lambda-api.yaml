@@ -1,12 +1,64 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: HTTP API per sensor-continuum Lmbda
+Description: HTTP API sensor-continuum con certificato ACM (DNS validazione gestita da script)
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: api.sensor-continuum.it
+    Description: Dominio personalizzato
 
 Resources:
+  # -----------------------------
+  # HTTP API con CORS
+  # -----------------------------
   SensorContinuumApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: sensor-continuum
+      Name: Sensor Continuum API
       ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - https://sensor-continuum.it
+          - https://www.sensor-continuum.it
+        AllowMethods:
+          - GET
+
+  SensorContinuumApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref SensorContinuumApi
+      StageName: dev
+      AutoDeploy: true
+
+  # -----------------------------
+  # Certificato ACM
+  # -----------------------------
+  CustomDomainCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+
+  # -----------------------------
+  # Dominio personalizzato API Gateway
+  # -----------------------------
+  CustomDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref CustomDomainCertificate
+          EndpointType: REGIONAL
+
+  # -----------------------------
+  # Mapping API -> Dominio personalizzato
+  # -----------------------------
+  CustomApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Properties:
+      ApiId: !Ref SensorContinuumApi
+      DomainName: !Ref CustomDomainName
+      Stage: !Ref SensorContinuumApiStage
 
 Outputs:
   ApiId:
@@ -14,3 +66,9 @@ Outputs:
     Value: !Ref SensorContinuumApi
     Export:
       Name: sensor-continuum-api-id
+
+  CertificateArn:
+    Description: ARN del certificato ACM (per script di validazione)
+    Value: !Ref CustomDomainCertificate
+    Export:
+      Name: sensor-continuum-certificate-arn

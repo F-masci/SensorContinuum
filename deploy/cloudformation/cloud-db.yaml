@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Database Aurora PostgreSQL per metadati cloud di Sensor Continuum
+
+Resources:
+  CloudMetaDbVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-vpc
+
+  CloudMetaDbInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-igw
+
+  CloudMetaDbVpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref CloudMetaDbVpc
+      InternetGatewayId: !Ref CloudMetaDbInternetGateway
+
+  CloudMetaDbPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CloudMetaDbVpc
+      CidrBlock: 10.20.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-public-1
+
+  CloudMetaDbPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CloudMetaDbVpc
+      CidrBlock: 10.20.2.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-public-2
+
+  CloudMetaDbRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CloudMetaDbVpc
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-rt
+
+  CloudMetaDbRoute:
+    Type: AWS::EC2::Route
+    DependsOn: CloudMetaDbVpcGatewayAttachment
+    Properties:
+      RouteTableId: !Ref CloudMetaDbRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref CloudMetaDbInternetGateway
+
+  CloudMetaDbSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CloudMetaDbPublicSubnet1
+      RouteTableId: !Ref CloudMetaDbRouteTable
+
+  CloudMetaDbSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CloudMetaDbPublicSubnet2
+      RouteTableId: !Ref CloudMetaDbRouteTable
+
+  CloudMetaDbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Accesso DB Cloud Metadati solo su porta 5433
+      VpcId: !Ref CloudMetaDbVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5433
+          ToPort: 5433
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: sc-cloud-meta-db-sg
+
+  CloudMetaDbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group per DB Cloud Metadati
+      SubnetIds:
+        - !Ref CloudMetaDbPublicSubnet1
+        - !Ref CloudMetaDbPublicSubnet2
+      DBSubnetGroupName: sc-cloud-meta-db-subnet-group
+
+  CloudMetaDbCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      EngineVersion: 17.5
+      MasterUsername: sc_master
+      MasterUserPassword: adminpass
+      DBSubnetGroupName: !Ref CloudMetaDbSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref CloudMetaDbSecurityGroup
+      DatabaseName: sensorcontinuum
+      Port: 5433
+      StorageEncrypted: false
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: "cloud-metadata-db-cluster"
+
+  CloudMetaDbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref CloudMetaDbCluster
+      DBInstanceClass: db.t3.medium
+      Engine: aurora-postgresql
+      PubliclyAccessible: true
+      EnablePerformanceInsights: false
+      Tags:
+        - Key: Name
+          Value: "cloud-metadata-db-instance"
+
+Outputs:
+  CloudMetaDbEndpoint:
+    Description: Endpoint del database Aurora PostgreSQL per metadati cloud di Sensor Continuum
+    Value: !GetAtt CloudMetaDbCluster.Endpoint.Address
+    Export:
+      Name: sensor-continuum-cloud-meta-db-endpoint
+  CloudMetaDbReaderEndpoint:
+    Description: Reader Endpoint del database Aurora PostgreSQL per metadati cloud di Sensor Continuum
+    Value: !GetAtt CloudMetaDbCluster.ReadEndpoint.Address
+    Export:
+      Name: sensor-continuum-cloud-meta-db-reader-endpoint
+  CloudMetaDbPort:
+    Description: Porta del database Aurora PostgreSQL per metadati cloud di Sensor Continuum
+    Value: !GetAtt CloudMetaDbCluster.Endpoint.Port
+    Export:
+      Name: sensor-continuum-cloud-meta-db-port
