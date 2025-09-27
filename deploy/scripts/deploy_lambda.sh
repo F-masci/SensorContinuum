@@ -20,21 +20,38 @@ OUTPUT_FILE="$OUTPUT_DIR/$FUNCTION.yaml"
 mkdir -p "$OUTPUT_DIR"
 
 # --- Generazione template ---
+SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters Name=tag:Name,Values=sc-sg-lambda --query 'SecurityGroups[0].GroupId' --output text)
+SUBNET_ID_1=$(aws ec2 describe-subnets --filters Name=tag:Name,Values=sc-subnet-lambda-private-1 --query 'Subnets[0].SubnetId' --output text)
+SUBNET_ID_2=$(aws ec2 describe-subnets --filters Name=tag:Name,Values=sc-subnet-lambda-private-2 --query 'Subnets[0].SubnetId' --output text)
+
 echo "[INFO] Creo template per $FUNCTION"
 sed \
   -e "s|\${FUNCTION_NAME}|$FUNCTION|g" \
   -e "s|\${FOLDER_PATH}|$FOLDER|g" \
+  -e "s|\${SECURITY_GROUP_ID}|$SECURITY_GROUP_ID|g" \
+  -e "s|\${SUBNET_ID_1}|$SUBNET_ID_1|g" \
+  -e "s|\${SUBNET_ID_2}|$SUBNET_ID_2|g" \
   "$BASE_TEMPLATE" > "$OUTPUT_FILE"
 
 # --- Build ---
 echo "[INFO] Eseguo sam build"
 sam build --template-file "$OUTPUT_FILE"
 
+# --- Controllo e creazione bucket S3 ---
+BUCKET_NAME="sensor-continuum-lambda"
+if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+  echo "[INFO] Il bucket $BUCKET_NAME non esiste. Lo creo..."
+  aws s3api create-bucket --bucket "$BUCKET_NAME"
+else
+  echo "[INFO] Il bucket $BUCKET_NAME esiste già."
+fi
+
 # --- Deploy ---
 echo "[INFO] Avvio deploy con SAM"
 sam deploy \
   --template-file "$OUTPUT_FILE" \
-  --stack-name "$STACK_NAME"
+  --stack-name "$STACK_NAME" \
+  --s3-bucket "$BUCKET_NAME"
 
 # --- Recupera API ID ---
 echo "[INFO] Recupero API ID"

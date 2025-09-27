@@ -3,7 +3,7 @@
 set -e
 
 # Lista regioni
-./deploy_lambda.sh region-list-stack region regionList /region/list
+./deploy_lambda.sh region-list-stack region regionList "/region/list"
 
 # Ricerca region per nome
 ./deploy_lambda.sh region-search-name-stack region regionSearchName "/region/search/name/{name}"

@@ -14,3 +14,4 @@ input/test*
 *.zip
 
 deploy/scripts/keys
+deploy/cloudformation/lambda

@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: HTTP API per sensor-continuum Lmbda
+
+Resources:
+  SensorContinuumApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: sensor-continuum
+      ProtocolType: HTTP
+
+Outputs:
+  ApiId:
+    Description: ID della HTTP API sensor-continuum
+    Value: !Ref SensorContinuumApi
+    Export:
+      Name: sensor-continuum-api-id

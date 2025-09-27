@@ -17,7 +17,7 @@ Resources:
         - x86_64
       VpcConfig:
         SecurityGroupIds:
-          - sg-0aa8b87cbc4221747
+          - ${SECURITY_GROUP_ID}
         SubnetIds:
-          - subnet-0834227dc6f29cb45
-          - subnet-05be34f065fbb111e
+          - ${SUBNET_ID_1}
+          - ${SUBNET_ID_2}
