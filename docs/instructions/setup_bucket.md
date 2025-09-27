@@ -2,6 +2,16 @@
 
 Questo script (`deploy/scripts/setup_bucket.sh`) è essenziale per la fase di **preparazione del deployment**. Si occupa di creare l'infrastruttura di storage necessaria su AWS S3 e di popolare il bucket con tutti i file che saranno scaricati dalle istanze EC2 al momento dell'avvio.
 
+### Esempi di Utilizzo
+
+```bash
+# Esegue l'upload di tutti gli asset predefiniti nel bucket S3 specificato
+./setup_bucket.sh
+
+# Se si desidera specificare solo alcuni file e saltare la creazione del bucket:
+./setup_bucket.sh --no-create docker-install.sh analyze-failure.sh
+```
+
 ### Logica Operativa Dettagliata
 
 1.  **Verifica e Creazione Bucket**: Controlla l'esistenza del bucket S3 (nome di default: `sensor-continuum-scripts`). Se non esiste e non è specificato il flag `--no-create`, il bucket viene creato nella regione AWS definita (`$AWS_REGION`).
@@ -40,12 +50,3 @@ Questo script (`deploy/scripts/setup_bucket.sh`) è essenziale per la fase di **
       echo "Copiato $f → s3://$BUCKET_NAME/$dest_path"
     done
     ```
-### Esempi di Utilizzo
-
-```bash
-# Esegue l'upload di tutti gli asset predefiniti nel bucket S3 specificato
-./setup_bucket.sh
-
-# Se si desidera specificare solo alcuni file e saltare la creazione del bucket:
-./setup_bucket.sh --no-create docker-install.sh analyze-failure.sh
-```

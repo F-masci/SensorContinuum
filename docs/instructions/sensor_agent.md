@@ -223,7 +223,7 @@ Questo processo è documentato in [`setup_bucket.md`](./setup_bucket.md) e gesti
 
 ## 2\. Deploy Edge Zone tramite CloudFormation
 
-Il deployment dell'intera zona Edge (che comprende l'istanza EC2, la configurazione di Docker, gli Edge Hub e i Sensor Agents) è orchestrato da uno script che utilizza il template **`deploy/cloudformation/zone/services.yaml`**.
+Il deployment dell'intera zona Edge (che comprende l'istanza EC2, la configurazione di Docker, gli Edge Hub e i Sensor Agents) è orchestrato dallo script **`deploy/scripts/deploy_zone.sh`** che utilizza il template **`deploy/cloudformation/zone/services.yaml`**.
 
 ### Funzionamento del Template CloudFormation
 
@@ -234,39 +234,51 @@ Il template CloudFormation esegue le seguenti operazioni cruciali per il layer E
 * **Configurazione con `UserData`**: Il blocco `UserData` (eseguito al primo boot) installa l'AWS CLI, scarica gli **`InitScripts`** (come `docker-install.sh`) per installare Docker e Docker Compose, scarica il file **`.env`** specifico per la zona da S3 e infine esegue lo script di deployment **`deploy_edge_services.sh`**.
 * **Configurazione DNS (Route53)**: Crea un set di **Record CNAME** all'interno della Hosted Zone privata (`$REGION.sensor-continuum.local`). Questi record sono essenziali per risolvere correttamente i nomi di dominio complessi dei broker MQTT (`$ZONE.$MACROZONE.sensor.mqtt-broker.$HOSTED_ZONE_NAME`) verso l'IP privato dell'istanza EC2.
 
-### Utilizzo dello Script di Deployment (Esempio)
+### Utilizzo dello Script di Deployment
 
 Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per definire la regione logica del sistema (`Lazio`), la macrozona (`RomaMacro`) e la zona (`TorVergata`).
 
-**Sintassi:**
+#### Sintassi ed Esempi
+
+**Sintassi Completa:**
 
 ```bash
-./deploy_zone_services.sh region-name macrozone-name zone-name [opzioni]
+./deploy_zone.sh region-name macrozone-name zone-name [opzioni]
 ```
 
-**Esempio Pratico (Regione Lazio, Macrozona RomaMacro, Zona TorVergata):**
-
-Assumendo che la regione AWS sia `us-east-1` (per la creazione dello stack):
+**Esempio di Deploy Standard su AWS (produzione):**
 
 ```bash
-./deploy_zone_services.sh Lazio RomaMacro TorVergata --aws-region us-east-1 --instance-type t3.small
+./deploy_zone.sh Lazio RomaMacro TorVergata --aws-region eu-central-1 --instance-type t3.medium
 ```
 
-Il comando lancerà uno stack CloudFormation denominato `Lazio-RomaMacro-TorVergata-services-stack`, creando le risorse descritte precedentemente.
+**Esempio di Test (utilizzando LocalStack):**
 
------
+```bash
+./deploy_zone.sh Lazio RomaMacro TestZone --deploy=localstack --instance-type t2.micro
+```
 
-## 3\. Dettagli Operativi del Deployment Script
+#### Opzioni dello Script di Deployment
+
+Oltre ai tre parametri posizionali obbligatori (Regione Logica, Macrozona, Zona), lo script **`deploy_zone.sh`** accetta le seguenti opzioni facoltative per personalizzare l'ambiente di deployment:
+
+| Opzione | Parametro | Descrizione                                                                                                                                                       | Valore di Default |
+| :--- | :--- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------| :--- |
+| **Modalità di Deploy** | `--deploy=localstack` | Forza il deployment su **LocalStack**. Se non specificata, il deployment avviene sul cloud AWS reale.           | `aws` |
+| **Regione AWS** | `--aws-region REGION` | Specifica la regione geografica AWS dove verranno create le risorse (e dove verranno cercate le risorse preesistenti come VPC e Subnet).                          | `us-east-1` |
+| **Tipo di Istanza EC2** | `--instance-type TYPE` | Definisce il tipo di istanza EC2 su cui verranno eseguiti i container Docker (Edge Hub e Sensor Agents). Questo parametro è cruciale per dimensionare le risorse. | `t3.small` |
+
+### Dettagli Operativi del Deployment Script in EC2
 
 Questo script Bash (`deploy_edge_services.sh`) viene eseguito all'interno dell'istanza EC2 tramite `UserData` ed è responsabile dell'avvio dei servizi Edge Hub e Sensor Agent.
 
-### A. Sequenza di Avvio dei Servizi
+#### A. Sequenza di Avvio dei Servizi
 
 1.  **Caricamento Variabili**: Carica le variabili d'ambiente dal file **`.env`** precedentemente scaricato da S3.
 2.  **Download Docker Compose**: Scarica da S3 la configurazione generata per i sensori (`sensor-agent.generated_N.yml`, con **N=50** di default).
 3.  **Avvio Sensor Agents**: Utilizza `docker-compose -p sensors` per avviare i simulatori di sensori, isolandoli in un progetto separato per facilitare la gestione.
 
-### B. Gestione Operativa e Resilienza
+#### B. Gestione Operativa e Resilienza
 
 Lo script `deploy_edge_services.sh` integra diverse funzionalità per la gestione e la simulazione di un ambiente Edge robusto:
 
