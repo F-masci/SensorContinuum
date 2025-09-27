@@ -134,6 +134,28 @@ Dopo aver creato il volume, l'avvio viene eseguito tramite il comando standard d
 docker compose -f edge-hub.yaml up -d
 ```
 
+#### C. Risoluzione del Nome Host del Broker
+
+Il template utilizza un indirizzo complesso (es. `${EDGE_ZONE}.${EDGE_MACROZONE}.mqtt-broker.${REGION}.sensor-continuum.local`).
+
+```yaml
+# --- environment base per tutti i zone hub ---
+x-zone-hub-env: &zone-hub-env
+    EDGE_MACROZONE: "${EDGE_MACROZONE}"
+    EDGE_ZONE: "${EDGE_ZONE}"
+    MQTT_BROKER_ADDRESS: "${EDGE_ZONE}.${EDGE_MACROZONE}.mqtt-broker.${REGION}.sensor-continuum.local"
+    REDIS_ADDRESS: "zone-hub-${EDGE_ZONE}-cache"
+    OPERATION_MODE: "loop"
+    HEALTHZ_SERVER: "true"
+    HEALTHZ_SERVER_PORT: "8080"
+```
+
+Per risolvere questo nome di dominio e dirigerlo correttamente verso l'host del broker MQTT (il container desiderato), si hanno due opzioni in un ambiente Docker locale:
+
+1.  **Utilizzo di `extra_hosts`:** Configurare la sezione `extra_hosts` nel file Docker Compose, mappando l'indirizzo del broker all'IP appropriato.
+2.  **Modifica del File `/etc/hosts`:** Se necessario, è possibile modificare il file **`/etc/hosts`** del sistema operativo host per puntare il record DNS utilizzato direttamente all'indirizzo IP del container o del servizio che ospita il broker.
+
+
 > **⚠️ NOTA OPERATIVA**
 >
 > **File d'Ambiente:**
