@@ -42,7 +42,7 @@ L'architettura definisce una gerarchia di componenti con responsabilità chiaram
 
 L'immagine seguente illustra la disposizione gerarchica dei componenti e il flusso comunicativo attraverso i diversi livelli:
 
-![Diagramma di deploy del sistema](docs/deploy/deploy-diagram.png)
+![Diagramma di deploy del sistema](docs/deploy/deploy-diagram.jpg)
 
 ---
 
