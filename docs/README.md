@@ -10,7 +10,7 @@ Questa cartella (`docs`) costituisce il repository centrale per tutti i document
 
 Il documento ufficiale che descrive in dettaglio la progettazione, l'implementazione e la valutazione sperimentale del sistema è contenuto direttamente in questa cartella. I dati grezzi utilizzati per tali analisi sono qui archiviati per garantire la riproducibilità.
 
-* **Report Tecnico:** `Report_SDCC.pdf`
+* **Report Tecnico:** `Sensor Continuum Report - Renzi Maurizio 0369222, Masci Francesco 0365258.pdf`
 * **Dataset:** I file di dati grezzi in CSV acquisiti durante le sessioni di test sono collocati in questa cartella.
 
 ---
