@@ -14,7 +14,7 @@ Il suo funzionamento ad alto livello include:
 
 La configurazione del **Sensor Agent** avviene interamente tramite variabili d'ambiente, suddivise in tre categorie principali:
 
-### 1. Parametri di Simulazione (Simulation Settings)
+### 1. Parametri di Simulazione
 
 Queste variabili controllano l'origine e la natura dei dati simulati.
 
@@ -29,7 +29,7 @@ Queste variabili controllano l'origine e la natura dei dati simulati.
 | **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV. | **`2006-01-02T15:04:05`** (Default) |
 | **`SIMULATION_OFFSET_DAY`** | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica. | Intero non negativo (**2** Default) |
 
-### 2. Parametri di Identificazione e Ambiente (Environment Settings)
+### 2. Parametri di Identificazione e Ambiente
 
 Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
 
@@ -61,12 +61,6 @@ Controllano la connessione al broker MQTT dell'Edge Hub.
 | **`HEALTHZ_SERVER`** | Abilita un server HTTP per il controllo dello stato di salute (Health Check). | **`false`** (Default), **`true`** |
 | **`HEALTHZ_SERVER_PORT`** | Porta su cui il server Health Check si mette in ascolto. | **`8080`** (Default) |
 | **`LOG_LEVEL`** | Livello di dettaglio per l'output del logger. | `error` (Default), `warning`, `info`, `debug` |
-
-Certamente. Ho aggiornato la sezione per includere l'importante nota sulla risoluzione DNS locale per l'indirizzo del broker MQTT.
-
------
-
-Certamente. Ecco la sezione completa per il deploy in locale del Sensor Agent, che integra i riferimenti ai file template e allo script presenti nel tuo repository.
 
 -----
 
