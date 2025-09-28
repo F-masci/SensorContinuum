@@ -11,6 +11,24 @@ import (
 	"os"
 )
 
+/*
+DESCRIZIONE FUNZIONALE:
+Il Sensor Agent opera come il nodo computazionale di base nel Compute Continuum, simulando il comportamento di un sensore IoT sul campo.
+
+RESPONSABILITÀ CHIAVE:
+
+1.  Generazione dei Dati: Produce periodicamente misurazioni multivariate (es. temperatura, umidità) basate su distribuzioni realistiche per replicare l'ambiente fisico.
+
+2.  Simulazione delle Anomalie: Introduce intenzionalmente outlier e dati mancanti per testare la robustezza e le capacità di filtraggio dei nodi Edge.
+
+3.  Comunicazione Outgoing: Invia i dati grezzi all'Edge Hub designato utilizzando il protocollo MQTT.
+
+4.  Qualità del Servizio: I messaggi di misurazione sono trasmessi con QoS at-most-once.
+
+5.  Comunicazione di Controllo: Invia messaggi di registrazione contenenti i metadati del sensore con QoS exactly-once.
+
+6.  Stato di Salute: Non trasmette heartbeat espliciti; la sua operatività è dedotta dalla continuità del flusso di misurazioni da parte dei nodi superiori.
+*/
 func main() {
 
 	// Inizializza l'ambiente

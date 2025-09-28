@@ -13,13 +13,24 @@ import (
 	"time"
 )
 
-/**
- * Punto di ingresso dell'applicazione Edge Hub.
- * Inizializza l'ambiente, il logger, i canali di comunicazione e
- * avvia i servizi in base alla modalità di servizio configurata.
- * Gestisce i servizi di configurazione, filtro, aggregazione e pulizia.
- * Avvia anche il server di health check se abilitato.
- */
+/*
+DESCRIZIONE FUNZIONALE:
+L'Edge Hub è il nodo computazionale periferico, ottimizzato per l'elaborazione a bassa latenza e la gestione di una rete localizzata di Sensor Agent. È basato su un'architettura a microservizi con cache volatile (Redis).
+
+RESPONSABILITÀ CHIAVE:
+
+1.  Elaborazione a Bassa Latenza: Esegue il primo livello di elaborazione critica, filtrando gli outlier in tempo quasi reale, basandosi sulla storia recente del sensore mantenuta in Redis.
+
+2.  Ingestione e Scalabilità: Riceve i dati dai sensori tramite MQTT e utilizza le shared subscriptions di MQTTv5 per distribuire il carico e garantire la scalabilità orizzontale.
+
+3.  Aggregazione: Calcola la media dei valori validati presenti nella cache nell'ultimo minuto. Applica un offset di 2 minuti per mitigare la latenza e i ritardi di pacchetto.
+
+4.  Comunicazione Outgoing: Inoltra i dati aggregati al Proximity Hub di riferimento tramite MQTT.
+
+5.  Gestione della Concorrenza: Utilizza un lock distribuito in Redis per la leader election e per garantire l'esecuzione atomica delle operazioni di aggregazione.
+
+6.  Manutenzione e Notifica: Il Servizio di Pulizia monitora la cache, identificando ed etichettando come unhealthy i sensori in caso di interruzione prolungata del flusso dati (timeout di 5 minuti).
+*/
 func main() {
 
 	// Setup dell'ambiente

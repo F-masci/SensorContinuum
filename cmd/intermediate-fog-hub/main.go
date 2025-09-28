@@ -17,12 +17,20 @@ import (
 )
 
 /*
-	Per ora l' intermediate fog hub:
+DESCRIZIONE FUNZIONALE:
+L'Intermediate Hub è il punto di convergenza regionale, focalizzato sull'ingestione ad alto volume, l'aggregazione finale e la persistenza a lungo termine dei dati elaborati.
 
-- riceve i dati che l edge-hub invia al proximity-fog-hub in modo da poter rispondere alla domanda "cosa accade ora?"
-- riceve i dati aggregati ( le statistiche ) ogni tot minuti dal proximity fog hub tramite kafka
-- il suo compito è quindi quello di storage di dati sia dettagliati ( i dati che arrivano in tempo reale ) sia aggregati ( le statistiche che arrivano ogni tot minuti )
-- altre responsabilità le implementerò in futuro
+RESPONSABILITÀ CHIAVE:
+
+1.  Ingestione e Ottimizzazione I/O: I Servizi di Data Ingestion leggono i messaggi da Kafka e li raccolgono in batch in memoria. Questi batch sono scritti in blocco nel database a lungo termine (PostgreSQL) utilizzando l'operazione COPY FROM per ottimizzare l'efficienza.
+
+2.  Gestione Affidabile dell'Offset: Viene implementata la gestione manuale dell'offset di Kafka. L'offset viene contrassegnato come letto solo dopo il successo della scrittura nel database, garantendo l'integrità dei dati e la semantica at-least-once.
+
+3.  Controllo del Flusso: La lettura da Kafka viene temporaneamente sospesa durante le operazioni di scrittura sul database per prevenire il sovraccarico e l'accumulo di backlog.
+
+4.  Aggregazione Finale: Calcola le statistiche aggregate a livello di regione, sfruttando i dati pre-elaborati (statistiche di macrozona) ricevuti dai livelli inferiori.
+
+5.  Gestione Metadati: Aggiorna i timestamp dell'ultima comunicazione dei sensori contestualmente all'inserimento dei batch di dati nel database.
 */
 func main() {
 

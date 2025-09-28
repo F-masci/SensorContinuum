@@ -16,30 +16,22 @@ import (
 	"os"
 )
 
-/*	---------------------------- DESCRIZIONE  PROXIMITY FOG HUB ---------------------------------------------------------
+/*
+DESCRIZIONE FUNZIONALE:
+Il Proximity Hub è il nodo di aggregazione Fog critico, responsabile della persistenza temporanea dei dati e della garanzia di inoltro affidabile verso il livello intermedio (Cloud). Utilizza un database PostgreSQL locale.
 
-il proximity fog hub svolge i seguenti compiti:
+RESPONSABILITÀ CHIAVE:
 
-	- riceve i dati filtrati dall edge-hub tramite broker mqtt iscrivendosi allo stesso topic
-	- salva i dati ricevuti in una cache locale (che mantiene i dati delle ultime 6 ore)
-	- invia i dati ricevuti tramite kafka all' intermediate-fog-hub, in questo modo l' intermediate-fog-hub
-      ha una copia dettagliata e immediata di ogni singolo dato e può rispondere alla domanda "cosa accade ora nel sistema?"
-	- ogni 5 minuti (da modificare nel caso) scatta un ticker che:
-		1) esegue una query sulla cache locale temporanea (sul db locale quindi) chiedendo di restituire i valori
-            di max, min e avg di tutti i dati ricevuti negli ultimi 5 minuti
-		2) riceve i risultati dal db
-		3) salva queste statistiche in una tabella outbox locale, ci penserà poi un componente chiamato
-			dispatcher (una goroutine che si avvia anche essa grazie a un ticker)
-			a inviarle all' intermediate-fog-hub e settare lo stato 'sent' alla tabella outbox.
-		4) un cleaner che si avvia sempre con un ticker in una goroutine separata si occupa di pulire la tabella outbox
-			ossia nello specifico di eliminare i messaggi che sono in stato 'sent' e che hanno più di 1 ora (per il momento)
-			per evitare che la tabella outbox cresca all'infinito
+1.  Persistenza Idempotente: Il Modulo Local Cache salva i dati aggregati ricevuti via MQTT in un database PostgreSQL locale con stato "pending". Implementa una logica di de-duplicazione a livello di database per assicurare l'idempotenza.
 
-quindi alla fine saremo sicuri che l 'intermediate-fog-hub possieda una visione riassuntiva e
-di più alto livello dello stato dell'edificio
+2.  Aggregazione Statistica: Il Modulo Aggregator calcola le statistiche (max, min, avg) a livello di zona e macrozona. Elabora un intervallo di 15 minuti con un offset di 10 minuti per la gestione della latenza e ha la capacità di colmare le lacune nelle aggregazioni.
 
-------------------------------------------------------------------------------------------------------------------------- */
+3.  Affidabilità (Transactional Outbox): Il Modulo Dispatcher implementa il pattern Transactional Outbox. Preleva i messaggi "pending" dal database e li inoltra in modo affidabile al broker Kafka (Intermediate Hub), aggiornando lo stato a "sent" solo dopo il successo dell'invio.
 
+4.  Proxy di Controllo: I Moduli Proxy Heartbeat e Proxy Configuration raccolgono i messaggi di controllo dagli Edge Hub (via MQTT) e li inoltrano su Kafka.
+
+5.  Manutenzione: Il Modulo Cleaner elimina periodicamente i messaggi con stato "sent" che superano il periodo di conservazione stabilito (tipicamente 1-2 giorni) per prevenire la crescita indefinita della tabella outbox.
+*/
 func main() {
 
 	// Setup dell'ambiente

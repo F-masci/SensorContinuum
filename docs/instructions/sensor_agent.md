@@ -18,49 +18,49 @@ La configurazione del **Sensor Agent** avviene interamente tramite variabili d'a
 
 Queste variabili controllano l'origine e la natura dei dati simulati.
 
-| Variabile | Descrizione | Valori Ammessi (Default) |
-| :--- | :--- | :--- |
-| **`SENSOR_LOCATION`** | Definisce il contesto del sensore. | **`indoor`** (Default), **`outdoor`** |
-| **`SENSOR_TYPE`** | Definisce la grandezza fisica misurata. | **`temperature`** (Default), **`humidity`**, **`pressure`** |
+| Variabile                         | Descrizione                                                                                 | Valori Ammessi (Default)                                               |
+|:----------------------------------|:--------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------|
+| **`SENSOR_LOCATION`**             | Definisce il contesto del sensore.                                                          | **`indoor`** (Default), **`outdoor`**                                  |
+| **`SENSOR_TYPE`**                 | Definisce la grandezza fisica misurata.                                                     | **`temperature`** (Default), **`humidity`**, **`pressure`**            |
 | **`SIMULATION_SENSOR_REFERENCE`** | Riferimento al modello di sensore fisico simulato, cruciale per l'interpretazione dei dati. | **`bmp280`** (Default) o altri 17 modelli (es. `DHT22`, `SPS30`, ecc.) |
-| **`SIMULATION_VALUE_COLUMN`** | Nome della colonna nel file CSV da cui leggere il valore del sensore. | **`[SENSOR_TYPE]`** (Default) |
-| **`SIMULTION_TIMESTAMP_COLUMN`** | Nome della colonna nel file CSV contenente i timestamp. | **`timestamp`** (Default) |
-| **`SIMULATION_SEPARATOR`** | Carattere separatore utilizzato nel file CSV. | **`;`** (Default) |
-| **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV. | **`2006-01-02T15:04:05`** (Default) |
-| **`SIMULATION_OFFSET_DAY`** | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica. | Intero non negativo (**2** Default) |
+| **`SIMULATION_VALUE_COLUMN`**     | Nome della colonna nel file CSV da cui leggere il valore del sensore.                       | **`[SENSOR_TYPE]`** (Default)                                          |
+| **`SIMULTION_TIMESTAMP_COLUMN`**  | Nome della colonna nel file CSV contenente i timestamp.                                     | **`timestamp`** (Default)                                              |
+| **`SIMULATION_SEPARATOR`**        | Carattere separatore utilizzato nel file CSV.                                               | **`;`** (Default)                                                      |
+| **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV.             | **`2006-01-02T15:04:05`** (Default)                                    |
+| **`SIMULATION_OFFSET_DAY`**       | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica.       | Intero non negativo (**2** Default)                                    |
 
 ### 2. Parametri di Identificazione e Ambiente
 
 Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
 
-| Variabile | Descrizione | Valori Ammessi (Default) |
-| :--- | :--- | :--- |
-| **`EDGE_MACROZONE`** | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene. | Stringa (es. `RegioneA`) |
-| **`EDGE_ZONE`** | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene. | Stringa (es. `Zona1`) |
-| **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore. | **`uuid`** (Default), **`hostname`** |
-| **`SENSOR_ID`** | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa (es. UUID generato) |
+| Variabile                 | Descrizione                                                                                                 | Valori Ammessi (Default)             |
+|:--------------------------|:------------------------------------------------------------------------------------------------------------|:-------------------------------------|
+| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa (es. `RegioneA`)             |
+| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa (es. `Zona1`)                |
+| **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore.                                                               | **`uuid`** (Default), **`hostname`** |
+| **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa (es. UUID generato)          |
 
 ### 3. Parametri di Comunicazione (MQTT Broker Settings)
 
 Controllano la connessione al broker MQTT dell'Edge Hub.
 
-| Variabile | Descrizione | Valori Ammessi (Default) |
-| :--- | :--- | :--- |
-| **`MQTT_BROKER_PROTOCOL`** | Protocollo del broker MQTT. | `tcp` (Default) |
-| **`MQTT_BROKER_ADDRESS`** | Indirizzo IP/Hostname del broker MQTT. | `mosquitto` (Default, tipico in Docker) |
-| **`MQTT_BROKER_PORT`** | Porta di connessione del broker MQTT. | `1883` (Default) |
-| **`MAX_RECONNECTION_INTERVAL`** | Intervallo massimo (in secondi) tra i tentativi di riconnessione. | Intero positivo (**10** Default) |
-| **`MAX_RECONNECTION_TIMEOUT`** | Timeout massimo (in secondi) per i tentativi di riconnessione. | Intero positivo (**10** Default) |
-| **`MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione. | Intero positivo (**10** Default) |
-| **`MESSAGE_PUBLISH_TIMEOUT`** | Timeout (in secondi) per l'invio di un singolo messaggio MQTT. | Intero positivo (**5** Default) |
+| Variabile                       | Descrizione                                                       | Valori Ammessi (Default)                |
+|:--------------------------------|:------------------------------------------------------------------|:----------------------------------------|
+| **`MQTT_BROKER_PROTOCOL`**      | Protocollo del broker MQTT.                                       | `tcp` (Default)                         |
+| **`MQTT_BROKER_ADDRESS`**       | Indirizzo IP/Hostname del broker MQTT.                            | `mosquitto` (Default, tipico in Docker) |
+| **`MQTT_BROKER_PORT`**          | Porta di connessione del broker MQTT.                             | `1883` (Default)                        |
+| **`MAX_RECONNECTION_INTERVAL`** | Intervallo massimo (in secondi) tra i tentativi di riconnessione. | Intero positivo (**10** Default)        |
+| **`MAX_RECONNECTION_TIMEOUT`**  | Timeout massimo (in secondi) per i tentativi di riconnessione.    | Intero positivo (**10** Default)        |
+| **`MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione.                     | Intero positivo (**10** Default)        |
+| **`MESSAGE_PUBLISH_TIMEOUT`**   | Timeout (in secondi) per l'invio di un singolo messaggio MQTT.    | Intero positivo (**5** Default)         |
 
 ### 4. Parametri di Logging e Health Check
 
-| Variabile | Descrizione | Valori Ammessi (Default) |
-| :--- | :--- | :--- |
-| **`HEALTHZ_SERVER`** | Abilita un server HTTP per il controllo dello stato di salute (Health Check). | **`false`** (Default), **`true`** |
-| **`HEALTHZ_SERVER_PORT`** | Porta su cui il server Health Check si mette in ascolto. | **`8080`** (Default) |
-| **`LOG_LEVEL`** | Livello di dettaglio per l'output del logger. | `error` (Default), `warning`, `info`, `debug` |
+| Variabile                 | Descrizione                                                                   | Valori Ammessi (Default)                      |
+|:--------------------------|:------------------------------------------------------------------------------|:----------------------------------------------|
+| **`HEALTHZ_SERVER`**      | Abilita un server HTTP per il controllo dello stato di salute (Health Check). | **`false`** (Default), **`true`**             |
+| **`HEALTHZ_SERVER_PORT`** | Porta su cui il server Health Check si mette in ascolto.                      | **`8080`** (Default)                          |
+| **`LOG_LEVEL`**           | Livello di dettaglio per l'output del logger.                                 | `error` (Default), `warning`, `info`, `debug` |
 
 -----
 
@@ -187,13 +187,13 @@ La fase di **Deploy su AWS**, gestita dallo script **`deploy_zone.sh`**, è l'ul
 
 **Prima di eseguire lo script di deployment della Zona, è indispensabile che le seguenti risorse AWS siano già state create e configurate attraverso i rispettivi script di provisioning di Livello Superiore (`deploy_region.sh` e `deploy_macrozone.sh`):**
 
-| Risorsa                          | Livello di Creazione | Variabile nello script | Riferimento Logico |
-|:---------------------------------| :--- | :--- | :--- |
-| **Virtual Private Cloud (VPC)**  | Regionale | `$VPC_ID` | Identificata da **`$REGION-vpc`** |
-| **Subnet Pubblica**              | Macrozona | `$SUBNET_ID` | Identificata da **`$REGION-$MACROZONE-subnet`** |
-| **Security Group**               | Macrozona | `$SECURITY_GROUP_ID` | Identificata da **`$REGION-$MACROZONE-sg`** |
-| **Route Table Pubblica**         | Regionale | `$ROUTE_TABLE_ID` | Identificata da **`$REGION-vpc-public-rt`** |
-| **Route 53 Hosted Zone Privata** | Regionale | `$HOSTED_ZONE_ID` | Identificata da **`$REGION.sensor-continuum.local`** |
+| Risorsa                          | Livello di Creazione | Variabile nello script | Riferimento Logico                                   |
+|:---------------------------------|:---------------------|:-----------------------|:-----------------------------------------------------|
+| **Virtual Private Cloud (VPC)**  | Regionale            | `$VPC_ID`              | Identificata da **`$REGION-vpc`**                    |
+| **Subnet Pubblica**              | Macrozona            | `$SUBNET_ID`           | Identificata da **`$REGION-$MACROZONE-subnet`**      |
+| **Security Group**               | Macrozona            | `$SECURITY_GROUP_ID`   | Identificata da **`$REGION-$MACROZONE-sg`**          |
+| **Route Table Pubblica**         | Regionale            | `$ROUTE_TABLE_ID`      | Identificata da **`$REGION-vpc-public-rt`**          |
+| **Route 53 Hosted Zone Privata** | Regionale            | `$HOSTED_ZONE_ID`      | Identificata da **`$REGION.sensor-continuum.local`** |
 
 Lo script `deploy_zone.sh` non crea le risorse di rete; piuttosto, **le cerca e le recupera** tramite le funzioni `find_vpc_id`, `find_subnet_id`, etc. Se queste risorse non esistono o non corrispondono ai tag di denominazione attesi (`$VPC_NAME`, `$SUBNET_NAME`, etc.), lo script fallirà, non potendo lanciare lo stack CloudFormation.
 
@@ -256,11 +256,11 @@ Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per 
 
 Oltre ai tre parametri posizionali obbligatori (Regione Logica, Macrozona, Zona), lo script **`deploy_zone.sh`** accetta le seguenti opzioni facoltative per personalizzare l'ambiente di deployment:
 
-| Opzione | Parametro | Descrizione                                                                                                                                                       | Valore di Default |
-| :--- | :--- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------| :--- |
-| **Modalità di Deploy** | `--deploy=localstack` | Forza il deployment su **LocalStack**. Se non specificata, il deployment avviene sul cloud AWS reale.           | `aws` |
-| **Regione AWS** | `--aws-region REGION` | Specifica la regione geografica AWS dove verranno create le risorse (e dove verranno cercate le risorse preesistenti come VPC e Subnet).                          | `us-east-1` |
-| **Tipo di Istanza EC2** | `--instance-type TYPE` | Definisce il tipo di istanza EC2 su cui verranno eseguiti i container Docker (Edge Hub e Sensor Agents). Questo parametro è cruciale per dimensionare le risorse. | `t3.small` |
+| Opzione                 | Parametro              | Descrizione                                                                                                                                                       | Valore di Default |
+|:------------------------|:-----------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------|
+| **Modalità di Deploy**  | `--deploy=localstack`  | Forza il deployment su **LocalStack**. Se non specificata, il deployment avviene sul cloud AWS reale.                                                             | `aws`             |
+| **Regione AWS**         | `--aws-region REGION`  | Specifica la regione geografica AWS dove verranno create le risorse (e dove verranno cercate le risorse preesistenti come VPC e Subnet).                          | `us-east-1`       |
+| **Tipo di Istanza EC2** | `--instance-type TYPE` | Definisce il tipo di istanza EC2 su cui verranno eseguiti i container Docker (Edge Hub e Sensor Agents). Questo parametro è cruciale per dimensionare le risorse. | `t3.small`        |
 
 ### Dettagli Operativi del Deployment Script in EC2
 
@@ -276,9 +276,9 @@ Questo script Bash (`deploy_edge_services.sh`) viene eseguito all'interno dell'i
 
 Lo script `deploy_edge_services.sh` integra diverse funzionalità per la gestione e la simulazione di un ambiente Edge robusto:
 
-| Funzionalità | Dettaglio Operativo                                                                                                                                                                                                                                                                                                   |
-| :--- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Funzionalità                        | Dettaglio Operativo                                                                                                                                                                                                                                                                                                   |
+|:------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Simulatore di Ritardi (Latenza)** | Scarica ed esegue lo script **`init-delay.sh`** per simulare condizioni di rete reali. Applica una latenza di rete configurabile (es. `${NETWORK_DELAY:-200ms}`) sull'interfaccia di rete dell'istanza EC2.                                                                                                           |
-| **Cron Job per Resilienza** | Configura un **Cron Job** che riavvia periodicamente i container dei sensori alle 3:00 (`docker-compose -p sensors restart`). Questo simula il *churn* (spegnimento/riavvio casuale) dei dispositivi Edge per testare la resilienza del sistema.                                                                      |
-| **Servizio Systemd** | Configura il servizio **`sc-deploy.service`** per eseguire automaticamente lo script di deployment all'avvio del sistema. Ciò garantisce che i servizi vengano ripristinati correttamente dopo un riavvio dell'istanza EC2.                                                                                           |
-| **Script di Analisi** | Scarica lo script **`analyze_failure.sh`**. Questo strumento è progettato per analizzare i log dei container, confrontando i messaggi ricevuti con i messaggi attesi e calcolando parametri di performance chiave come il **Missing Rate** (tasso di messaggi mancanti) e l'errore nel rilevamento degli **Outlier**. |
+| **Cron Job per Resilienza**         | Configura un **Cron Job** che riavvia periodicamente i container dei sensori alle 3:00 (`docker-compose -p sensors restart`). Questo simula il *churn* (spegnimento/riavvio casuale) dei dispositivi Edge per testare la resilienza del sistema.                                                                      |
+| **Servizio Systemd**                | Configura il servizio **`sc-deploy.service`** per eseguire automaticamente lo script di deployment all'avvio del sistema. Ciò garantisce che i servizi vengano ripristinati correttamente dopo un riavvio dell'istanza EC2.                                                                                           |
+| **Script di Analisi**               | Scarica lo script **`analyze_failure.sh`**. Questo strumento è progettato per analizzare i log dei container, confrontando i messaggi ricevuti con i messaggi attesi e calcolando parametri di performance chiave come il **Missing Rate** (tasso di messaggi mancanti) e l'errore nel rilevamento degli **Outlier**. |

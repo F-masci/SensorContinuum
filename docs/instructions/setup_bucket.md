@@ -33,12 +33,12 @@ Questo script (`deploy/scripts/setup_bucket.sh`) è essenziale per la fase di **
 
 2.  **Mappatura e Caricamento File**: Una mappa associativa (`FILE_MAP`) definisce le associazioni tra i pattern dei file locali e le cartelle di destinazione all'interno del bucket S3, garantendo l'organizzazione degli asset:
 
-    | File Locale (Pattern) | Cartella di Destinazione S3 | Contenuto Tipico |
-        | :--- | :--- | :--- |
-    | `inits/*install*.sh` | `init/` | Script di installazione (es. `docker-install.sh`, `init-delay.sh`) |
-    | `deploy/*deploy*.sh` | `deploy/` | Script di avvio (es. `deploy_edge_services.sh`) |
-    | `../compose/*.y*ml` | `compose/` | File Docker Compose e template YAML |
-    | `performance/analyze_*.sh` | `performance/` | Script di analisi delle performance |
+    | File Locale (Pattern)      | Cartella di Destinazione S3 | Contenuto Tipico                                                   |
+    |:---------------------------|:----------------------------|:-------------------------------------------------------------------|
+    | `inits/*install*.sh`       | `init/`                     | Script di installazione (es. `docker-install.sh`, `init-delay.sh`) |
+    | `deploy/*deploy*.sh`       | `deploy/`                   | Script di avvio (es. `deploy_edge_services.sh`)                    |
+    | `../compose/*.y*ml`        | `compose/`                  | File Docker Compose e template YAML                                |
+    | `performance/analyze_*.sh` | `performance/`              | Script di analisi delle performance                                |
 
     Lo script itera su questa mappa e utilizza il comando `aws s3 cp` per copiare i file:
 
