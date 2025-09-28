@@ -165,16 +165,12 @@ Poiché il volume `macrozone-cache-data` è definito come **`external: true`** n
 docker volume create macrozone-hub-RomaMacro-cache-data
 ```
 
-#### B. Avvio con Docker Compose
-
-Dopo aver creato il volume e definito le variabili d'ambiente (nel file `.env`), l'avvio viene eseguito tramite il comando standard di Docker Compose.
-
 ```bash
 # Avvio di tutti i microservizi del Proximity Hub
 docker compose -f proximity-fog-hub.yaml up -d
 ```
 
-#### C. Risoluzione del Nome Host dei Broker
+#### B. Risoluzione del Nome Host dei Broker
 
 Il Proximity Hub deve connettersi a due broker esterni. Per indirizzarli correttamente, vengono utilizzati hostname complessi che richiedono una risoluzione DNS locale:
 
@@ -185,6 +181,10 @@ In un ambiente Docker locale, si hanno le seguenti opzioni per la risoluzione:
 
 * **Utilizzo di `extra_hosts`:** Configurare la sezione `extra_hosts` nel file Docker Compose, mappando l'indirizzo del broker all'IP appropriato.
 * **Modifica del File `/etc/hosts`:** Modificare il file **`/etc/hosts`** del sistema operativo host per puntare i record DNS utilizzati direttamente all'indirizzo IP del nodo che ospita il broker.
+
+#### C. Avvio con Docker Compose
+
+Dopo aver creato il volume e definito le variabili d'ambiente (nel file `.env`), l'avvio viene eseguito tramite il comando standard di Docker Compose.
 
 > **⚠️ NOTA OPERATIVA**
 >

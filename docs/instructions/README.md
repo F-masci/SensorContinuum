@@ -15,29 +15,73 @@ Per eseguire la build, il test e il deployment dell'applicazione, è necessario 
 | **AWS CLI**                                | Necessario per interagire con i servizi AWS (S3, EC2, CloudFormation, ...) e gestire le credenziali.  |
 | **AWS SAM** (Serverless Application Model) | Utilizzato per il deployment dei componenti Serverless nel Cloud.                                     |
 
-## Strategia di Deployment
+---
 
-Si raccomanda vivamente il **deployment su AWS** grazie all'automazione offerta dai suoi servizi.
+## Deployment
 
 | Modalità di Deploy          | Vantaggi                                                                                                | Svantaggi / Prerequisiti Operativi                                                                                                                                                                   |
 |:----------------------------|:--------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **AWS (Consigliata)**       | **Automazione Completa** (CloudFormation, Route53), provisioning dinamico della rete e degli hostnames. | Richiede l'accesso e la configurazione dell'ambiente AWS.                                                                                                                                            |
 | **Locale (Docker Compose)** | Ideale per test e sviluppo rapido.                                                                      | Richiede la **configurazione manuale del sistema host** (modifica del file `/etc/hosts`) per risolvere gli hostname complessi dei broker interni (es. `kafka-broker.region.sensor-continuum.local`). |
 
-
------
-
-## Sequenza di Deployment dei Livelli
-
 Il deploy segue l'ordine gerarchico del Compute Continuum, partendo dal Cloud (Intermediate) verso l'Edge (Sensor Agent).
 
-| Livello del Continuum | Componente                     | Riferimento Istruzioni                                 | 
-|:----------------------|:-------------------------------|:-------------------------------------------------------|
-| CLOUD                 | API Gateway, Lambda, Site, ... | [`setup_cloud.md`](./setup_cloud.md)                   |
-| INTERMEDIATE FOG      | Intermediate Fog Hub, Kafka    | [`intermediate_fog_hub.md`](./intermediate_fog_hub.md) |
-| PROXIMITY FOG         | Proximity Fog Hub, MQTT Broker | [`proximity_fog_hub.md`](./proximity_fog_hub.md)       |
-| EDGE FOG              | Edge Hub                       | [`edge_hub.md`](./edge_hub.md)                         |
-| EDGE DEVICE           | Sensor Agent                   | [`sensor_agent.md`](./sensor_agent.md)                 |
+| Livello del Continuum | Componente                             | Riferimento Istruzioni                                 | 
+|:----------------------|:---------------------------------------|:-------------------------------------------------------|
+| CLOUD                 | API Gateway, Lambda, Site, ...         | [`setup_cloud.md`](./setup_cloud.md)                   |
+| INTERMEDIATE FOG      | Intermediate Fog Hub, Kafka, Databases | [`intermediate_fog_hub.md`](./intermediate_fog_hub.md) |
+| PROXIMITY FOG         | Proximity Fog Hub, MQTT Broker         | [`proximity_fog_hub.md`](./proximity_fog_hub.md)       |
+| EDGE FOG              | Edge Hub                               | [`edge_hub.md`](./edge_hub.md)                         |
+| EDGE DEVICE           | Sensor Agent                           | [`sensor_agent.md`](./sensor_agent.md)                 |
+
+Il deployment su AWS è gestito da un set di script Bash situati nella directory **`deploy/scripts`**.
+Gli script utilizzano **AWS CloudFormation** e **Docker Compose** per l'orchestrazione, seguendo l'ordine gerarchico del Continuum:
+
+1.  **`setup_bucket.sh`**: Prepara il bucket S3 di supporto per tutti gli asset e gli script necessari al deployment.
+2.  **`deploy_region.sh`**: Crea l'infrastruttura centrale del livello Intermediate Fog Hub (VPC, Kafka, Databases, Services).
+3.  **`deploy_macrozone.sh`**: Crea il Proximity Fog Hub a livello di macrozona, includendo il Broker MQTT e il database locale.
+4.  **`deploy_zone.sh`**: Crea l'Edge Hub e i Sensor Agents a livello di zona.
+
+### Esempio di Deploy Completo (Singola Zona)
+
+Il seguente esempio mostra la sequenza di comandi necessari per deployare l'intero sistema Compute Continuum (esclusa la parte Cloud) in una singola regione (`us-east-1`), con una macrozona e una zone attive, garantendo la completa operatività della pipeline dati dall'Edge all'Intermediate Fog Hub.
+
+Si noti come gli script utilizzino nomi logici e prevedibili (`region-001`, `build-0001`, `floor-001`) per identificare univocamente le risorse:
+
+```bash
+#!/bin/bash
+
+# 1. SETUP INIZIALE: Preparazione degli asset su AWS S3
+# Questo bucket è il punto di partenza per il UserData di tutte le istanze EC2.
+./setup_bucket.sh
+if [ $? -ne 0 ]; then
+  echo "Errore nella creazione del bucket."
+  exit 1
+fi
+
+# 2. DEPLOY LIVELLO REGIONALE (INTERMEDIATE FOG HUB)
+# Crea VPC, Kafka Broker, Databases e l'istanza EC2 dei Servizi nella regione US-EAST-1.
+./deploy_region.sh region-001 --aws-region us-east-1
+if [ $? -ne 0 ]; then
+  echo "Errore nella creazione della regione region-001."
+  exit 1
+fi
+
+# 3. DEPLOY LIVELLO MACROZONA E ZONE (PROXIMITY FOG E EDGE FOG)
+# Inizializza la Macrozona 'build-0001'.
+./deploy_macrozone.sh region-001 build-0001 --aws-region us-east-1
+if [ $? -ne 0 ]; then
+  echo "Errore nella creazione della macrozona build-0001."
+  exit 1
+fi
+
+# Inizializza le zona 'floor-001' nella macrozona 'build-0001'.
+./deploy_zone.sh region-001 build-0001 floor-001 --aws-region us-east-1
+if [ $? -ne 0 ]; then
+  echo "Errore nella creazione della zona floor-001."
+  exit 1
+fi
+```
 
 -----
 
