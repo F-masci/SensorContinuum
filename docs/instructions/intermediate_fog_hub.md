@@ -142,14 +142,10 @@ Il deployment è interamente parametrico. Tutte le variabili essenziali devono e
 
 L'avvio dei Microservizi Hub richiede che l'infrastruttura di supporto (Kafka e Database) sia attiva, accessibile e inizializzata. L'infrastruttura può essere deployata con implementazioni custom o utilizzando i template forniti:
 
-* **Broker Kafka:**
-  * Compose: `deploy/compose/kafka-broker.yml`
-  * Dockerfile: `deploy/docker/kafka-init-topics.Dockerfile`
+* **Broker Kafka:** `deploy/compose/kafka-broker.yml`
 * **Database Regionali:**
-  * Compose: `deploy/compose/region-databases.yml`
-  * Dockerfile:
-    * `deploy/docker/region-metadata-database.Dockerfile` (PostGIS)
-    * `deploy/docker/region-sensor-database.Dockerfile` (TimescaleDB)
+  * `deploy/docker/region-metadata-database.Dockerfile` (PostGIS)
+  * `deploy/docker/region-sensor-database.Dockerfile` (TimescaleDB)
 
 ### A. Creazione dei Volumi Persistenti
 
@@ -165,6 +161,8 @@ docker volume create region-sensor-data-Lazio
 
 ### B. Broker Kafka: Requisiti di Inizializzazione
 
+Se non si utilizza il template Compose fornito per Kafka, è necessario assicurarsi che il Broker sia correttamente configurato e che i topic richiesti siano creati.
+
 Il Broker deve essere accessibile all'hostname **`kafka-broker.${REGION}.sensor-continuum.local`**. I servizi Hub richiedono l'esistenza dei seguenti topic, con le relative configurazioni per le partizioni e la retention policy:
 
 | Nome Topic Richiesto                    | Configurazione                                    |
@@ -175,6 +173,8 @@ Il Broker deve essere accessibile all'hostname **`kafka-broker.${REGION}.sensor-
 | **`heartbeats-proximity-fog-hub`**      | `cleanup.policy=compact,delete` (Compacted Topic) |
 
 ### C. Database Regionali: Requisiti di Inizializzazione
+
+Se non si utilizza il template Compose fornito per i Database, è necessario assicurarsi che entrambi i database siano correttamente configurati e inizializzati con gli schemi SQL richiesti.
 
 Le due istanze database devono essere accessibili ai rispettivi hostname e devono avere gli schemi SQL inizializzati tramite gli script forniti.
 
