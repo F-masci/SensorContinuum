@@ -35,14 +35,14 @@ Queste variabili definiscono l'identità gerarchica del servizio e il suo ruolo 
 
 Queste variabili configurano l'Hub come *consumer* dei dati provenienti dagli Edge Hub.
 
-| Variabile | Descrizione | Default |
-| :--- | :--- | :--- |
-| **`MQTT_BROKER_PROTOCOL`** | Protocollo di connessione al broker MQTT. | `tcp` |
-| **`MQTT_BROKER_ADDRESS`** | Indirizzo IP/Hostname del broker MQTT. | `mosquitto` |
-| **`MQTT_BROKER_PORT`** | Porta di connessione del broker MQTT. | `1883` |
-| **`MQTT_MAX_RECONNECTION_INTERVAL`** | Intervallo massimo tra i tentativi di riconnessione (sec). | $10$ |
-| **`MQTT_MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione. | $10$ |
-| **`MQTT_MESSAGE_PUBLISH_TIMEOUT`** | Timeout per l'invio dei messaggi (sec). | $5$ |
+| Variabile                            | Descrizione                                                | Default     |
+|:-------------------------------------|:-----------------------------------------------------------|:------------|
+| **`MQTT_BROKER_PROTOCOL`**           | Protocollo di connessione al broker MQTT.                  | `tcp`       |
+| **`MQTT_BROKER_ADDRESS`**            | Indirizzo IP/Hostname del broker MQTT.                     | `mosquitto` |
+| **`MQTT_BROKER_PORT`**               | Porta di connessione del broker MQTT.                      | `1883`      |
+| **`MQTT_MAX_RECONNECTION_INTERVAL`** | Intervallo massimo tra i tentativi di riconnessione (sec). | $10$        |
+| **`MQTT_MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione.              | $10$        |
+| **`MQTT_MESSAGE_PUBLISH_TIMEOUT`**   | Timeout per l'invio dei messaggi (sec).                    | $5$         |
 
 **Topic di Sottoscrizione (Derivati):**
 * **Dati Filtrati:** `$share/proximity-fog-hub_<MACROZONE>/filtered-data/<MACROZONE>` (usa Shared Subscription).
@@ -111,15 +111,15 @@ Il **Proximity Hub** è distribuito come una suite di microservizi in Go che gar
 
 Il file Compose `proximity-fog-hub.yaml` definisce l'Hub non come un'unica entità, ma come una **serie di microservizi cooperanti** (basati sull'immagine `fmasci/sc-proximity-fog-hub:latest`) che eseguono ruoli specifici. Tutti i servizi dell'Hub sono scalati a due istanze per l'alta disponibilità.
 
-| Servizio | Istanze | Modalità (`SERVICE_MODE`) | Funzione Principale |
-| :--- | :--- | :--- | :--- |
-| **POSTGRES CACHE** | 1 | (N/A) | Fornisce la cache persistente (TimescaleDB). |
-| **LOCAL CACHE** | 2 | `proximity_hub_local_cache` | Ingestione da MQTT e persistenza idempotente nel DB. |
-| **CONFIGURATOR** | 2 | `proximity_hub_configuration` | Proxy per i messaggi di registrazione/configurazione (MQTT -\> Kafka). |
-| **HEARTBEAT** | 2 | `proximity_hub_heartbeat` | Proxy per i messaggi di heartbeat (MQTT -\> Kafka). |
-| **AGGREGATOR** | 2 | `proximity_hub_aggregator` | Calcolo delle statistiche (max, min, avg) su intervalli di 15 minuti. |
-| **DISPATCHER** | 2 | `proximity_hub_dispatcher` | Implementa l'**Outbox Pattern**; inoltro affidabile dal DB a Kafka. |
-| **CLEANER** | 2 | `proximity_hub_cleaner` | Manutenzione del DB; elimina i record "sent" più vecchi. |
+| Servizio           | Istanze | Modalità                      | Funzione Principale                                                    |
+|:-------------------|:--------|:------------------------------|:-----------------------------------------------------------------------|
+| **POSTGRES CACHE** | 1       | (N/A)                         | Fornisce la cache persistente (TimescaleDB).                           |
+| **LOCAL CACHE**    | 2       | `proximity_hub_local_cache`   | Ingestione da MQTT e persistenza idempotente nel DB.                   |
+| **CONFIGURATOR**   | 2       | `proximity_hub_configuration` | Proxy per i messaggi di registrazione/configurazione (MQTT -\> Kafka). |
+| **HEARTBEAT**      | 2       | `proximity_hub_heartbeat`     | Proxy per i messaggi di heartbeat (MQTT -\> Kafka).                    |
+| **AGGREGATOR**     | 2       | `proximity_hub_aggregator`    | Calcolo delle statistiche (max, min, avg) su intervalli di 15 minuti.  |
+| **DISPATCHER**     | 2       | `proximity_hub_dispatcher`    | Implementa l'**Outbox Pattern**; inoltro affidabile dal DB a Kafka.    |
+| **CLEANER**        | 2       | `proximity_hub_cleaner`       | Manutenzione del DB; elimina i record "sent" più vecchi.               |
 
 Il file sfrutta le estensioni YAML (`x-macrozone-hub-base`, `x-macrozone-hub-env`) per ereditare configurazioni comuni e garantire la coerenza tra le istanze.
 
@@ -211,6 +211,57 @@ In un ambiente Docker locale, si hanno le seguenti opzioni per la risoluzione:
 
 ---
 
+### 4\. Deployment del Broker MQTT della Macrozona
+
+Contestualmente al deployment del Proximity Hub, è necessario installare un broker MQTT per ricevere i dati dai nodi Edge Hub (livello inferiore).
+
+> **⚠️ NOTA ARCHITETTURALE**
+> 
+> È possibile prevedere un broker MQTT per ogni singola zona (comunicazione Sensor -\> Hub) o un **singolo broker per l'intera macrozona** (comunicazione Hub -\> Hub). Per semplicità del deployment locale, la documentazione si concentra sulla seconda casistica, con un unico broker che gestisce l'intera macrozona.
+
+#### A. Template Docker Compose per il Broker MQTT
+
+Il broker può essere deployato utilizzando un'immagine Mosquitto standard o, come in questo caso, un'immagine custom (`fmasci/sc-mqtt-broker:latest`) basata su `eclipse-mosquitto:latest` con l'aggiunta di file di configurazione specifici.
+
+Di seguito è riportato il template Compose per il broker:
+
+```yaml
+services:
+  mqtt-broker:
+    image: fmasci/sc-mqtt-broker:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/mosquitto.Dockerfile
+    container_name: mqtt-broker-${EDGE_MACROZONE}-01
+    hostname: mqtt-broker-${EDGE_MACROZONE}-01
+    ports:
+      - "1883:1883"
+    healthcheck:
+      test: [ "CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 2 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  mqtt-broker-bridge:
+    name: mqtt-broker-${EDGE_MACROZONE}-bridge
+    driver: bridge
+```
+
+#### B. Avvio del Broker
+
+Se il broker non è già attivo, è necessario avviare il file Docker Compose specifico (`deploy/compose/mqtt-broker.yml`) in aggiunta ai servizi Hub.
+
+```bash
+# Assumendo di utilizzare il file mqtt-broker.yml
+docker compose -f deploy/compose/mqtt-broker.yml --env-file .env -p Lazio_RomaMacro_Broker up -d
+```
+
+Una volta avviato, il container sarà accessibile pubblicamente sulla porta `1883`, consentendo ai microservizi Proximity Hub di sottoscrivere i dati dal livello Edge.
+
+---
+
 ## Deploy su AWS del Proximity Hub
 
 Il **Proximity Hub**viene distribuito su un'istanza **EC2** dedicata alla macrozona tramite **Docker Compose**, con l'orchestrazione gestita da **AWS CloudFormation** attraverso lo script Bash **`deploy_macrozone.sh`**.
@@ -238,9 +289,17 @@ Prima di procedere con l'istanza EC2, lo script lancia il deployment del templat
 * **Subnet Pubblica** (`$REGION-$MACROZONE-subnet`): Viene calcolato e assegnato un CIDR disponibile all'interno della VPC.
 * **Security Group** (`$REGION-$MACROZONE-sg`): Configurato per permettere tutto il traffico in ingresso e in uscita.
 
+----
+
+### 1\. Preparazione: Caricamento Asset su S3
+
+Prima di eseguire il deployment, tutti gli asset necessari (script di installazione, file Docker Compose, file di servizio Systemd e script di analisi) devono essere caricati in un **Bucket S3** dedicato.
+
+Questo processo è documentato in [`setup_bucket.md`](./setup_bucket.md) e gestito dallo script **`deploy/scripts/setup_bucket.sh`**.
+
 -----
 
-### 1\. Deploy Macrozona Services tramite CloudFormation
+### 2\. Deploy Macrozona Services tramite CloudFormation
 
 Dopo aver creato o verificato le risorse di rete, lo script `deploy_macrozone.sh` lancia lo stack dei servizi tramite il template **`services.yaml`**.
 
@@ -254,7 +313,7 @@ Il template `services.yaml` esegue le seguenti operazioni:
 
 -----
 
-### 2\. Dettagli Operativi del Deployment Script in EC2
+### 3\. Dettagli Operativi del Deployment Script in EC2
 
 Lo script Bash **`deploy_proximity_services.sh`**, eseguito all'interno dell'istanza EC2, è responsabile dell'installazione e dell'avvio di **due componenti chiave**: la suite di microservizi **Proximity Hub** e il **Broker MQTT** locale.
 

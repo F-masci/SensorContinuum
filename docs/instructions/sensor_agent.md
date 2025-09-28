@@ -181,7 +181,7 @@ La fase di deploy su AWS per l'ambiente Edge Hub e i Sensor Agents viene gestita
 
 -----
 
-## ⚠️ Prerequisiti di Deployment
+### ⚠️ Prerequisiti di Deployment
 
 La fase di **Deploy su AWS**, gestita dallo script **`deploy_zone.sh`**, è l'ultima di una sequenza di provisioning che stabilisce l'infrastruttura di rete a livello regionale e di macrozona.
 
@@ -207,7 +207,7 @@ Assicurarsi che la catena di provisioning dell'infrastruttura AWS sia stata comp
 
 -----
 
-## 1\. Preparazione: Caricamento Asset su S3
+### 1\. Preparazione: Caricamento Asset su S3
 
 Prima di eseguire il deployment, tutti gli asset necessari (script di installazione, file Docker Compose, file di servizio Systemd e script di analisi) devono essere caricati in un **Bucket S3** dedicato.
 
@@ -215,11 +215,11 @@ Questo processo è documentato in [`setup_bucket.md`](./setup_bucket.md) e gesti
 
 -----
 
-## 2\. Deploy Edge Zone tramite CloudFormation
+### 2\. Deploy Edge Zone tramite CloudFormation
 
 Il deployment dell'intera zona Edge (che comprende l'istanza EC2, la configurazione di Docker, gli Edge Hub e i Sensor Agents) è orchestrato dallo script **`deploy/scripts/deploy_zone.sh`** che utilizza il template **`deploy/cloudformation/zone/services.yaml`**.
 
-### Funzionamento del Template CloudFormation
+#### Funzionamento del Template CloudFormation
 
 Il template CloudFormation esegue le seguenti operazioni cruciali per il layer Edge:
 
@@ -228,11 +228,11 @@ Il template CloudFormation esegue le seguenti operazioni cruciali per il layer E
 * **Configurazione con `UserData`**: Il blocco `UserData` (eseguito al primo boot) installa l'AWS CLI, scarica gli **`InitScripts`** (come `docker-install.sh`) per installare Docker e Docker Compose, scarica il file **`.env`** specifico per la zona da S3 e infine esegue lo script di deployment **`deploy_edge_services.sh`**.
 * **Configurazione DNS (Route53)**: Crea un set di **Record CNAME** all'interno della Hosted Zone privata (`$REGION.sensor-continuum.local`). Questi record sono essenziali per risolvere correttamente i nomi di dominio complessi dei broker MQTT (`$ZONE.$MACROZONE.sensor.mqtt-broker.$HOSTED_ZONE_NAME`) verso l'IP privato dell'istanza EC2.
 
-### Utilizzo dello Script di Deployment
+#### Utilizzo dello Script di Deployment
 
 Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per definire la regione logica del sistema (`Lazio`), la macrozona (`RomaMacro`) e la zona (`TorVergata`).
 
-#### Sintassi ed Esempi
+##### Sintassi ed Esempi
 
 **Sintassi Completa:**
 
@@ -252,7 +252,7 @@ Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per 
 ./deploy_zone.sh Lazio RomaMacro TestZone --deploy=localstack --instance-type t2.micro
 ```
 
-#### Opzioni dello Script di Deployment
+##### Opzioni dello Script di Deployment
 
 Oltre ai tre parametri posizionali obbligatori (Regione Logica, Macrozona, Zona), lo script **`deploy_zone.sh`** accetta le seguenti opzioni facoltative per personalizzare l'ambiente di deployment:
 
@@ -262,9 +262,9 @@ Oltre ai tre parametri posizionali obbligatori (Regione Logica, Macrozona, Zona)
 | **Regione AWS**         | `--aws-region REGION`  | Specifica la regione geografica AWS dove verranno create le risorse (e dove verranno cercate le risorse preesistenti come VPC e Subnet).                          | `us-east-1`       |
 | **Tipo di Istanza EC2** | `--instance-type TYPE` | Definisce il tipo di istanza EC2 su cui verranno eseguiti i container Docker (Edge Hub e Sensor Agents). Questo parametro è cruciale per dimensionare le risorse. | `t3.small`        |
 
-### Dettagli Operativi del Deployment Script in EC2
+### 3\. Dettagli Operativi del Deployment Script in EC2
 
-Questo script Bash (`deploy_edge_services.sh`) viene eseguito all'interno dell'istanza EC2 tramite `UserData` ed è responsabile dell'avvio dei servizi Edge Hub e Sensor Agent.
+Lo script Bash `deploy_edge_services.sh` viene eseguito all'interno dell'istanza EC2 tramite `UserData` ed è responsabile dell'avvio dei servizi Edge Hub e Sensor Agent.
 
 #### A. Sequenza di Avvio dei Servizi
 
