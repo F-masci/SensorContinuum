@@ -1,20 +1,31 @@
 # Istruzioni per il Sensor Agent
 
-Il **Sensor Agent** rappresenta il livello più basso del **Compute Continuum**. Non è un sensore fisico, ma un simulatore che legge dati storici da un dataset CSV e li pubblica periodicamente come misurazioni in un formato standardizzato verso l'**Edge Hub** tramite il protocollo **MQTT**.
+Il Sensor Agent rappresenta il livello più basso del sistema. Non è un sensore fisico, ma un simulatore che legge dati storici da un dataset CSV e li pubblica periodicamente come misurazioni in un formato standardizzato verso l'Edge Hub tramite il protocollo MQTT.
 
 Il suo funzionamento ad alto livello include:
 1.  **Caricamento Dati:** Legge un dataset predefinito.
 2.  **Identificazione:** Genera un ID univoco e si registra nelle macrozone/zone di appartenenza.
-3.  **Simulazione Temporale:** Utilizza un *offset* per simulare l'invio dei dati come se fossero raccolti in tempo reale, partendo da un punto indietro nel tempo (es. 2 giorni fa).
+3.  **Simulazione Temporale:** Utilizza un *offset* per simulare l'invio dei dati come se fossero raccolti in tempo reale, partendo da un punto indietro nel .
 4.  **Trasmissione:** Pubblica le misurazioni sul *topic* MQTT dedicato, garantendo la connettività e gestendo i tentativi di riconnessione al broker.
 
----
+-----
 
 ## Variabili d'Ambiente per la Configurazione
 
-La configurazione del **Sensor Agent** avviene interamente tramite variabili d'ambiente, suddivise in tre categorie principali:
+La configurazione del Sensor Agent avviene interamente tramite variabili d'ambiente, suddivise in quattro categorie principali:
 
-### 1. Parametri di Simulazione
+### A\. Parametri di Identificazione e Ambiente
+
+Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
+
+| Variabile                 | Descrizione                                                                                                 | Valori Ammessi (Default)             |
+|:--------------------------|:------------------------------------------------------------------------------------------------------------|:-------------------------------------|
+| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa (es. `RegioneA`)             |
+| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa (es. `Zona1`)                |
+| **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore.                                                               | **`uuid`** (Default), **`hostname`** |
+| **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa (es. UUID generato)          |
+
+### B\. Parametri di Simulazione
 
 Queste variabili controllano l'origine e la natura dei dati simulati.
 
@@ -29,18 +40,7 @@ Queste variabili controllano l'origine e la natura dei dati simulati.
 | **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV.             | **`2006-01-02T15:04:05`** (Default)                                    |
 | **`SIMULATION_OFFSET_DAY`**       | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica.       | Intero non negativo (**2** Default)                                    |
 
-### 2. Parametri di Identificazione e Ambiente
-
-Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
-
-| Variabile                 | Descrizione                                                                                                 | Valori Ammessi (Default)             |
-|:--------------------------|:------------------------------------------------------------------------------------------------------------|:-------------------------------------|
-| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa (es. `RegioneA`)             |
-| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa (es. `Zona1`)                |
-| **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore.                                                               | **`uuid`** (Default), **`hostname`** |
-| **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa (es. UUID generato)          |
-
-### 3. Parametri di Comunicazione (MQTT Broker Settings)
+### C\. Parametri di Comunicazione
 
 Controllano la connessione al broker MQTT dell'Edge Hub.
 
@@ -54,7 +54,7 @@ Controllano la connessione al broker MQTT dell'Edge Hub.
 | **`MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione.                     | Intero positivo (**10** Default)        |
 | **`MESSAGE_PUBLISH_TIMEOUT`**   | Timeout (in secondi) per l'invio di un singolo messaggio MQTT.    | Intero positivo (**5** Default)         |
 
-### 4. Parametri di Logging e Health Check
+### D\. Parametri di Logging e Health Check
 
 | Variabile                 | Descrizione                                                                   | Valori Ammessi (Default)                      |
 |:--------------------------|:------------------------------------------------------------------------------|:----------------------------------------------|
@@ -66,11 +66,11 @@ Controllano la connessione al broker MQTT dell'Edge Hub.
 
 ## Deploy in Locale del Sensor Agent
 
-Il **Sensor Agent** (simulatore) costituisce il livello più basso del **Compute Continuum**. È distribuito come immagine Docker (`fmasci/sc-sensor-agent:latest`) ed è configurato interamente tramite variabili d'ambiente per connettersi al broker MQTT del livello Edge Hub.
+Il Sensor Agent è distribuito come immagine Docker (`fmasci/sc-sensor-agent:latest`) ed è configurato interamente tramite variabili d'ambiente per connettersi al broker MQTT del livello Edge Hub.
 
-### 1\. Avvio di un Singolo Sensor Agent
+### Avvio di un Singolo Sensor Agent
 
-È possibile eseguire un singolo agente utilizzando l'immagine Docker pre-buildata o costruendola localmente. Il template base di Docker è disponibile nel file **`deploy/docker/sensor-agent.Dockerfile`**.
+È possibile eseguire un singolo agente utilizzando l'immagine Docker pre-buildata o costruendola localmente. Il template base di Docker è disponibile nel file [`sensor-agent.Dockerfile`](../../deploy/docker/sensor-agent.Dockerfile).
 
 #### Esempio di Docker Compose per Singolo Sensore
 
@@ -112,16 +112,14 @@ docker compose up -d sensor-agent-01
 
 **Risoluzione del Nome Host del Broker:**
 
-Il template utilizza un indirizzo complesso (es. `${EDGE_ZONE}.${EDGE_MACROZONE}.sensor.mqtt-broker.${REGION}.sensor-continuum.local`). Per risolvere questo nome di dominio e dirigerlo correttamente verso l'host del broker MQTT (il container desiderato), si hanno due opzioni in un ambiente Docker locale:
+Il template utilizza un indirizzo parametrico per connettersi al broker. Per risolvere questo nome di dominio e dirigerlo correttamente verso l'host desiderato, si hanno due opzioni in un ambiente Docker locale:
 
-1.  **Utilizzo di `extra_hosts`:** Decommentare e configurare la sezione `extra_hosts` nel file Docker Compose, mappando l'indirizzo del broker all'IP appropriato.
-2.  **Modifica del File `/etc/hosts`:** Se necessario, è possibile modificare il file **`/etc/hosts`** del sistema operativo host per puntare il record DNS utilizzato direttamente all'indirizzo IP del container o del servizio che ospita il broker.
+* **Utilizzo di `extra_hosts`:** Decommentare e configurare la sezione `extra_hosts` nel file Docker Compose, mappando l'indirizzo del broker all'IP appropriato.
+* **Modifica del File `/etc/hosts`:** Se necessario, è possibile modificare il file `/etc/hosts` del sistema operativo host per puntare il record DNS utilizzato direttamente all'indirizzo IP del container o del servizio che ospita il broker.
 
------
+### Deployment di una Fleet di Sensori
 
-### 2\. Deployment di una Fleet di Sensori (Script di Generazione)
-
-Per simulare l'ambiente distribuito con una **molteplicità di sensori**, si ricorre al template **`sensor-agent.template.yml`** e allo script Go **`generate-sensor-agent.go`**, entrambi presenti nella cartella `deploy/compose`. Lo script genera automaticamente un file Docker Compose con il numero di agenti richiesto e parametri di simulazione casuali.
+Per simulare l'ambiente distribuito con una molteplicità di sensori, si ricorre al template [`sensor-agent.template.yml`](../../deploy/compose/sensor-agent.template.yml) e allo script Go [`generate-sensor-agent.go`](../../deploy/compose/generate-sensor-agents.go), entrambi presenti nella cartella [`deploy/compose`](../../deploy/compose/). Lo script genera automaticamente un file Docker Compose con il numero di agenti richiesto e parametri di simulazione casuali.
 
 #### Procedura
 
@@ -162,8 +160,8 @@ In caso di malfunzionamenti, la direttiva **`restart: unless-stopped`** assicura
 > docker compose -f sensor-agent.generated_2.yml --env-file simulazione.env up -d
 > ```
 >
-> **Nomi di Progetto per la Gestione Layer:**
-> Poiché al livello Edge appartengono diversi servizi (Edge Hub e Sensor Agents), è cruciale nominare esplicitamente il progetto Docker Compose. Questo facilita l'identificazione, l'avvio e l'arresto dei container che fanno parte di quella specifica macrozona/zona.
+> **Nomi di Progetto:**
+> Poiché al livello Edge appartengono diversi servizi (Edge Hub e Sensor Agents), è cruciale nominare esplicitamente il progetto Docker Compose. Questo facilita l'identificazione, l'avvio e l'arresto dei container che fanno parte di quella specifica zona.
 >
 > Si raccomanda di utilizzare il flag **`-p`** o **`--project-name`** con un nome che rifletta la regione, la macrozona e la zona (es. `Lazio_RomaMacro_TorVergata`).
 >
@@ -177,15 +175,13 @@ In caso di malfunzionamenti, la direttiva **`restart: unless-stopped`** assicura
 
 ## Deploy su AWS del Sensor Agent
 
-La fase di deploy su AWS per l'ambiente Edge Hub e i Sensor Agents viene gestita tramite un approccio infrastrutturale basato su **AWS CloudFormation** e l'utilizzo di script ausiliari e asset ospitati su **Amazon S3**.
-
------
+La fase di deploy su AWS per l'ambiente Edge Hub e i Sensor Agents viene gestita tramite un approccio infrastrutturale automatico basato su AWS CloudFormation e l'utilizzo di script ausiliari e asset ospitati su Amazon S3.
 
 ### ⚠️ Prerequisiti di Deployment
 
-La fase di **Deploy su AWS**, gestita dallo script **`deploy_zone.sh`**, è l'ultima di una sequenza di provisioning che stabilisce l'infrastruttura di rete a livello regionale e di macrozona.
+La fase di *Deploy su AWS, gestita dallo script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh), è l'ultima di una sequenza di provisioning che stabilisce l'infrastruttura di rete a livello regionale e di macrozona.
 
-**Prima di eseguire lo script di deployment della Zona, è indispensabile che le seguenti risorse AWS siano già state create e configurate attraverso i rispettivi script di provisioning di Livello Superiore (`deploy_region.sh` e `deploy_macrozone.sh`):**
+**Prima di eseguire lo script di deployment della Zona, è indispensabile che le seguenti risorse AWS siano già state create e configurate attraverso i rispettivi script di provisioning di Livello Superiore ([`deploy_region.sh`](../../deploy/scripts/deploy_region.sh) e [`deploy_macrozone.sh`](../../deploy/scripts/deploy_macrozone.sh)) o manualmente:**
 
 | Risorsa                          | Livello di Creazione | Variabile nello script | Riferimento Logico                                   |
 |:---------------------------------|:---------------------|:-----------------------|:-----------------------------------------------------|
@@ -195,42 +191,38 @@ La fase di **Deploy su AWS**, gestita dallo script **`deploy_zone.sh`**, è l'ul
 | **Route Table Pubblica**         | Regionale            | `$ROUTE_TABLE_ID`      | Identificata da **`$REGION-vpc-public-rt`**          |
 | **Route 53 Hosted Zone Privata** | Regionale            | `$HOSTED_ZONE_ID`      | Identificata da **`$REGION.sensor-continuum.local`** |
 
-Lo script `deploy_zone.sh` non crea le risorse di rete; piuttosto, **le cerca e le recupera** tramite le funzioni `find_vpc_id`, `find_subnet_id`, etc. Se queste risorse non esistono o non corrispondono ai tag di denominazione attesi (`$VPC_NAME`, `$SUBNET_NAME`, etc.), lo script fallirà, non potendo lanciare lo stack CloudFormation.
+Lo script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh) non crea le risorse di rete; piuttosto, le cerca e le recupera tramite le funzioni presenti nel file [`utils.sh`](../../deploy/scripts/utils.sh): `find_vpc_id`, `find_subnet_id`, etc. Se queste risorse non esistono o non corrispondono ai tag di denominazione attesi, lo script fallirà, non potendo lanciare lo stack CloudFormation.
 
-**Sequenza di Deployment Rigorosa:**
+#### Sequenza di Deployment Rigorosa
 
-1.  **Deploy Livello Regionale:** Esecuzione dello script per creare la **VPC**, la **Hosted Zone** e la **Route Table Pubblica**.
-2.  **Deploy Livello Macrozona:** Esecuzione dello script per creare la **Subnet** e il **Security Group** associati.
-3.  **Deploy Livello Zona/Edge:** Esecuzione dello script **`deploy_zone.sh`** per installare l'istanza EC2, i container (Edge Hub, Sensor Agents) e configurare i record DNS specifici (`$SENSOR_MQTT_BROKER_HOSTNAME`, ecc.) che puntano all'IP dell'istanza.
+1.  **Deploy Livello Regionale:** Esecuzione dello script per creare la VPC, la Hosted Zone e la Route Table Pubblica.
+2.  **Deploy Livello Macrozona:** Esecuzione dello script per creare la Subnet e il Security Group associati.
+3.  **Deploy Livello Zona/Edge:** Esecuzione dello script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh) per installare l'istanza EC2, i container e configurare i record DNS specifici che puntano dell'istanza contenente il broker MQTT associato alla zona.
 
 Assicurarsi che la catena di provisioning dell'infrastruttura AWS sia stata completata correttamente è la condizione necessaria per un deploy di successo dell'Edge Zone.
 
------
+### 1\. Caricamento Asset su S3
 
-### 1\. Preparazione: Caricamento Asset su S3
+Prima di eseguire il deployment, tutti gli asset necessari (script di installazione, file Docker Compose, file di servizio Systemd e script di analisi) devono essere caricati in un Bucket S3 dedicato.
 
-Prima di eseguire il deployment, tutti gli asset necessari (script di installazione, file Docker Compose, file di servizio Systemd e script di analisi) devono essere caricati in un **Bucket S3** dedicato.
+Questo processo è documentato in [`setup_bucket.md`](./setup_bucket.md) e gestito dallo script [`setup_bucket.sh`](../../deploy/scripts/setup_bucket.sh).
 
-Questo processo è documentato in [`setup_bucket.md`](./setup_bucket.md) e gestito dallo script **`deploy/scripts/setup_bucket.sh`**.
+### 2\. Deploy Edge Zone
 
------
-
-### 2\. Deploy Edge Zone tramite CloudFormation
-
-Il deployment dell'intera zona Edge (che comprende l'istanza EC2, la configurazione di Docker, gli Edge Hub e i Sensor Agents) è orchestrato dallo script **`deploy/scripts/deploy_zone.sh`** che utilizza il template **`deploy/cloudformation/zone/services.yaml`**.
+Il deployment dell'intera zona Edge (che comprende l'istanza EC2, la configurazione di Docker e i Sensor Agents) è orchestrato dallo script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh) che utilizza il template [`zone/services.yaml`](../../deploy/cloudformation/zone/services.yaml).
 
 #### Funzionamento del Template CloudFormation
 
 Il template CloudFormation esegue le seguenti operazioni cruciali per il layer Edge:
 
-* **Creazione EC2 Instance (`ServicesInstance`)**: Avvia un'istanza EC2 (di default Amazon Linux 2) che ospiterà i container Docker.
-    * Viene associato un **IAM Role** (`LabRole`) che fornisce i permessi necessari per accedere a S3 e Route53.
-* **Configurazione con `UserData`**: Il blocco `UserData` (eseguito al primo boot) installa l'AWS CLI, scarica gli **`InitScripts`** (come `docker-install.sh`) per installare Docker e Docker Compose, scarica il file **`.env`** specifico per la zona da S3 e infine esegue lo script di deployment **`deploy_edge_services.sh`**.
-* **Configurazione DNS (Route53)**: Crea un set di **Record CNAME** all'interno della Hosted Zone privata (`$REGION.sensor-continuum.local`). Questi record sono essenziali per risolvere correttamente i nomi di dominio complessi dei broker MQTT (`$ZONE.$MACROZONE.sensor.mqtt-broker.$HOSTED_ZONE_NAME`) verso l'IP privato dell'istanza EC2.
+* **Creazione EC2 Instance**: Avvia un'istanza EC2 (di default Amazon Linux 2) che ospiterà i container Docker.
+    * Viene associato un IAM Role che fornisce i permessi necessari per accedere a S3 e Route53.
+* **Configurazione con `UserData`**: Il blocco `UserData` (eseguito al primo boot) installa l'AWS CLI, scarica gli *init scripts* (come `docker-install.sh`) per installare Docker e Docker Compose, scarica il file `.env` specifico per la zona da S3 e infine esegue lo script di deployment [`deploy_edge_services.sh`](../../deploy/scripts/deploy/deploy_edge_services.sh).
+* **Configurazione DNS privato**: Crea un set di Record CNAME all'interno della Hosted Zone privata relativa alla regione. Questi record sono essenziali per risolvere correttamente i nomi di dominio complessi dei broker MQTT verso l'IP privato dell'istanza EC2.
 
 #### Utilizzo dello Script di Deployment
 
-Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per definire la regione logica del sistema (`Lazio`), la macrozona (`RomaMacro`) e la zona (`TorVergata`).
+Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per definire la regione logica del sistema, la macrozona e la zona.
 
 ##### Sintassi ed Esempi
 
@@ -240,45 +232,27 @@ Lo script di avvio CloudFormation accetta parametri posizionali obbligatori per 
 ./deploy_zone.sh region-name macrozone-name zone-name [opzioni]
 ```
 
-**Esempio di Deploy Standard su AWS (produzione):**
+**Esempio di Deploy Standard su AWS:**
 
 ```bash
-./deploy_zone.sh Lazio RomaMacro TorVergata --aws-region eu-central-1 --instance-type t3.medium
+./deploy_zone.sh Lazio RomaMacro TorVergata --aws-region us-east-1 --instance-type t3.small
 ```
 
-**Esempio di Test (utilizzando LocalStack):**
+#### Dettagli Operativi del Deployment Script in EC2
 
-```bash
-./deploy_zone.sh Lazio RomaMacro TestZone --deploy=localstack --instance-type t2.micro
-```
+Lo script Bash [`deploy_edge_services.sh`](../../deploy/scripts/deploy/deploy_edge_services.sh) viene eseguito all'interno dell'istanza EC2 tramite `UserData` ed è responsabile dell'avvio dei servizi di Sensor Agent.
 
-##### Opzioni dello Script di Deployment
-
-Oltre ai tre parametri posizionali obbligatori (Regione Logica, Macrozona, Zona), lo script **`deploy_zone.sh`** accetta le seguenti opzioni facoltative per personalizzare l'ambiente di deployment:
-
-| Opzione                 | Parametro              | Descrizione                                                                                                                                                       | Valore di Default |
-|:------------------------|:-----------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------|
-| **Modalità di Deploy**  | `--deploy=localstack`  | Forza il deployment su **LocalStack**. Se non specificata, il deployment avviene sul cloud AWS reale.                                                             | `aws`             |
-| **Regione AWS**         | `--aws-region REGION`  | Specifica la regione geografica AWS dove verranno create le risorse (e dove verranno cercate le risorse preesistenti come VPC e Subnet).                          | `us-east-1`       |
-| **Tipo di Istanza EC2** | `--instance-type TYPE` | Definisce il tipo di istanza EC2 su cui verranno eseguiti i container Docker (Edge Hub e Sensor Agents). Questo parametro è cruciale per dimensionare le risorse. | `t3.small`        |
-
-### 3\. Dettagli Operativi del Deployment Script in EC2
-
-Lo script Bash `deploy_edge_services.sh` viene eseguito all'interno dell'istanza EC2 tramite `UserData` ed è responsabile dell'avvio dei servizi Edge Hub e Sensor Agent.
-
-#### A. Sequenza di Avvio dei Servizi
+##### Sequenza di Avvio dei Servizi
 
 1.  **Caricamento Variabili**: Carica le variabili d'ambiente dal file **`.env`** precedentemente scaricato da S3.
-2.  **Download Docker Compose**: Scarica da S3 la configurazione generata per i sensori (`sensor-agent.generated_N.yml`, con **N=50** di default).
+2.  **Download Docker Compose**: Scarica da S3 la configurazione generata per i sensori (`sensor-agent.generated_N.yml`, con N=50 di default).
 3.  **Avvio Sensor Agents**: Utilizza `docker-compose -p sensors` per avviare i simulatori di sensori, isolandoli in un progetto separato per facilitare la gestione.
 
-#### B. Gestione Operativa e Resilienza
+##### Gestione Operativa e Resilienza
 
-Lo script `deploy_edge_services.sh` integra diverse funzionalità per la gestione e la simulazione di un ambiente Edge robusto:
+Lo script [`deploy_edge_services.sh`](../../deploy/scripts/deploy/deploy_edge_services.sh) integra diverse funzionalità per la gestione e la simulazione di un ambiente Edge robusto:
 
-| Funzionalità                        | Dettaglio Operativo                                                                                                                                                                                                                                                                                                   |
-|:------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Simulatore di Ritardi (Latenza)** | Scarica ed esegue lo script **`init-delay.sh`** per simulare condizioni di rete reali. Applica una latenza di rete configurabile (es. `${NETWORK_DELAY:-200ms}`) sull'interfaccia di rete dell'istanza EC2.                                                                                                           |
-| **Cron Job per Resilienza**         | Configura un **Cron Job** che riavvia periodicamente i container dei sensori alle 3:00 (`docker-compose -p sensors restart`). Questo simula il *churn* (spegnimento/riavvio casuale) dei dispositivi Edge per testare la resilienza del sistema.                                                                      |
-| **Servizio Systemd**                | Configura il servizio **`sc-deploy.service`** per eseguire automaticamente lo script di deployment all'avvio del sistema. Ciò garantisce che i servizi vengano ripristinati correttamente dopo un riavvio dell'istanza EC2.                                                                                           |
-| **Script di Analisi**               | Scarica lo script **`analyze_failure.sh`**. Questo strumento è progettato per analizzare i log dei container, confrontando i messaggi ricevuti con i messaggi attesi e calcolando parametri di performance chiave come il **Missing Rate** (tasso di messaggi mancanti) e l'errore nel rilevamento degli **Outlier**. |
+* **Simulatore di Ritardi**: Scarica ed esegue lo script [`init-delay.sh`](../../deploy/scripts/inits/init-delay.sh) per simulare condizioni di rete reali. Applica una latenza di rete configurabile (di default impostata a `${NETWORK_DELAY:-200ms}`) sull'interfaccia di rete dell'istanza EC2.
+* **Cron Job per Resilienza**: Configura un Cron Job che riavvia periodicamente i container dei sensori alle 3:00.
+* **Servizio Systemd**: Configura il servizio [`sc-deploy.service`](../../deploy/scripts/services/sc-deploy.service.template) per eseguire automaticamente lo script di deployment all'avvio del sistema. Ciò garantisce che i servizi vengano ripristinati correttamente dopo un riavvio dell'istanza EC2.
+* **Script di Analisi**: Scarica lo script [`analyze_failure.sh`](../../deploy/scripts/performance/analyze_failure.sh). Questo strumento è progettato per analizzare i log dei container, confrontando i messaggi ricevuti con i messaggi attesi e calcolando parametri di performance chiave come il *Missing Rate* e l'*errore nel rilevamento degli Outlier*.
