@@ -3,10 +3,10 @@
 Il Sensor Agent rappresenta il livello più basso del sistema. Non è un sensore fisico, ma un simulatore che legge dati storici da un dataset CSV e li pubblica periodicamente come misurazioni in un formato standardizzato verso l'Edge Hub tramite il protocollo MQTT.
 
 Il suo funzionamento ad alto livello include:
-1.  **Caricamento Dati:** Legge un dataset predefinito.
-2.  **Identificazione:** Genera un ID univoco e si registra nelle macrozone/zone di appartenenza.
-3.  **Simulazione Temporale:** Utilizza un *offset* per simulare l'invio dei dati come se fossero raccolti in tempo reale, partendo da un punto indietro nel .
-4.  **Trasmissione:** Pubblica le misurazioni sul *topic* MQTT dedicato, garantendo la connettività e gestendo i tentativi di riconnessione al broker.
+* **Caricamento Dati:** Legge un dataset predefinito.
+* **Identificazione:** Genera un ID univoco e si registra nelle macrozone/zone di appartenenza.
+* **Simulazione Temporale:** Utilizza un *offset* per simulare l'invio dei dati come se fossero raccolti in tempo reale, partendo da un punto indietro nel .
+* **Trasmissione:** Pubblica le misurazioni sul *topic* MQTT dedicato, garantendo la connettività e gestendo i tentativi di riconnessione al broker.
 
 -----
 
@@ -20,8 +20,8 @@ Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
 
 | Variabile                 | Descrizione                                                                                                 | Valori Ammessi (Default)             |
 |:--------------------------|:------------------------------------------------------------------------------------------------------------|:-------------------------------------|
-| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa                              |
-| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa                              |
+| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona a cui il sensore appartiene.                               | Stringa                              |
+| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona a cui il sensore appartiene.                                    | Stringa                              |
 | **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore.                                                               | **`uuid`** (Default), **`hostname`** |
 | **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa                              |
 
@@ -34,7 +34,7 @@ Queste variabili controllano l'origine e la natura dei dati simulati.
 | **`SENSOR_LOCATION`**             | Definisce il contesto del sensore.                                                          | **`indoor`** (Default), **`outdoor`**                                     |
 | **`SENSOR_TYPE`**                 | Definisce la grandezza fisica misurata.                                                     | Stringa( **`temperature`** Default, **`humidity`**, **`pressure`**, ecc.) |
 | **`SIMULATION_SENSOR_REFERENCE`** | Riferimento al modello di sensore fisico simulato, cruciale per l'interpretazione dei dati. | **`bmp280`** (Default) o altri 17 modelli (es. `DHT22`, `SPS30`, ecc.)    |
-| **`SIMULATION_VALUE_COLUMN`**     | Nome della colonna nel file CSV da cui leggere il valore del sensore.                       | Stringa (**`[SENSOR_TYPE]`** Default)                                    |
+| **`SIMULATION_VALUE_COLUMN`**     | Nome della colonna nel file CSV da cui leggere il valore del sensore.                       | Stringa (**`[SENSOR_TYPE]`** Default)                                     |
 | **`SIMULTION_TIMESTAMP_COLUMN`**  | Nome della colonna nel file CSV contenente i timestamp.                                     | Stringa (**`timestamp`** Default)                                         |
 | **`SIMULATION_SEPARATOR`**        | Carattere separatore utilizzato nel file CSV.                                               | Stringa (**`;`** Default)                                                 |
 | **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV.             | Stringa (**`2006-01-02T15:04:05`** Default)                               |
@@ -149,6 +149,8 @@ Per simulare l'ambiente distribuito con una molteplicità di sensori, si ricorre
 
 In caso di malfunzionamenti, la direttiva **`restart: unless-stopped`** assicura che Docker Compose tenti di riavviare automaticamente i container dei sensori.
 
+Come specificato nella sezione precedente, per il corretto funzionamento del Sensor Agent, è necessario che il broker MQTT sia raggiungibile tramite il nome di dominio configurato nella variabile `MQTT_BROKER_ADDRESS`.
+
 > **⚠️ NOTA OPERATIVA**
 >
 > **File d'Ambiente:**
@@ -179,7 +181,7 @@ La fase di deploy su AWS per l'ambiente Edge Hub e i Sensor Agents viene gestita
 
 ### ⚠️ Prerequisiti di Deployment
 
-La fase di *Deploy su AWS, gestita dallo script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh), è l'ultima di una sequenza di provisioning che stabilisce l'infrastruttura di rete a livello regionale e di macrozona.
+La fase di Deploy su AWS, gestita dallo script [`deploy_zone.sh`](../../deploy/scripts/deploy_zone.sh), è l'ultima di una sequenza di provisioning che stabilisce l'infrastruttura di rete a livello regionale e di macrozona.
 
 **Prima di eseguire lo script di deployment della Zona, è indispensabile che le seguenti risorse AWS siano già state create e configurate attraverso i rispettivi script di provisioning di Livello Superiore ([`deploy_region.sh`](../../deploy/scripts/deploy_region.sh) e [`deploy_macrozone.sh`](../../deploy/scripts/deploy_macrozone.sh)) o manualmente:**
 
