@@ -20,39 +20,39 @@ Definiscono l'appartenenza gerarchica del Sensor Agent e il suo ID.
 
 | Variabile                 | Descrizione                                                                                                 | Valori Ammessi (Default)             |
 |:--------------------------|:------------------------------------------------------------------------------------------------------------|:-------------------------------------|
-| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa (es. `RegioneA`)             |
-| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa (es. `Zona1`)                |
+| **`EDGE_MACROZONE`**      | **Obbligatoria.** Identificativo della macrozona (Edge di secondo livello) a cui il sensore appartiene.     | Stringa                              |
+| **`EDGE_ZONE`**           | **Obbligatoria.** Identificativo della zona (Edge di primo livello) a cui il sensore appartiene.            | Stringa                              |
 | **`SENSOR_ID_GENERATOR`** | Metodo per generare l'ID univoco del sensore.                                                               | **`uuid`** (Default), **`hostname`** |
-| **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa (es. UUID generato)          |
+| **`SENSOR_ID`**           | ID univoco del sensore. Se non specificato, viene generato automaticamente in base a `SENSOR_ID_GENERATOR`. | Stringa                              |
 
 ### B\. Parametri di Simulazione
 
 Queste variabili controllano l'origine e la natura dei dati simulati.
 
-| Variabile                         | Descrizione                                                                                 | Valori Ammessi (Default)                                               |
-|:----------------------------------|:--------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------|
-| **`SENSOR_LOCATION`**             | Definisce il contesto del sensore.                                                          | **`indoor`** (Default), **`outdoor`**                                  |
-| **`SENSOR_TYPE`**                 | Definisce la grandezza fisica misurata.                                                     | **`temperature`** (Default), **`humidity`**, **`pressure`**            |
-| **`SIMULATION_SENSOR_REFERENCE`** | Riferimento al modello di sensore fisico simulato, cruciale per l'interpretazione dei dati. | **`bmp280`** (Default) o altri 17 modelli (es. `DHT22`, `SPS30`, ecc.) |
-| **`SIMULATION_VALUE_COLUMN`**     | Nome della colonna nel file CSV da cui leggere il valore del sensore.                       | **`[SENSOR_TYPE]`** (Default)                                          |
-| **`SIMULTION_TIMESTAMP_COLUMN`**  | Nome della colonna nel file CSV contenente i timestamp.                                     | **`timestamp`** (Default)                                              |
-| **`SIMULATION_SEPARATOR`**        | Carattere separatore utilizzato nel file CSV.                                               | **`;`** (Default)                                                      |
-| **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV.             | **`2006-01-02T15:04:05`** (Default)                                    |
-| **`SIMULATION_OFFSET_DAY`**       | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica.       | Intero non negativo (**2** Default)                                    |
+| Variabile                         | Descrizione                                                                                 | Valori Ammessi (Default)                                                  |
+|:----------------------------------|:--------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------|
+| **`SENSOR_LOCATION`**             | Definisce il contesto del sensore.                                                          | **`indoor`** (Default), **`outdoor`**                                     |
+| **`SENSOR_TYPE`**                 | Definisce la grandezza fisica misurata.                                                     | Stringa( **`temperature`** Default, **`humidity`**, **`pressure`**, ecc.) |
+| **`SIMULATION_SENSOR_REFERENCE`** | Riferimento al modello di sensore fisico simulato, cruciale per l'interpretazione dei dati. | **`bmp280`** (Default) o altri 17 modelli (es. `DHT22`, `SPS30`, ecc.)    |
+| **`SIMULATION_VALUE_COLUMN`**     | Nome della colonna nel file CSV da cui leggere il valore del sensore.                       | Stringa (**`[SENSOR_TYPE]`** Default)                                    |
+| **`SIMULTION_TIMESTAMP_COLUMN`**  | Nome della colonna nel file CSV contenente i timestamp.                                     | Stringa (**`timestamp`** Default)                                         |
+| **`SIMULATION_SEPARATOR`**        | Carattere separatore utilizzato nel file CSV.                                               | Stringa (**`;`** Default)                                                 |
+| **`SIMULATION_TIMESTAMP_FORMAT`** | Formato Go (Layout di riferimento `2006-01-02T15:04:05`) del timestamp nel CSV.             | Stringa (**`2006-01-02T15:04:05`** Default)                               |
+| **`SIMULATION_OFFSET_DAY`**       | Numero di giorni da sottrarre alla data corrente per iniziare la simulazione storica.       | Intero non negativo (**2** Default)                                       |
 
 ### C\. Parametri di Comunicazione
 
 Controllano la connessione al broker MQTT dell'Edge Hub.
 
-| Variabile                       | Descrizione                                                       | Valori Ammessi (Default)                |
-|:--------------------------------|:------------------------------------------------------------------|:----------------------------------------|
-| **`MQTT_BROKER_PROTOCOL`**      | Protocollo del broker MQTT.                                       | `tcp` (Default)                         |
-| **`MQTT_BROKER_ADDRESS`**       | Indirizzo IP/Hostname del broker MQTT.                            | `mosquitto` (Default, tipico in Docker) |
-| **`MQTT_BROKER_PORT`**          | Porta di connessione del broker MQTT.                             | `1883` (Default)                        |
-| **`MAX_RECONNECTION_INTERVAL`** | Intervallo massimo (in secondi) tra i tentativi di riconnessione. | Intero positivo (**10** Default)        |
-| **`MAX_RECONNECTION_TIMEOUT`**  | Timeout massimo (in secondi) per i tentativi di riconnessione.    | Intero positivo (**10** Default)        |
-| **`MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione.                     | Intero positivo (**10** Default)        |
-| **`MESSAGE_PUBLISH_TIMEOUT`**   | Timeout (in secondi) per l'invio di un singolo messaggio MQTT.    | Intero positivo (**5** Default)         |
+| Variabile                       | Descrizione                                                       | Valori Ammessi (Default)                       |
+|:--------------------------------|:------------------------------------------------------------------|:-----------------------------------------------|
+| **`MQTT_BROKER_PROTOCOL`**      | Protocollo del broker MQTT.                                       | `tcp` (Default)                                |
+| **`MQTT_BROKER_ADDRESS`**       | Indirizzo IP/Hostname del broker MQTT.                            | `localhost` (Default)                          |
+| **`MQTT_BROKER_PORT`**          | Porta di connessione del broker MQTT.                             | `1883` (Default)                               |
+| **`MAX_RECONNECTION_INTERVAL`** | Intervallo massimo (in secondi) tra i tentativi di riconnessione. | Intero positivo (**10** Default)               |
+| **`MAX_RECONNECTION_TIMEOUT`**  | Timeout massimo (in secondi) per i tentativi di riconnessione.    | Intero positivo (**10** Default)               |
+| **`MAX_RECONNECTION_ATTEMPTS`** | Numero massimo di tentativi di riconnessione.                     | Intero positivo (**10** Default)               |
+| **`MESSAGE_PUBLISH_TIMEOUT`**   | Timeout (in secondi) per l'invio di un singolo messaggio MQTT.    | Intero positivo (**5** Default)                |
 
 ### D\. Parametri di Logging e Health Check
 
