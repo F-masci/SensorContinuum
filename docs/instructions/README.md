@@ -19,10 +19,10 @@ Per eseguire la build, il test e il deployment dell'applicazione, è necessario 
 
 ## Deployment
 
-| Modalità di Deploy          | Vantaggi                                                                                                     | Svantaggi / Prerequisiti Operativi                                                                                                                                                                   |
+| Modalità di Deploy          | Vantaggi                                                                                                     | Svantaggi / Prerequisiti Operativi                                                                                                                                                                  |
 |:----------------------------|:-------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **AWS (Consigliata)**       | **Automazione Completa** (CloudFormation, Route53, ...), provisioning dinamico della rete e degli hostnames. | Richiede l'accesso e la configurazione dell'ambiente AWS.                                                                                                                                            |
-| **Locale (Docker Compose)** | Ideale per test e sviluppo rapido.                                                                           | Richiede la configurazione manuale del sistema host per risolvere gli hostname complessi dei broker e dei databases interni. |
+| **AWS (Consigliata)**       | **Automazione Completa** (CloudFormation, Route53, ...), provisioning dinamico della rete e degli hostnames. | Richiede l'accesso e la configurazione dell'ambiente AWS.                                                                                                                                           |
+| **Locale (Docker Compose)** | Ideale per test e sviluppo rapido.                                                                           | Richiede la configurazione manuale del sistema host per risolvere gli hostname complessi dei broker e dei databases interni.                                                                        |
 
 Il deploy segue l'ordine gerarchico del Compute Continuum, partendo dal Cloud verso l'Edge.
 
@@ -87,9 +87,15 @@ Lo script [`setup_site.sh`](../../deploy/scripts/setup_site.sh) configura l'host
 2. **Associazione Dominio:** Associa il dominio personalizzato *sensor-continuum.it* e il sottodominio *www* all'app Amplify.
 3. **Setup Bucket S3:** Crea un bucket S3 di supporto.
 
-> ###### ⚠️ AVVERTENZA
+> **⚠️ Avvertenza**
 >
-> Lo script [`setup_site.sh`](../../deploy/scripts/setup_site.sh) prepara l'ambiente Amplify e configura il dominio personalizzato. Tuttavia, il **deployment effettivo** del codice del sito web **non può essere automatizzato completamente** tramite questo script Bash. Per deployare il contenuto nel servizio di hosting Amplify, è necessario utilizzare l'**interfaccia web di AWS Amplify** o collegare l'app a un repository Git.
+> Lo script [`setup_site.sh`](../../deploy/scripts/setup_site.sh) prepara l'ambiente. Il deployment effettivo del codice del sito web è gestito dal comando `npm run deploy`, che esegue i seguenti passi:
+>
+> * **Build del Progetto**: Esegue react-scripts build.
+>
+> * **Sincronizzazione S3**: Esegue lo script [`./deploy.sh`](../../site/deploy.sh), che a sua volta effettua una sincronizzazione diretta della cartella [`build`](../../site/) verso il bucket S3 configurato: `s3://sensor-continuum-site`.
+>
+> Dopo la sincronizzazione su S3, il deployment non è tecnicamente completo, poiché è necessario accedere alla dashboard di AWS Amplify per innescare la finalizzazione della distribuzione, dato che l'hosting è configurato per servire i contenuti direttamente da un ambiente collegato ad Amplify.
 
 ##### E. Deploy delle Funzioni Lambda
 

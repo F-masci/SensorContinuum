@@ -1,85 +1,91 @@
 # Setup Cloud AWS
 
-Il **Setup Cloud** è un processo a più fasi orchestrato da script Bash, che utilizzano **AWS CloudFormation** per il provisioning dell'infrastruttura e vari servizi per la configurazione logica. Questo processo garantisce la creazione della rete, degli endpoint pubblici e della persistenza dati, fornendo la base operativa per il resto del *Compute Continuum*.
+Il Setup Cloud è un processo a più fasi orchestrato da script Bash, che utilizzano AWS CloudFormation per il provisioning dell'infrastruttura e vari servizi per la configurazione logica. Questo processo garantisce la creazione della rete, degli endpoint pubblici e della persistenza dati, fornendo la base operativa per il resto del sistema *Sensor Continuum*.
 
 -----
 
-### A. Configurazione DNS Pubblico (`setup_dns.sh`)
+### Configurazione DNS Pubblico ([`setup_dns.sh`](../../deploy/scripts/setup_dns.sh))
 
 Questo è il primo e più critico step di configurazione, poiché stabilisce la risoluzione dei nomi di dominio per tutti i servizi successivi (API, Database e Sito Web).
 
-1.  **Creazione Hosted Zone:** Lo script esegue il deployment dello stack **`sc-public-dns`** tramite CloudFormation, che crea la **Zona Pubblica di Route 53** (es. `sensor-continuum.it`).
+1.  **Creazione Hosted Zone:** Lo script esegue il deployment dello stack `sc-public-dns` tramite CloudFormation, che crea la Zona Pubblica di Route 53 per *sensor-continuum.it*.
     ```bash
     aws cloudformation deploy --stack-name "sc-public-dns" --template-file "../cloudformation/public-dns.yaml"
     ```
-2.  **Passaggio Manuale Cruciale:** Una volta completato il deploy, lo script recupera e stampa i **Name Server (NS)** assegnati da AWS. Questi indirizzi sono l'unica informazione che l'utente deve configurare **manualmente** presso il proprio *registrar* di dominio. Tutti i passi successivi dipendono dal successo di questa configurazione esterna.
+2.  ⚠️ **Passaggio Manuale Cruciale:** Una volta completato il deploy, lo script recupera e stampa i Name Server assegnati da AWS. Questi indirizzi sono l'unica informazione che l'utente deve configurare **manualmente** presso il proprio *registrar* di dominio. Tutti i passi successivi dipendono dal successo di questa configurazione esterna.
 
 -----
 
-### B. Setup Rete VPC per Lambda e API Gateway (`setup_lambda.sh`)
+### Setup Rete VPC per Lambda e API Gateway ([`setup_lambda.sh`](../../deploy/scripts/setup_lambda.sh))
 
-Questa fase combina il provisioning dell'infrastruttura di rete privata e la creazione dell'interfaccia pubblica (API Gateway), gestendo automaticamente la complessità dei certificati SSL.
+Questa fase combina il provisioning dell'infrastruttura di rete privata e la creazione dell'interfaccia pubblica tramite API Gateway, gestendo automaticamente la complessità dei certificati SSL.
 
 #### 1\. Setup Rete VPC per Lambda
 
-Lo script deploya lo stack **`sc-lambda-network`** (`lambda-network.yaml`) che crea la rete dedicata e privata:
+Lo script deploya lo stack `sc-lambda-network`, definito in [`lambda-network.yaml`](../../deploy/cloudformation/lambda-network.yaml) che crea la rete dedicata, pubblica e privata:
 
-* Una **VPC** dedicata.
-* Due **Subnet Private** (`sc-subnet-lambda-private-1` e `-2`).
-* Un **NAT Gateway** e un **Security Group** dedicato (`sc-sg-lambda`).
+* Una VPC dedicata: `sc-lambda-vpc`.
+* Due Subnet Private: `sc-subnet-lambda-private-1` e `-2`.
+* Un NAT Gateway e un Security Group dedicato: `sc-lambda-natgw` e `sc-sg-lambda`.
 
-Al termine, lo script estrae gli ID di VPC, Security Group e Subnet (es. `${VPC_ID}`, `${SUBNET1}`) per la successiva iniezione di parametri.
+Al termine, lo script estrae gli ID di VPC, Security Group e Subnet per la successiva iniezione di parametri.
 
 #### 2\. Deploy API Gateway, ACM e Configurazione CNAME
 
-Lo script continua deployando lo stack **`sc-lambda-api`** (`lambda-api.yaml`), che crea:
-
-* L'**API Gateway HTTP** e la richiesta di **Certificato ACM** per il dominio personalizzato (`api.sensor-continuum.it`).
-* **Validazione DNS Automatica:** Il meccanismo cruciale è un **processo in background** che monitora gli eventi di CloudFormation. Questo processo intercetta il **CNAME di validazione** richiesto da ACM e lo inserisce automaticamente in Route 53, sbloccando l'emissione del certificato.
-* **Configurazione Endpoint Pubblico:** Infine, recupera il dominio canonico dell'API Gateway e crea il record **CNAME** finale nella Zona Pubblica, rendendo l'URL **`api.sensor-continuum.it`** risolvibile e protetto.
+Lo script continua deployando lo stack `sc-lambda-api` tramite il file [`lambda-api.yaml`](../../deploy/cloudformation/lambda-api.yaml), che crea l'API Gateway HTTP e la richiesta di Certificato ACM per il dominio personalizzato *api.sensor-continuum.it*.
+Il meccanismo cruciale è un processo in background che monitora gli eventi di CloudFormation. Questo processo intercetta il CNAME di validazione richiesto da ACM e lo inserisce automaticamente in Route 53, sbloccando l'emissione del certificato.
+Infine, recupera il dominio canonico dell'API Gateway e crea il record CNAME finale nella Zona Pubblica, rendendo l'URL *api.sensor-continuum.it* risolvibile e protetto.
 
 -----
 
-### C. Deploy Database Cloud dei Metadati (`setup_cloud_db.sh`)
+### Deploy Database Cloud dei Metadati Globali ([`setup_cloud_db.sh`](../../deploy/scripts/setup_cloud_db.sh))
 
-Questo passaggio implementa il database centrale per i metadati globali, assicurando che sia raggiungibile in modo sicuro all'interno della VPC.
+Questo passaggio implementa il database centrale Aurora PostgreSQL per i metadati globali, insieme alla sua infrastruttura di rete dedicata.
 
-1.  **Deployment Cluster Aurora:** Lo script deploya lo stack **`sc-cloud-metadata-db`** (`cloud-db.yaml`), iniettando gli ID di **VPC** e **Subnet** estratti nello step precedente. Questo colloca il cluster **Aurora PostgreSQL** nella rete privata.
+1.  **Deployment Cluster Aurora e Rete Dedicata:** Lo script deploya lo stack `sc-cloud-metadata-db` utilizzando [`cloud-db.yaml`](../../deploy/cloudformation/cloud-db.yaml). A differenza dei passaggi precedenti, questo template crea una nuova VPC dedicata (`sc-cloud-meta-db-vpc`) con subnet pubbliche, un Internet Gateway e le relative tabelle di routing. Colloca il cluster Aurora PostgreSQL su queste subnet e lo rende pubblicamente accessibile (con accesso limitato alla porta `5433` tramite il Security Group).
     ```bash
     aws cloudformation deploy --stack-name "sc-cloud-metadata-db" \
-      --template-file "$TEMPLATE_FILE" \
-      --parameter-overrides VpcId="$VPC_ID" Subnet1="$SUBNET1" Subnet2="$SUBNET2"
+      --template-file "$TEMPLATE_FILE"
     ```
-2.  **Configurazione Hostname Pubblici:** Recupera gli endpoint di Writer e Reader da Aurora e crea tre record **CNAME** nella Zona Pubblica per un accesso semplificato, come `write.cloud.metadata-db.sensor-continuum.it`.
-3.  **Inizializzazione Schema:** Utilizzando il client `psql`, lo script si connette all'endpoint Writer per eseguire gli script SQL **`init-cloud-metadata-db.sql`** e **`init-metadata.sql`**, popolando lo schema iniziale e i metadati.
+    (***Nota: lo script non utilizza i parametri di rete di step precedenti***)
+2.  **Configurazione Hostname Pubblici:** Lo script recupera gli endpoint di Writer e Reader del cluster Aurora. Crea tre record CNAME nella Zona Pubblica di Route 53 di `sensor-continuum.it` per semplificare l'accesso: `write.cloud.metadata-db.sensor-continuum.it`, `read-only.cloud.metadata-db.sensor-continuum.it` e l'alias principale `cloud.metadata-db.sensor-continuum.it`che punta l'endpoint di lettura.
+3.  **Inizializzazione Schema:** Utilizzando le credenziali cablate, lo script si connette tramite il client `psql` all'endpoint Writer (sulla porta `5433`) ed esegue in sequenza gli script SQL [`init-cloud-metadata-db.sql`](../../configs/postgresql/init-cloud-metadata-db.sql) e [`init-metadata.sql`](../../configs/postgresql/init-metadata.sql), popolando lo schema iniziale del database.
 
 -----
 
-### D. Setup Hosting Sito Web Metadata DB(`setup_site.sh`)
+### Setup Hosting Sito Web ([`setup_site.sh`](../../deploy/scripts/setup_site.sh))
 
 L'ultimo step del setup Cloud prepara l'ambiente di hosting statico per l'interfaccia utente.
 
-1.  **Creazione App Amplify:** Lo script verifica o crea l'applicazione **AWS Amplify** (`Sensor Continuum`) che serve per l'hosting statico.
-2.  **Associazione Dominio:** Viene associato il dominio personalizzato (`sensor-continuum.it` e `www`) all'app Amplify.
+1.  **Creazione App Amplify:** Lo script verifica o crea l'applicazione AWS Amplify `Sensor Continuum`, che serve per l'hosting statico.
+2.  **Associazione Dominio:** Viene associato il dominio personalizzato *sensor-continuum.it* e *www.sensor-continuum.it* all'app Amplify.
 3.  **Setup S3:** Viene verificata e creata l'esistenza del bucket S3 di supporto.
 
-> **Avvertenza:** Lo script `setup_site.sh` **prepara l'ambiente**. Il **deployment effettivo** del codice del sito web Metadata DBdeve essere completato manualmente o tramite un repository Git collegato alla console AWS Amplify.
+> **⚠️ Avvertenza**
+>
+> Lo script [`setup_site.sh`](../../deploy/scripts/setup_site.sh) prepara l'ambiente. Il deployment effettivo del codice del sito web è gestito dal comando `npm run deploy`, che esegue i seguenti passi:
+>
+> * **Build del Progetto**: Esegue react-scripts build.
+> 
+> * **Sincronizzazione S3**: Esegue lo script [`./deploy.sh`](../../site/deploy.sh), che a sua volta effettua una sincronizzazione diretta della cartella [`build`](../../site/) verso il bucket S3 configurato: `s3://sensor-continuum-site`.
+> 
+> Dopo la sincronizzazione su S3, il deployment non è tecnicamente completo, poiché è necessario accedere alla dashboard di AWS Amplify per innescare la finalizzazione della distribuzione, dato che l'hosting è configurato per servire i contenuti direttamente da un ambiente collegato ad Amplify.
 
 -----
 
-### E. Deploy delle Funzioni Lambda (`deploy_lambda.sh`)
+### Deploy delle Funzioni Lambda ([`deploy_lambda.sh`](../../deploy/scripts/deploy_lambda.sh))
 
-La fase di creazione delle funzioni **Lambda** è gestita interamente dallo script `deploy_lambda.sh`, il quale orchestra il ciclo di vita completo di ogni singola funzione, dal *build* del codice all'integrazione finale con l'**API Gateway HTTP**. Lo script sfrutta l'**AWS Serverless Application Model (SAM)** per automatizzare il deployment, assicurando che le funzioni siano isolate e configurate per accedere alle risorse private.
+La fase di creazione delle funzioni Lambda è gestita interamente dallo script [`deploy_lambda.sh`](../../deploy/scripts/deploy_lambda.sh), il quale orchestra il ciclo di vita completo di ogni singola funzione, dal build del codice all'integrazione finale con l'API Gateway HTTP. Lo script sfrutta l'*AWS Serverless Application Model* (SAM) per automatizzare il deployment, assicurando che le funzioni siano isolate e configurate per accedere alle risorse private.
 
 Il processo di deployment di ciascuna Lambda segue una rigorosa sequenza di sette passaggi chiave:
 
-1.  **Generazione Dinamica del Template:** Lo script recupera gli ID del **Security Group** (`sc-sg-lambda`) e delle **Subnet Private** (`sc-subnet-lambda-private-1`, `-2`) create durante il setup della rete VPC. Successivamente, utilizza `sed` per iniettare questi parametri, insieme al nome della funzione, in un template SAM di base. Questa iniezione è fondamentale, poiché costringe l'esecuzione della Lambda all'interno della VPC privata (sezione **`VpcConfig`**), garantendo che possa connettersi in modo sicuro al database PostgreSQL dei metadati.
-2.  **Build del Codice:** Il comando **`sam build`** prepara l'artefatto di deployment (un file `.zip` contenente il codice della funzione).
-3.  **Deploy SAM:** Viene verificata l'esistenza del bucket S3 dedicato (`sensor-continuum-lambda`) e quindi eseguito **`sam deploy`**. Questo comando carica l'artefatto e crea lo stack CloudFormation (es. `region-list-stack`), istanziando la funzione Lambda.
-4.  **Recupero API ID:** Lo script recupera l'ID dell'API Gateway (`Sensor Continuum API`) precedentemente creato.
-5.  **Configurazione Permessi di Invocation:** Tramite `aws lambda add-permission`, viene concesso un permesso esplicito (**`lambda:InvokeFunction`**) all'API Gateway per chiamare la Lambda su un ARN specifico (associato alla route, es. `GET /region/list`).
-6.  **Creazione Integrazione:** Viene creata una **integrazione HTTP API** di tipo **`AWS_PROXY`** che mappa direttamente l'endpoint API alla Lambda. Questo tipo di integrazione garantisce che l'intera richiesta HTTP venga inoltrata alla funzione.
-7.  **Creazione Route:** Infine, viene creata la **Route GET** nell'API Gateway (es. `GET /region/list`), che viene agganciata all'ID dell'integrazione creata nello step precedente.
+1.  **Generazione Dinamica del Template:** Lo script recupera gli ID del Security Group `sc-sg-lambda` e delle Subnet Private `sc-subnet-lambda-private-1` e`-2` create durante il setup della rete VPC. Successivamente, utilizza `sed` per iniettare questi parametri, insieme al nome della funzione, in un template SAM di base [`lambda.template.yaml`](../../deploy/cloudformation/lambda.template.yaml). Questa iniezione è fondamentale, poiché costringe l'esecuzione della Lambda all'interno della VPC privata, garantendo che possa connettersi in modo sicuro al database PostgreSQL dei metadati.
+2.  **Build del Codice:** Il comando `sam build` prepara l'artefatto di deployment (un file `.zip` contenente il codice della funzione).
+3.  **Deploy SAM:** Viene verificata l'esistenza del bucket S3 dedicato `sensor-continuum-lambda` e quindi eseguito `sam deploy`. Questo comando carica l'artefatto e crea lo stack CloudFormation, istanziando la funzione Lambda.
+4.  **Recupero API ID:** Lo script recupera l'ID dell'API Gateway `Sensor Continuum API` precedentemente creato.
+5.  **Configurazione Permessi di Invocation:** Tramite `aws lambda add-permission`, viene concesso un permesso esplicito `lambda:InvokeFunction` all'API Gateway per chiamare la Lambda su un ARN specifico associato alla route.
+6.  **Creazione Integrazione:** Viene creata una integrazione HTTP API di tipo `AWS_PROXY` che mappa direttamente l'endpoint API alla Lambda. Questo tipo di integrazione garantisce che l'intera richiesta HTTP venga inoltrata alla funzione.
+7.  **Creazione Route:** Infine, viene creata la Route GET nell'API Gateway, che viene agganciata all'ID dell'integrazione creata nello step precedente.
 
 #### Chiamate di Deployment Esemplari
 

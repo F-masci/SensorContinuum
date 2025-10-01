@@ -8,8 +8,7 @@ PUBLIC_HOSTED_ZONE_NAME="sensor-continuum.it"
 echo "[INFO] Deploy cluster..."
 aws cloudformation deploy \
   --stack-name "$STACK_NAME" \
-  --template-file "$TEMPLATE_FILE" \
-  --parameter-overrides VpcId="$VPC_ID" Subnet1="$SUBNET1" Subnet2="$SUBNET2"
+  --template-file "$TEMPLATE_FILE"
 
 # Recupera Hosted Zone ID
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones-by-name \
