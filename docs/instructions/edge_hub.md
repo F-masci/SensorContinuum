@@ -146,7 +146,7 @@ Il corretto funzionamento del file Compose dipende dalla risoluzione dinamica di
 
 Senza queste variabili, Docker Compose non sarà in grado di popolare correttamente le estensioni YAML e i nomi delle risorse, portando al fallimento del deployment.
 
-### Preparazione e Esecuzione del Deploy
+### Preparazione ed Esecuzione del Deploy
 
 Il deployment in locale richiede due passaggi fondamentali: la creazione del volume e l'avvio tramite Compose.
 

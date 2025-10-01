@@ -30,7 +30,7 @@ Queste variabili definiscono l'identità gerarchica del servizio e il suo ruolo 
 
 -----
 
-### B\. Connessione MQTT (Ingresso: Edge Hub $\to$ Proximity Hub)
+### B\. Connessione MQTT (Input: Edge Hub $\to$ Proximity Hub)
 
 Queste variabili configurano l'Hub come *consumer* dei dati provenienti dagli Edge Hub.
 
@@ -50,7 +50,7 @@ Queste variabili configurano l'Hub come *consumer* dei dati provenienti dagli Ed
 
 -----
 
-### C\. Connessione Kafka (Uscita: Proximity Hub $\to$ Intermediate Fog Hub)
+### C\. Connessione Kafka (Output: Proximity Hub $\to$ Intermediate Fog Hub)
 
 Queste variabili configurano l'Hub come *producer* verso il livello superiore.
 
@@ -165,11 +165,11 @@ Il corretto funzionamento del file Compose dipende dalla risoluzione dinamica di
 | **`REGION`**         | Indirizzamento Broker                | Cruciale per la risoluzione DNS degli indirizzi Kafka e MQTT.               |
 | **`POSTGRES_PORT`**  | Mappatura Porta                      | Definisce la porta host per l'accesso a PostgreSQL (default `5432`).        |
 
-### Preparazione e Esecuzione del Deploy
+### Preparazione ed Esecuzione del Deploy
 
 Il deployment in locale richiede due passaggi fondamentali: la creazione del volume e l'avvio tramite Compose.
 
-#### 1. Creazione del Volume Persistente
+#### 1\. Creazione del Volume Persistente
 
 Poiché il volume `macrozone-cache-data` è definito come `external: true` nel file Compose, deve essere creato **manualmente** prima dell'avvio per garantire la persistenza dei dati PostgreSQL:
 
@@ -331,5 +331,5 @@ Lo script Bash [`deploy_proximity_services.sh`](../../deploy/scripts/deploy/depl
 
 Lo script [`deploy_proximity_services.sh`](../../deploy/scripts/deploy/deploy_proximity_services.sh) integra diverse funzionalità per la gestione e la simulazione di un ambiente Fog robusto:
 
-* **Configurazione Latenza:** Esecuzione dello script `init-delay.sh` per simulare latenza, jitter e packet loss sull'interfaccia di rete dell'istanza EC2, utilizzando le variabili d'ambiente (es. `${NETWORK_DELAY:-30ms}`).
+* **Configurazione Latenza:** Esecuzione dello script [`init-delay.sh`](../../deploy/scripts/inits/init-delay.sh) per simulare latenza, jitter e packet loss sull'interfaccia di rete dell'istanza EC2, utilizzando le variabili d'ambiente (es. `${NETWORK_DELAY:-30ms}`).
 * **Servizio Systemd:** Configurazione del servizio [`sc-deploy-services.service`](../../deploy/scripts/services/sc-deploy.service.template) per rieseguire automaticamente lo script di deployment all'avvio del sistema, garantendo la resilienza dell'Hub e del Broker MQTT.
