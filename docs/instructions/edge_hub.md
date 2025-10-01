@@ -160,16 +160,7 @@ Poiché il volume `zone-hub-cache` è definito come `external: true` nel file Co
 docker volume create zone-hub-TorVergata-cache-data
 ```
 
-#### 2\. Avvio con Docker Compose
-
-Dopo aver creato il volume, l'avvio viene eseguito tramite il comando standard di Docker Compose:
-
-```bash
-# Esempio di avvio
-docker compose -f edge-hub.yaml up -d
-```
-
-#### 3\. Risoluzione del Nome Host del Broker
+#### 2\. Risoluzione del Nome Host del Broker
 
 Il template utilizza un indirizzo complesso:
 
@@ -186,6 +177,14 @@ Per risolvere questo nome di dominio e dirigerlo correttamente verso l'host del 
 1.  **Utilizzo di `extra_hosts`:** Configurare la sezione `extra_hosts` nel file Docker Compose, mappando l'indirizzo del broker all'IP appropriato.
 2.  **Modifica del File `/etc/hosts`:** Se necessario, è possibile modificare il file `/etc/hosts` del sistema operativo host per puntare il record DNS utilizzato direttamente all'indirizzo IP del container o del servizio che ospita il broker.
 
+#### 3\. Avvio con Docker Compose
+
+Dopo aver creato il volume, l'avvio viene eseguito tramite il comando standard di Docker Compose:
+
+```bash
+# Esempio di avvio
+docker compose -f edge-hub.yaml up -d
+```
 
 > **⚠️ NOTA OPERATIVA**
 >
