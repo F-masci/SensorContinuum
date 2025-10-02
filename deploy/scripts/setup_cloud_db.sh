@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 STACK_NAME="sc-cloud-metadata-db"
 TEMPLATE_FILE="../cloudformation/cloud-db.yaml"
@@ -22,8 +21,20 @@ HOSTED_ZONE_ID=${HOSTED_ZONE_ID#/hostedzone/}
 # Recupera endpoint writer e reader dal DB
 WRITER_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
   --query "Stacks[0].Outputs[?OutputKey=='CloudMetaDbEndpoint'].OutputValue" --output text)
+
+if [ -z "$WRITER_ENDPOINT" ]; then
+  echo "[ERROR] Output 'CloudMetaDbEndpoint' non trovato. Verifica che lo stack sia aggiornato correttamente."
+  exit 1
+fi
+
+
 READER_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
   --query "Stacks[0].Outputs[?OutputKey=='CloudMetaDbReaderEndpoint'].OutputValue" --output text)
+
+if [ -z "$READER_ENDPOINT" ]; then
+  echo "[ERROR] Output 'CloudMetaDbReaderEndpoint' non trovato. Verifica che lo stack sia aggiornato correttamente."
+  exit 1
+fi
 
 echo "[INFO] DB Writer Endpoint: $WRITER_ENDPOINT"
 echo "[INFO] DB Reader Endpoint: $READER_ENDPOINT"

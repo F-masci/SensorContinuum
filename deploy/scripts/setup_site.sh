@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ----------------
 # Configurazioni
@@ -63,6 +62,7 @@ echo
 # Creazione bucket S3 se non esiste
 # ----------------
 
+BUCKET_NAME="sensor-continuum-site"
 echo "[INFO] Verifica bucket S3: $BUCKET_NAME"
 if ! aws s3 ls "s3://$BUCKET_NAME" 2>&1 | grep -q 'NoSuchBucket'; then
     echo "[INFO] Bucket già esistente."

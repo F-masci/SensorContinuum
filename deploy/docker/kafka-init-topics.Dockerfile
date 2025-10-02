@@ -1,4 +1,4 @@
-FROM bitnami/kafka:latest
+FROM bitnamilegacy/kafka:latest
 
 COPY configs/kafka/init-topics.sh /init-topics.sh
 

@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 STACK_NAME="sc-public-dns"
 TEMPLATE_FILE="../cloudformation/public-dns.yaml"

@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 STACK_NAME=$1       # nome dello stack CloudFormation
 FOLDER=$2

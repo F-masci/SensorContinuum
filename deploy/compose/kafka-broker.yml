@@ -1,7 +1,7 @@
 services:
 
   kafka-01:
-    image: bitnami/kafka:latest
+    image: bitnamilegacy/kafka:latest
     container_name: kafka-${REGION}-01
     hostname: kafka-${REGION}-01
     ports:
