@@ -275,7 +275,7 @@ SERVICES_KEY_FILE="$KEYS_DIR/$SERVICES_KEY_NAME.pem"
 mkdir -p "$KEYS_DIR"
 
 SERVICES_KEY_PAIR=$(
-  { ensure_key_pair "$SERVICES_KEY_NAME" "$SERVICES_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+  { ensure_key_pair "$SERVICES_KEY_NAME" "$SERVICES_KEY_FILE" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 HOSTED_ZONE_ID=$(

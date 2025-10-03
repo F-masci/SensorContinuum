@@ -114,7 +114,7 @@ KEY_FILE="$KEYS_DIR/$KEY_NAME.pem"
 mkdir -p "$KEYS_DIR"
 
 KEY_PAIR=$(
-  { ensure_key_pair "$KEY_NAME" "$KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+  { ensure_key_pair "$KEY_NAME" "$KEY_FILE" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 HOSTED_ZONE_ID=$(

@@ -41,7 +41,7 @@ func GetMacrozonesByLocation(ctx context.Context, lat, lon, radius float64) ([]t
 	regions := make([]types.Macrozone, 0)
 	for rows.Next() {
 		var m types.Macrozone
-		if err := rows.Scan(&m.RegionName, &m.Name); err != nil {
+		if err := rows.Scan(&m.RegionName, &m.Name, &m.Lat, &m.Lon); err != nil {
 			return nil, err
 		}
 		regions = append(regions, m)

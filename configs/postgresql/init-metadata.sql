@@ -54,14 +54,14 @@ INSERT INTO zones (region_name, macrozone_name, name, location, creation_time) V
     ('region-004', 'build-0009', 'floor-002', ST_SetSRID(ST_GeomFromText('POLYGON((11.255 43.755, 11.257 43.755, 11.257 43.757, 11.255 43.757, 11.255 43.755))'), 4326), NOW()),
 
     -- Zone esterne per zone outdoor esistenti
-    ('region-001', 'macrozone-0003', 'outdoor-zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((12.472 41.912, 12.474 41.912, 12.474 41.914, 12.472 41.914, 12.472 41.912))'), 4326), NOW()),
-    ('region-001', 'macrozone-0003', 'outdoor-zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((12.475 41.915, 12.477 41.915, 12.477 41.917, 12.475 41.917, 12.475 41.915))'), 4326), NOW()),
+    ('region-001', 'macrozone-0003', 'zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((12.472 41.912, 12.474 41.912, 12.474 41.914, 12.472 41.914, 12.472 41.912))'), 4326), NOW()),
+    ('region-001', 'macrozone-0003', 'zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((12.475 41.915, 12.477 41.915, 12.477 41.917, 12.475 41.917, 12.475 41.915))'), 4326), NOW()),
 
-    ('region-002', 'macrozone-0006', 'outdoor-zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((9.251 45.445, 9.253 45.445, 9.253 45.447, 9.251 45.447, 9.251 45.445))'), 4326), NOW()),
-    ('region-002', 'macrozone-0006', 'outdoor-zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((9.255 45.448, 9.257 45.448, 9.257 45.450, 9.255 45.450, 9.255 45.448))'), 4326), NOW()),
+    ('region-002', 'macrozone-0006', 'zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((9.251 45.445, 9.253 45.445, 9.253 45.447, 9.251 45.447, 9.251 45.445))'), 4326), NOW()),
+    ('region-002', 'macrozone-0006', 'zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((9.255 45.448, 9.257 45.448, 9.257 45.450, 9.255 45.450, 9.255 45.448))'), 4326), NOW()),
 
-    ('region-003', 'macrozone-0008', 'outdoor-zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((14.301 40.901, 14.303 40.901, 14.303 40.903, 14.301 40.903, 14.301 40.901))'), 4326), NOW()),
-    ('region-003', 'macrozone-0008', 'outdoor-zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((14.305 40.905, 14.307 40.905, 14.307 40.907, 14.305 40.907, 14.305 40.905))'), 4326), NOW()),
+    ('region-003', 'macrozone-0008', 'zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((14.301 40.901, 14.303 40.901, 14.303 40.903, 14.301 40.903, 14.301 40.901))'), 4326), NOW()),
+    ('region-003', 'macrozone-0008', 'zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((14.305 40.905, 14.307 40.905, 14.307 40.907, 14.305 40.907, 14.305 40.905))'), 4326), NOW()),
 
-    ('region-004', 'macrozone-0010', 'outdoor-zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((11.351 43.801, 11.353 43.801, 11.353 43.803, 11.351 43.803, 11.351 43.801))'), 4326), NOW()),
-    ('region-004', 'macrozone-0010', 'outdoor-zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((11.355 43.805, 11.357 43.805, 11.357 43.807, 11.355 43.807, 11.355 43.805))'), 4326), NOW());
+    ('region-004', 'macrozone-0010', 'zone-001', ST_SetSRID(ST_GeomFromText('POLYGON((11.351 43.801, 11.353 43.801, 11.353 43.803, 11.351 43.803, 11.351 43.801))'), 4326), NOW()),
+    ('region-004', 'macrozone-0010', 'zone-002', ST_SetSRID(ST_GeomFromText('POLYGON((11.355 43.805, 11.357 43.805, 11.357 43.807, 11.355 43.807, 11.355 43.805))'), 4326), NOW());

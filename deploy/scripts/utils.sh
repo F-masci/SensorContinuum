@@ -78,13 +78,14 @@ find_route_table_id() {
 ensure_key_pair() {
   local key_name="$1"
   local key_file="$2"
-  local endpoint="$3"
+  local region="$3"
+  local endpoint="$4"
   echo "Verifica presenza chiave privata SSH..."
   local key
-  key=$(aws ec2 $endpoint describe-key-pairs --key-names "$key_name" --query "KeyPairs[0].KeyName" --output text 2>/dev/null || true)
+  key=$(aws ec2 $endpoint describe-key-pairs --region "$region" --key-names "$key_name" --query "KeyPairs[0].KeyName" --output text 2>/dev/null || true)
   if [[ -z "$key" || "$key" == "None" ]]; then
     echo "Chiave SSH $key_name non trovata in AWS. Creazione nuova chiave..."
-    aws ec2 $endpoint create-key-pair \
+    aws ec2 $endpoint create-key-pair --region "$region" \
       --key-name "$key_name" \
       --query "KeyMaterial" \
       --output text > "$key_file"

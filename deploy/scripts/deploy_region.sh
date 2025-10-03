@@ -211,7 +211,7 @@ KAFKA_KEY_FILE="$KEYS_DIR/$KAFKA_KEY_NAME.pem"
 mkdir -p "$KEYS_DIR"
 
 KAFKA_KEY_PAIR=$(
-  { ensure_key_pair "$KAFKA_KEY_NAME" "$KAFKA_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+  { ensure_key_pair "$KAFKA_KEY_NAME" "$KAFKA_KEY_FILE" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 HOSTED_ZONE_ID=$(
@@ -328,7 +328,7 @@ DATABASES_KEY_FILE="$KEYS_DIR/$DATABASES_KEY_NAME.pem"
 mkdir -p "$KEYS_DIR"
 
 DATABASES_KEY_PAIR=$(
-  { ensure_key_pair "$DATABASES_KEY_NAME" "$DATABASES_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+  { ensure_key_pair "$DATABASES_KEY_NAME" "$DATABASES_KEY_FILE" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 echo "Recupero ID della Hosted Zone $PUBLIC_HOSTED_ZONE_NAME..."
@@ -452,7 +452,7 @@ SERVICES_KEY_FILE="$KEYS_DIR/$SERVICES_KEY_NAME.pem"
 mkdir -p "$KEYS_DIR"
 
 SERVICES_KEY_PAIR=$(
-  { ensure_key_pair "$SERVICES_KEY_NAME" "$SERVICES_KEY_FILE" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
+  { ensure_key_pair "$SERVICES_KEY_NAME" "$SERVICES_KEY_FILE" "$AWS_REGION" "$ENDPOINT_URL"; } | tee /dev/tty | tail -n 1
 )
 
 HOSTED_ZONE_ID=$(
